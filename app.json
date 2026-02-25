@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "ANL",
+    "slug": "anl-continuous-system",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "com.cloudygetty.anl",
+      "infoPlist": {
+        "UIBackgroundModes": ["fetch", "processing"],
+        "BGTaskSchedulerPermittedIdentifiers": ["com.cloudygetty.anl.refresh"]
+      }
+    },
+    "android": {
+      "package": "com.cloudygetty.anl",
+      "permissions": ["RECEIVE_BOOT_COMPLETED", "FOREGROUND_SERVICE"]
+    },
+    "plugins": ["react-native-background-fetch"]
+  }
+}

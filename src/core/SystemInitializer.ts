@@ -1,0 +1,95 @@
+// src/core/SystemInitializer.ts
+import { EventLoopManager } from '@core/eventLoop/EventLoopManager';
+import { TaskQueue } from '@core/scheduler/TaskQueue';
+import { PersistenceLayer } from '@core/persistence/PersistenceLayer';
+import { HealthMonitor } from '@services/health/HealthMonitor';
+import { useSystemStore } from '@services/state/systemStore';
+import type { Task } from '@types/index';
+
+let _initialized = false;
+let _eventLoop: EventLoopManager | null = null;
+let _taskQueue: TaskQueue | null = null;
+let _persistence: PersistenceLayer | null = null;
+let _health: HealthMonitor | null = null;
+
+export async function initializeSystem(): Promise<void> {
+  if (_initialized) return;
+
+  const store = useSystemStore.getState();
+  store.setStatus('initializing');
+
+  _health = new HealthMonitor();
+  _taskQueue = new TaskQueue();
+  _persistence = new PersistenceLayer(30000);
+
+  // Attempt to restore from snapshot
+  const snapshot = await _persistence.load();
+  if (snapshot) {
+    _health.recordRecovery();
+    store.restoreFromSnapshot(snapshot.systemState, snapshot.health);
+    console.info('[SystemInitializer] Restored from snapshot at', new Date(snapshot.timestamp).toISOString());
+  } else {
+    console.info('[SystemInitializer] No snapshot found — fresh start');
+  }
+
+  // Register built-in tasks
+  const healthCheckTask: Task = {
+    id: 'system:health-check',
+    name: 'HealthCheck',
+    priority: 'CRITICAL',
+    intervalMs: 10000,
+    scheduledAt: Date.now(),
+    lastRunAt: null,
+    execute: async () => {
+      const metrics = _health!.getMetrics();
+      useSystemStore.getState().updateHealth(metrics);
+    },
+  };
+
+  const persistTask: Task = {
+    id: 'system:persist',
+    name: 'PersistState',
+    priority: 'CRITICAL',
+    intervalMs: 30000,
+    scheduledAt: Date.now(),
+    lastRunAt: null,
+    execute: async () => {
+      const state = useSystemStore.getState().systemState;
+      const health = _health!.getMetrics();
+      await _persistence!.save(state, health);
+    },
+  };
+
+  _taskQueue.register(healthCheckTask);
+  _taskQueue.register(persistTask);
+
+  // Start event loop
+  _eventLoop = new EventLoopManager(_taskQueue, _health);
+  _eventLoop.start();
+
+  store.setStatus('running');
+  _initialized = true;
+
+  console.info('[SystemInitializer] System running');
+}
+
+export function getEventLoop(): EventLoopManager | null {
+  return _eventLoop;
+}
+
+export function getTaskQueue(): TaskQueue | null {
+  return _taskQueue;
+}
+
+export function getHealth(): HealthMonitor | null {
+  return _health;
+}
+
+export async function shutdownSystem(): Promise<void> {
+  _eventLoop?.stop();
+  if (_persistence && _health) {
+    const state = useSystemStore.getState().systemState;
+    await _persistence.save(state, _health.getMetrics());
+  }
+  _initialized = false;
+}

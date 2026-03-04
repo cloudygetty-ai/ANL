@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AllNightLong — Drop In. Link Up. Tonight.</title>
+<meta name="description" content="The late-night proximity app. See who's out right now, within walking distance. Early access dropping soon."/>
+<meta property="og:title" content="AllNightLong"/>
+<meta property="og:description" content="Drop in. Link up. Tonight."/>
+<meta property="og:type" content="website"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,300&display=swap" rel="stylesheet"/>
+<style>
+/* ── Reset & tokens ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06060a;
+  --surface:#0e0e16;
+  --surfaceUp:#14141f;
+  --border:rgba(168,85,247,.18);
+  --purple:#a855f7;
+  --pink:#ec4899;
+  --amber:#fbbf24;
+  --cyan:#22d3ee;
+  --green:#4ade80;
+  --red:#f87171;
+  --text:#f0eee8;
+  --textDim:rgba(240,238,232,.5);
+  --textMuted:rgba(240,238,232,.22);
+  --ff-display:'Bebas Neue',sans-serif;
+  --ff-body:'DM Sans',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--ff-body);
+  min-height:100svh;
+  overflow-x:hidden;
+}
+
+/* ── Noise grain overlay ── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:.6;
+}
+
+/* ── Map grid bg ── */
+.map-grid{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+/* ── Glow blobs ── */
+.blob{
+  position:fixed;border-radius:50%;
+  filter:blur(80px);pointer-events:none;z-index:0;
+  animation:blobDrift 12s ease-in-out infinite alternate;
+}
+.blob-1{width:500px;height:500px;background:rgba(168,85,247,.12);top:-100px;right:-100px;}
+.blob-2{width:400px;height:400px;background:rgba(236,72,153,.09);bottom:0;left:-80px;animation-delay:-4s;}
+.blob-3{width:300px;height:300px;background:rgba(34,211,238,.07);top:40%;left:30%;animation-delay:-8s;}
+
+@keyframes blobDrift{
+  0%{transform:translate(0,0) scale(1);}
+  100%{transform:translate(30px,20px) scale(1.05);}
+}
+
+/* ── Layout ── */
+main{
+  position:relative;z-index:1;
+  min-height:100svh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:48px 24px 80px;
+  gap:0;
+}
+
+/* ── Nav ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 32px;
+  background:linear-gradient(to bottom,rgba(6,6,10,.9),transparent);
+  backdrop-filter:blur(12px);
+}
+.nav-logo{
+  font-family:var(--ff-display);
+  font-size:22px;letter-spacing:3px;
+  color:var(--text);
+}
+.nav-logo span{color:var(--amber);}
+.nav-badge{
+  font-size:10px;font-weight:700;letter-spacing:2px;
+  color:var(--purple);
+  border:1px solid rgba(168,85,247,.3);
+  border-radius:20px;padding:4px 12px;
+  background:rgba(168,85,247,.08);
+}
+
+/* ── Floating pins map ── */
+.pin-field{
+  position:relative;
+  width:min(560px,100%);
+  height:360px;
+  margin-bottom:48px;
+}
+/* distance rings */
+.ring{
+  position:absolute;top:50%;left:50%;
+  border-radius:50%;border:1px solid rgba(255,255,255,.05);
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+/* you dot */
+.you{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:16px;height:16px;
+  border-radius:50%;
+  background:var(--amber);
+  border:3px solid #fff;
+  box-shadow:0 0 0 6px rgba(251,191,36,.2),0 0 24px rgba(251,191,36,.5);
+  z-index:20;
+}
+/* floating pin */
+.fpin{
+  position:absolute;
+  transform:translate(-50%,-50%);
+  cursor:pointer;
+  z-index:10;
+  transition:filter .2s;
+  animation:pinFloat 3s ease-in-out infinite;
+}
+.fpin:hover{filter:brightness(1.3) drop-shadow(0 0 12px currentColor);}
+.fpin svg{display:block;}
+/* pulse ring per pin */
+.pulse-ring{
+  position:absolute;top:50%;left:50%;
+  border-radius:50%;border:1.5px solid currentColor;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  animation:ringPulse 2.4s ease-out infinite;
+}
+@keyframes ringPulse{
+  0%  {width:38px;height:38px;opacity:.7;}
+  100%{width:76px;height:76px;opacity:0;}
+}
+@keyframes pinFloat{
+  0%,100%{transform:translate(-50%,-50%) translateY(0);}
+  50%    {transform:translate(-50%,-50%) translateY(-6px);}
+}
+
+/* ── Hero copy ── */
+.hero{text-align:center;margin-bottom:48px;}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:700;letter-spacing:3px;
+  color:var(--textMuted);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;padding:5px 14px;
+  margin-bottom:24px;
+  background:rgba(255,255,255,.03);
+}
+.eyebrow .dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px var(--green);
+  animation:blink 1.8s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+h1{
+  font-family:var(--ff-display);
+  font-size:clamp(64px,12vw,110px);
+  line-height:.92;
+  letter-spacing:3px;
+  color:var(--text);
+  margin-bottom:24px;
+}
+h1 .accent{color:var(--amber);}
+h1 .dim{color:var(--textDim);font-size:.55em;letter-spacing:8px;display:block;margin-top:4px;}
+
+.hook{
+  font-size:clamp(16px,2.2vw,20px);
+  font-weight:300;
+  color:var(--textDim);
+  max-width:480px;
+  margin:0 auto 12px;
+  line-height:1.55;
+  letter-spacing:.2px;
+}
+.hook strong{color:var(--text);font-weight:600;}
+
+/* ── Stats strip ── */
+.stats{
+  display:flex;gap:32px;justify-content:center;
+  margin-bottom:52px;
+  flex-wrap:wrap;
+}
+.stat{text-align:center;}
+.stat-num{
+  font-family:var(--ff-display);
+  font-size:36px;letter-spacing:2px;
+  color:var(--text);
+  line-height:1;
+}
+.stat-num span{color:var(--purple);}
+.stat-label{font-size:11px;color:var(--textMuted);letter-spacing:1.5px;font-weight:600;margin-top:4px;}
+
+/* ── Email form ── */
+.form-wrap{
+  width:min(480px,100%);
+  margin-bottom:20px;
+}
+.form-label{
+  font-size:11px;font-weight:700;letter-spacing:2px;
+  color:var(--textMuted);text-align:center;
+  margin-bottom:14px;display:block;
+}
+.form{
+  display:flex;gap:8px;
+  background:var(--surfaceUp);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:6px 6px 6px 18px;
+  transition:border-color .2s;
+}
+.form:focus-within{border-color:rgba(168,85,247,.5);}
+.form input{
+  flex:1;background:none;border:none;outline:none;
+  font-family:var(--ff-body);font-size:14px;
+  color:var(--text);
+  caret-color:var(--purple);
+}
+.form input::placeholder{color:var(--textMuted);}
+.form button{
+  font-family:var(--ff-display);
+  font-size:15px;letter-spacing:2px;
+  background:var(--purple);
+  color:#fff;border:none;
+  border-radius:11px;
+  padding:12px 24px;
+  cursor:pointer;
+  transition:background .2s,transform .1s;
+  white-space:nowrap;
+}
+.form button:hover{background:#9333ea;}
+.form button:active{transform:scale(.97);}
+.form-note{
+  text-align:center;margin-top:10px;
+  font-size:11px;color:var(--textMuted);letter-spacing:.3px;
+}
+.form-note a{color:var(--purple);text-decoration:none;}
+
+/* ── Success state ── */
+.success{
+  display:none;
+  flex-direction:column;align-items:center;gap:12px;
+  padding:28px;
+  background:rgba(74,222,128,.06);
+  border:1px solid rgba(74,222,128,.2);
+  border-radius:16px;
+  text-align:center;
+}
+.success.show{display:flex;}
+.success-icon{font-size:32px;}
+.success-title{font-family:var(--ff-display);font-size:22px;letter-spacing:2px;color:var(--green);}
+.success-sub{font-size:13px;color:var(--textDim);}
+
+/* ── Pin legend / features ── */
+.features{
+  display:flex;gap:12px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-bottom:56px;
+  max-width:600px;
+}
+.feature-pill{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:20px;
+  padding:8px 16px;
+  font-size:12px;color:var(--textDim);font-weight:500;
+  transition:border-color .2s;
+}
+.feature-pill:hover{border-color:rgba(168,85,247,.3);}
+.feature-pill .icon{font-size:14px;}
+
+/* ── Pin showcase row ── */
+.pin-row{
+  display:flex;gap:20px;align-items:center;justify-content:center;
+  margin-bottom:60px;flex-wrap:wrap;
+}
+.pin-item{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  opacity:.7;
+  transition:opacity .2s,transform .2s;
+  cursor:default;
+}
+.pin-item:hover{opacity:1;transform:translateY(-4px);}
+.pin-item .plabel{
+  font-size:9px;font-weight:700;letter-spacing:1.5px;
+  color:var(--textMuted);text-transform:uppercase;
+}
+
+/* ── Footer ── */
+footer{
+  position:relative;z-index:1;
+  text-align:center;
+  padding:24px;
+  border-top:1px solid rgba(255,255,255,.05);
+  font-size:11px;color:var(--textMuted);letter-spacing:1px;
+}
+footer a{color:var(--purple);text-decoration:none;}
+
+/* ── Entrance animations ── */
+.reveal{opacity:0;transform:translateY(20px);animation:reveal .6s ease forwards;}
+@keyframes reveal{to{opacity:1;transform:none;}}
+.d1{animation-delay:.1s;}
+.d2{animation-delay:.25s;}
+.d3{animation-delay:.4s;}
+.d4{animation-delay:.55s;}
+.d5{animation-delay:.7s;}
+.d6{animation-delay:.85s;}
+.d7{animation-delay:1s;}
+
+/* ── Responsive ── */
+@media(max-width:480px){
+  nav{padding:16px 20px;}
+  .pin-field{height:260px;}
+  .stats{gap:20px;}
+  .form{flex-direction:column;padding:12px;}
+  .form button{border-radius:10px;padding:14px;}
+}
+</style>
+</head>
+<body>
+
+<div class="map-grid"></div>
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-logo">ALL<span>NIGHT</span>LONG</div>
+  <div class="nav-badge">EARLY ACCESS</div>
+</nav>
+
+<!-- Main -->
+<main>
+
+  <!-- Floating pin map -->
+  <div class="pin-field reveal d1">
+    <!-- Distance rings -->
+    <div class="ring" style="width:160px;height:160px;"></div>
+    <div class="ring" style="width:280px;height:280px;"></div>
+    <div class="ring" style="width:400px;height:400px;"></div>
+    <!-- You -->
+    <div class="you"></div>
+
+    <!-- Female pin — heart drop -->
+    <div class="fpin" style="left:38%;top:30%;color:#ff3c64;animation-delay:0s;">
+      <div class="pulse-ring" style="color:#ff3c64;"></div>
+      <svg width="44" height="54" viewBox="0 0 56 68" style="filter:drop-shadow(0 4px 12px rgba(255,60,100,.7))">
+        <path d="M28,46 C28,46 6,32 6,18 C6,9 13,4 20,4 C24,4 28,7 28,7 C28,7 32,4 36,4 C43,4 50,9 50,18 C50,32 28,46 28,46Z" fill="#ff3c64" stroke="#ff6080" stroke-width="1.5"/>
+        <text x="28" y="24" text-anchor="middle" dominant-baseline="middle" font-size="13" font-family="'Bebas Neue',sans-serif" fill="#fff">M</text>
+        <path d="M24,46 L28,62 L32,46Z" fill="#ff3c64" stroke="#ff6080" stroke-width="1"/>
+        <rect x="15" y="30" width="26" height="12" rx="6" fill="rgba(0,0,0,.5)"/>
+        <text x="28" y="36" text-anchor="middle" dominant-baseline="middle" font-size="8" font-family="'DM Sans',sans-serif" font-weight="800" fill="#fff">94%</text>
+      </svg>
+    </div>
+
+    <!-- Male pin — eggplant -->
+    <div class="fpin" style="left:62%;top:42%;color:#8844ff;animation-delay:-1.1s;">
+      <div class="pulse-ring" style="color:#8844ff;"></div>
+      <svg width="40" height="52" viewBox="0 0 56 60" style="filter:drop-shadow(0 4px 12px rgba(136,68,255,.7))">
+        <path d="M28,2 C28,2 22,-4 16,-2 C18,3 24,3 28,2Z M28,2 C28,2 34,-4 40,-2 C38,3 32,3 28,2Z" fill="#44aa44"/>
+        <path d="M28,54 C16,54 8,44 8,32 C8,18 14,6 22,3 C24,2 26,2 28,2 C30,2 32,2 34,3 C42,6 48,18 48,32 C48,44 40,54 28,54Z" fill="#8844ff" stroke="#aa66ff" stroke-width="1.8"/>
+        <text x="28" y="30" text-anchor="middle" dominant-baseline="middle" font-size="14" font-family="'Bebas Neue',sans-serif" fill="#fff">D</text>
+      </svg>
+    </div>
+
+    <!-- Trans women pin — butterfly -->
+    <div class="fpin" style="left:25%;top:58%;color:#f7a8c4;animation-delay:-0.6s;">
+      <div class="pulse-ring" style="color:#f7a8c4;"></div>
+      <svg width="48" height="48" viewBox="0 0 56 56" style="filter:drop-shadow(0 4px 14px rgba(247,168,196,.8))">
+        <defs>
+          <linearGradient id="bwg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#f7a8c4" stop-opacity=".95"/>
+            <stop offset="50%" stop-color="#fff" stop-opacity=".5"/>
+            <stop offset="100%" stop-color="#55cdfc" stop-opacity=".95"/>
+          </linearGradient>
+        </defs>
+        <path d="M28,28 C28,28 10,18 6,8 C4,2 10,0 14,4 C18,8 22,18 28,28Z" fill="url(#bwg)" stroke="#f7a8c4" stroke-width="1.5"/>
+        <path d="M28,28 C28,28 46,18 50,8 C52,2 46,0 42,4 C38,8 34,18 28,28Z" fill="url(#bwg)" stroke="#55cdfc" stroke-width="1.5"/>
+        <path d="M28,28 C28,28 8,32 4,42 C2,50 8,52 14,48 C20,44 24,36 28,28Z" fill="url(#bwg)" stroke="#f7a8c4" stroke-width="1.5" opacity=".8"/>
+        <path d="M28,28 C28,28 48,32 52,42 C54,50 48,52 42,48 C36,44 32,36 28,28Z" fill="url(#bwg)" stroke="#55cdfc" stroke-width="1.5" opacity=".8"/>
+        <path d="M28,10 C26,10 24,14 24,20 L24,36 C24,42 26,46 28,46 C30,46 32,42 32,36 L32,20 C32,14 30,10 28,10Z" fill="#1a1a1a"/>
+        <text x="28" y="28" text-anchor="middle" dominant-baseline="middle" font-size="11" font-family="'Bebas Neue',sans-serif" fill="#fff">L</text>
+      </svg>
+    </div>
+
+    <!-- Female pin 2 — classic butt -->
+    <div class="fpin" style="left:70%;top:28%;color:#ffa032;animation-delay:-1.8s;">
+      <div class="pulse-ring" style="color:#ffa032;"></div>
+      <svg width="40" height="40" viewBox="0 0 56 56" style="filter:drop-shadow(0 4px 10px rgba(255,160,50,.6))">
+        <path d="M4,20 C4,8 20,0 28,0 C36,0 52,8 52,20 C52,32 44,44 28,52 C12,44 4,32 4,20Z" fill="#1e1e1e" stroke="rgba(255,160,50,.7)" stroke-width="2"/>
+        <text x="28" y="24" text-anchor="middle" dominant-baseline="middle" font-size="13" font-family="'Bebas Neue',sans-serif" fill="#fff">J</text>
+        <line x1="28" y1="3" x2="28" y2="28" stroke="rgba(255,255,255,.1)" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="44" cy="44" r="5" fill="#44ff88" stroke="#080808" stroke-width="2"/>
+      </svg>
+    </div>
+
+    <!-- Trans men pin — lightning bolt -->
+    <div class="fpin" style="left:48%;top:68%;color:#55cdfc;animation-delay:-2.4s;">
+      <div class="pulse-ring" style="color:#55cdfc;"></div>
+      <svg width="36" height="44" viewBox="0 0 56 56" style="filter:drop-shadow(0 4px 12px rgba(85,205,252,.7))">
+        <defs>
+          <linearGradient id="blg" x1=".5" y1="0" x2=".5" y2="1">
+            <stop offset="0%" stop-color="#55cdfc" stop-opacity=".9"/>
+            <stop offset="100%" stop-color="#ffdd44" stop-opacity=".8"/>
+          </linearGradient>
+        </defs>
+        <path d="M32,2 L16,28 L28,28 L20,54 L40,24 L28,24 Z" fill="url(#blg)" stroke="#55cdfc" stroke-width="1.5" stroke-linejoin="round"/>
+        <text x="28" y="30" text-anchor="middle" dominant-baseline="middle" font-size="10" font-family="'Bebas Neue',sans-serif" fill="#000">Z</text>
+      </svg>
+    </div>
+
+    <!-- Male pin 2 — shield (offline) -->
+    <div class="fpin" style="left:18%;top:38%;color:rgba(68,136,255,.4);animation-delay:-3s;">
+      <svg width="38" height="42" viewBox="0 0 56 60" style="filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));opacity:.55">
+        <path d="M28,2 L50,12 L50,32 C50,44 40,52 28,56 C16,52 6,44 6,32 L6,12 Z" fill="#141414" stroke="rgba(255,255,255,.1)" stroke-width="1.8"/>
+        <text x="28" y="30" text-anchor="middle" dominant-baseline="middle" font-size="12" font-family="'Bebas Neue',sans-serif" fill="rgba(255,255,255,.3)">K</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Hero copy -->
+  <div class="hero">
+    <div class="eyebrow reveal d2">
+      <span class="dot"></span>
+      LAUNCHING SOON
+    </div>
+    <h1 class="reveal d2">
+      ALL<span class="accent">NIGHT</span>LONG
+      <span class="dim">DROP IN. LINK UP.</span>
+    </h1>
+    <p class="hook reveal d3">
+      See <strong>who's out right now</strong>, within walking distance.
+      Real people, real proximity — no swiping, no waiting.
+    </p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats reveal d3">
+    <div class="stat">
+      <div class="stat-num"><span>0.3</span> mi</div>
+      <div class="stat-label">Average distance</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num"><span>11</span>pm</div>
+      <div class="stat-label">Peak activity</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num"><span>&lt;5</span>s</div>
+      <div class="stat-label">To link up</div>
+    </div>
+  </div>
+
+  <!-- Feature pills -->
+  <div class="features reveal d4">
+    <div class="feature-pill"><span class="icon">📍</span> Live proximity map</div>
+    <div class="feature-pill"><span class="icon">🍑</span> Female pins</div>
+    <div class="feature-pill"><span class="icon">🍆</span> Male pins</div>
+    <div class="feature-pill"><span class="icon">🦋</span> Trans Women</div>
+    <div class="feature-pill"><span class="icon">⚡</span> Trans Men</div>
+    <div class="feature-pill"><span class="icon">💬</span> Real-time chat</div>
+    <div class="feature-pill"><span class="icon">🌙</span> Late-night only mode</div>
+  </div>
+
+  <!-- Email form -->
+  <div class="form-wrap reveal d5">
+    <span class="form-label">DROP YOUR EMAIL — GET IN FIRST</span>
+    <div id="formContainer">
+      <div class="form">
+        <input type="email" id="emailInput" placeholder="your@email.com" autocomplete="email"/>
+        <button type="button" onclick="handleSubmit()">GET ACCESS</button>
+      </div>
+      <p class="form-note">
+        No spam. Ever. Just a heads-up when the app drops.
+        <br/>Your email list is the only traffic you own.
+      </p>
+    </div>
+    <div class="success" id="successBox">
+      <div class="success-icon">🌙</div>
+      <div class="success-title">YOU'RE IN</div>
+      <div class="success-sub">We'll hit you up the night it drops.<br/>Stay out late.</div>
+    </div>
+  </div>
+
+  <!-- Pin showcase strip -->
+  <div class="pin-row reveal d6">
+    <!-- Female classic -->
+    <div class="pin-item">
+      <svg width="38" height="38" viewBox="0 0 56 56" style="filter:drop-shadow(0 3px 8px rgba(255,60,100,.5))">
+        <path d="M4,20 C4,8 20,0 28,0 C36,0 52,8 52,20 C52,32 44,44 28,52 C12,44 4,32 4,20Z" fill="#1e1e1e" stroke="#ff3c64" stroke-width="2"/>
+        <text x="28" y="24" text-anchor="middle" dominant-baseline="middle" font-size="13" font-family="'Bebas Neue',sans-serif" fill="#fff">F</text>
+        <line x1="28" y1="3" x2="28" y2="28" stroke="rgba(255,255,255,.1)" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="plabel">Women</span>
+    </div>
+    <!-- Heart drop -->
+    <div class="pin-item">
+      <svg width="38" height="48" viewBox="0 0 56 68" style="filter:drop-shadow(0 3px 10px rgba(255,60,100,.7))">
+        <path d="M28,46 C28,46 6,32 6,18 C6,9 13,4 20,4 C24,4 28,7 28,7 C28,7 32,4 36,4 C43,4 50,9 50,18 C50,32 28,46 28,46Z" fill="#ff3c64" stroke="#ff6080" stroke-width="1.5"/>
+        <path d="M24,46 L28,62 L32,46Z" fill="#ff3c64"/>
+      </svg>
+      <span class="plabel">Selected</span>
+    </div>
+    <!-- Eggplant -->
+    <div class="pin-item">
+      <svg width="34" height="44" viewBox="0 0 56 60" style="filter:drop-shadow(0 3px 8px rgba(136,68,255,.6))">
+        <path d="M28,2 C28,2 22,-4 16,-2 C18,3 24,3 28,2Z M28,2 C28,2 34,-4 40,-2 C38,3 32,3 28,2Z" fill="#44aa44"/>
+        <path d="M28,54 C16,54 8,44 8,32 C8,18 14,6 22,3 C24,2 26,2 28,2 C30,2 32,2 34,3 C42,6 48,18 48,32 C48,44 40,54 28,54Z" fill="#1e1e1e" stroke="rgba(136,68,255,.7)" stroke-width="2"/>
+      </svg>
+      <span class="plabel">Men</span>
+    </div>
+    <!-- Skull -->
+    <div class="pin-item">
+      <svg width="34" height="34" viewBox="0 0 56 56" style="filter:drop-shadow(0 3px 8px rgba(255,255,255,.2))">
+        <path d="M28,2 C14,2 6,12 6,24 C6,34 12,40 18,42 L18,50 L38,50 L38,42 C44,40 50,34 50,24 C50,12 42,2 28,2Z" fill="#1a1a1a" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
+        <path d="M20,22 A4,4 0 1,1 19.9,22Z M36,22 A4,4 0 1,1 35.9,22Z" fill="#080808"/>
+        <path d="M20,46 L20,50 M24,46 L24,50 M28,46 L28,50 M32,46 L32,50 M36,46 L36,50" stroke="#080808" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <span class="plabel">New arrival</span>
+    </div>
+    <!-- Butterfly -->
+    <div class="pin-item">
+      <svg width="42" height="40" viewBox="0 0 56 56" style="filter:drop-shadow(0 3px 12px rgba(247,168,196,.7))">
+        <defs><linearGradient id="bw2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f7a8c4"/><stop offset="100%" stop-color="#55cdfc"/></linearGradient></defs>
+        <path d="M28,28 C28,28 10,18 6,8 C4,2 10,0 14,4 C18,8 22,18 28,28Z" fill="url(#bw2)" stroke="#f7a8c4" stroke-width="1.5"/>
+        <path d="M28,28 C28,28 46,18 50,8 C52,2 46,0 42,4 C38,8 34,18 28,28Z" fill="url(#bw2)" stroke="#55cdfc" stroke-width="1.5"/>
+        <path d="M28,28 C28,28 8,32 4,42 C2,50 8,52 14,48 C20,44 24,36 28,28Z" fill="url(#bw2)" opacity=".8"/>
+        <path d="M28,28 C28,28 48,32 52,42 C54,50 48,52 42,48 C36,44 32,36 28,28Z" fill="url(#bw2)" opacity=".8"/>
+        <path d="M28,10 C26,10 24,14 24,20 L24,36 C24,42 26,46 28,46 C30,46 32,42 32,36 L32,20 C32,14 30,10 28,10Z" fill="#1a1a1a"/>
+      </svg>
+      <span class="plabel">Trans women</span>
+    </div>
+    <!-- Trans flag drop -->
+    <div class="pin-item">
+      <svg width="36" height="52" viewBox="0 0 56 66" style="filter:drop-shadow(0 3px 10px rgba(247,168,196,.6))">
+        <defs><linearGradient id="tfg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#55cdfc"/><stop offset="30%" stop-color="#f7a8c4"/><stop offset="50%" stop-color="#fff"/><stop offset="70%" stop-color="#f7a8c4"/><stop offset="100%" stop-color="#55cdfc"/></linearGradient></defs>
+        <path d="M28,46 C28,46 6,32 6,18 C6,9 13,4 20,4 C24,4 28,7 28,7 C28,7 32,4 36,4 C43,4 50,9 50,18 C50,32 28,46 28,46Z" fill="url(#tfg2)" stroke="rgba(255,255,255,.3)" stroke-width="1.5"/>
+        <path d="M24,46 L28,62 L32,46Z" fill="#f7a8c4"/>
+      </svg>
+      <span class="plabel">Trans men</span>
+    </div>
+    <!-- Bolt -->
+    <div class="pin-item">
+      <svg width="30" height="40" viewBox="0 0 56 56" style="filter:drop-shadow(0 3px 10px rgba(85,205,252,.6))">
+        <defs><linearGradient id="bl2" x1=".5" y1="0" x2=".5" y2="1"><stop offset="0%" stop-color="#55cdfc"/><stop offset="100%" stop-color="#ffdd44"/></linearGradient></defs>
+        <path d="M32,2 L16,28 L28,28 L20,54 L40,24 L28,24 Z" fill="url(#bl2)" stroke="#55cdfc" stroke-width="1.5"/>
+      </svg>
+      <span class="plabel">New arrival</span>
+    </div>
+  </div>
+
+</main>
+
+<!-- Footer -->
+<footer>
+  <div style="margin-bottom:8px;">
+    <span style="font-family:'Bebas Neue',sans-serif;letter-spacing:3px;font-size:16px;">
+      ALL<span style="color:var(--amber)">NIGHT</span>LONG
+    </span>
+  </div>
+  © 2025 AllNightLong ·
+  <a href="mailto:hi@allnightlong.app">hi@allnightlong.app</a>
+  · Built by <a href="https://github.com/cloudygetty-ai" target="_blank">cloudygetty-ai</a>
+</footer>
+
+<script>
+function handleSubmit(){
+  const input=document.getElementById('emailInput');
+  const email=input.value.trim();
+  const re=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if(!re.test(email)){
+    input.style.outline='2px solid var(--red)';
+    input.focus();
+    setTimeout(()=>{input.style.outline='';},1400);
+    return;
+  }
+  // Store locally (Formspree or Vercel serverless can replace this)
+  const list=JSON.parse(localStorage.getItem('anl_waitlist')||'[]');
+  if(!list.includes(email)){list.push(email);localStorage.setItem('anl_waitlist',JSON.stringify(list));}
+  document.getElementById('formContainer').style.display='none';
+  document.getElementById('successBox').classList.add('show');
+  // Optional: POST to a Formspree endpoint
+  // fetch('https://formspree.io/f/YOUR_ID',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+}
+document.getElementById('emailInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter')handleSubmit();
+});
+</script>
+</body>
+</html>

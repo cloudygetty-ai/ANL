@@ -19,8 +19,11 @@
     "react-native-background-fetch": "^4.2.1",
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/native-stack": "^6.9.17",
+    "@react-navigation/bottom-tabs": "^6.5.11",
     "react-native-safe-area-context": "4.8.2",
-    "react-native-screens": "~3.29.0"
+    "react-native-screens": "~3.29.0",
+    "react-native-linear-gradient": "^2.8.3",
+    "react-native-reanimated": "~3.6.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
@@ -31,10 +34,19 @@
     "@testing-library/react-native": "^12.4.0",
     "eslint": "^8.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0"
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "babel-plugin-module-resolver": "^5.0.0"
   },
   "jest": {
-    "preset": "react-native"
+    "preset": "react-native",
+    "moduleNameMapper": {
+      "^@core/(.*)$": "<rootDir>/src/core/$1",
+      "^@services/(.*)$": "<rootDir>/src/services/$1",
+      "^@screens/(.*)$": "<rootDir>/src/screens/$1",
+      "^@components/(.*)$": "<rootDir>/src/components/$1",
+      "^@utils/(.*)$": "<rootDir>/src/utils/$1",
+      "^@types/(.*)$": "<rootDir>/src/types/$1"
+    }
   },
   "private": true
 }

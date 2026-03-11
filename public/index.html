@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>All Night Long — Nightlife, Redefined</title>
+  <meta name="description" content="ANL connects you to the people, places, and pulse of your city's nightlife. Live, real-time, and radically inclusive." />
+  <style>
+    /* ============================================================
+       Reset and base
+    ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg:         #0a0a0f;
+      --bg-card:    #12121a;
+      --bg-input:   #1a1a26;
+      --aqua:       #7fffd4;
+      --orange:     #ffa032;
+      --blue:       #4488ff;
+      --pink:       #f7a8c4;
+      --sky:        #55cdfc;
+      --purple:     #a855f7;
+      --gold:       #ffd700;
+      --text:       #e8e8f0;
+      --text-muted: #7878a0;
+      --border:     #2a2a3e;
+      --radius:     12px;
+      --radius-sm:  6px;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3 {
+      line-height: 1.2;
+      font-weight: 700;
+    }
+
+    /* ============================================================
+       Layout
+    ============================================================ */
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ============================================================
+       Navigation
+    ============================================================ */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 18px 0;
+      background: linear-gradient(to bottom, rgba(10,10,15,0.96) 0%, transparent 100%);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: var(--aqua);
+      text-decoration: none;
+    }
+
+    .nav-logo span {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 8px;
+    }
+
+    /* ============================================================
+       Hero section
+    ============================================================ */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 130px 24px 90px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Ambient glow blobs behind the hero */
+    .hero-glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(110px);
+      pointer-events: none;
+    }
+
+    .hero-glow-1 {
+      width: 560px;
+      height: 560px;
+      background: var(--blue);
+      opacity: 0.10;
+      top: -100px;
+      left: -180px;
+    }
+
+    .hero-glow-2 {
+      width: 480px;
+      height: 480px;
+      background: var(--pink);
+      opacity: 0.09;
+      bottom: -60px;
+      right: -120px;
+    }
+
+    .hero-glow-3 {
+      width: 300px;
+      height: 300px;
+      background: var(--aqua);
+      opacity: 0.06;
+      top: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    /* Floating pin field — filled by JS */
+    .pin-field {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .pin-float {
+      position: absolute;
+      opacity: 0;
+      animation: float-pin linear infinite;
+    }
+
+    @keyframes float-pin {
+      0%   { transform: translateY(0)      scale(1);    opacity: 0; }
+      8%   { opacity: 0.65; }
+      88%  { opacity: 0.45; }
+      100% { transform: translateY(-115vh) scale(0.55); opacity: 0; }
+    }
+
+    /* Hero text */
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(127, 255, 212, 0.07);
+      border: 1px solid rgba(127, 255, 212, 0.22);
+      border-radius: 999px;
+      padding: 6px 18px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--aqua);
+      margin-bottom: 36px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--aqua);
+      animation: pulse-dot 2.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1;   transform: scale(1); }
+      50%       { opacity: 0.3; transform: scale(0.6); }
+    }
+
+    .hero h1 {
+      font-size: clamp(52px, 10vw, 96px);
+      font-weight: 900;
+      letter-spacing: -3px;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .word-all   { color: var(--aqua); }
+    .word-night { color: var(--orange); }
+    .word-long  { color: var(--pink); }
+
+    .hero-tagline {
+      font-size: clamp(17px, 2.8vw, 22px);
+      color: var(--text-muted);
+      max-width: 500px;
+      margin: 0 auto 52px;
+      font-weight: 400;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-tagline strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ============================================================
+       Waitlist form
+    ============================================================ */
+    .waitlist-wrap {
+      position: relative;
+      z-index: 2;
+    }
+
+    .waitlist-form {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .waitlist-input {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 15px;
+      padding: 14px 20px;
+      outline: none;
+      width: 288px;
+      transition: border-color 0.2s;
+    }
+
+    .waitlist-input::placeholder { color: var(--text-muted); }
+
+    .waitlist-input:focus { border-color: var(--aqua); }
+
+    .waitlist-input.error { border-color: #ff4455; }
+
+    .waitlist-btn {
+      background: var(--aqua);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #0a0a0f;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px 28px;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+
+    .waitlist-btn:hover  { opacity: 0.88; transform: translateY(-1px); }
+    .waitlist-btn:active { transform: translateY(0); }
+
+    .form-success {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(127, 255, 212, 0.07);
+      border: 1px solid rgba(127, 255, 212, 0.22);
+      border-radius: var(--radius-sm);
+      color: var(--aqua);
+      font-size: 15px;
+      font-weight: 600;
+      padding: 14px 24px;
+    }
+
+    .form-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 14px;
+    }
+
+    /* ============================================================
+       Divider
+    ============================================================ */
+    .divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ============================================================
+       Pin showcase strip
+    ============================================================ */
+    .pin-showcase {
+      padding: 64px 0;
+    }
+
+    .pin-showcase-label {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 40px;
+    }
+
+    .pin-strip {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: clamp(28px, 6vw, 64px);
+      flex-wrap: wrap;
+    }
+
+    .pin-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .pin-item-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .pin-svg-wrap {
+      transition: transform 0.25s;
+      cursor: default;
+    }
+
+    .pin-svg-wrap:hover {
+      transform: scale(1.18) translateY(-6px);
+    }
+
+    /* ============================================================
+       Features section
+    ============================================================ */
+    .features {
+      padding: 88px 0;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .section-header h2 {
+      font-size: clamp(26px, 4.5vw, 38px);
+      margin-bottom: 12px;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 16px;
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      transition: border-color 0.22s, transform 0.22s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(127, 255, 212, 0.28);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon {
+      font-size: 26px;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .feature-card p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    /* ============================================================
+       Stats bar
+    ============================================================ */
+    .stats {
+      padding: 56px 0;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .stat-cell {
+      background: var(--bg-card);
+      padding: 40px 24px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: clamp(30px, 5vw, 46px);
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 6px;
+    }
+
+    .stat-label {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* ============================================================
+       Footer CTA
+    ============================================================ */
+    .footer-cta {
+      padding: 88px 0 72px;
+      text-align: center;
+    }
+
+    .footer-cta h2 {
+      font-size: clamp(26px, 4vw, 40px);
+      margin-bottom: 14px;
+    }
+
+    .footer-cta p {
+      color: var(--text-muted);
+      font-size: 16px;
+      margin-bottom: 36px;
+    }
+
+    /* ============================================================
+       Footer
+    ============================================================ */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 0;
+      text-align: center;
+    }
+
+    footer p {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    footer a:hover { color: var(--aqua); }
+
+    /* ============================================================
+       Responsive
+    ============================================================ */
+    @media (max-width: 600px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .waitlist-input {
+        width: 100%;
+        max-width: 320px;
+      }
+
+      .waitlist-form {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .waitlist-btn {
+        width: 100%;
+        max-width: 320px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="container">
+      <a href="#" class="nav-logo">ANL <span>All Night Long</span></a>
+    </div>
+  </nav>
+
+  <!-- ============================================================
+       Hero
+  ============================================================ -->
+  <section class="hero">
+
+    <!-- Ambient glow blobs -->
+    <div class="hero-glow hero-glow-1" aria-hidden="true"></div>
+    <div class="hero-glow hero-glow-2" aria-hidden="true"></div>
+    <div class="hero-glow hero-glow-3" aria-hidden="true"></div>
+
+    <!-- Floating pins — populated by JS -->
+    <div class="pin-field" id="pinField" aria-hidden="true"></div>
+
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Early access — waitlist open
+    </div>
+
+    <h1>
+      <span class="word-all">All</span>&nbsp;<span class="word-night">Night</span>&nbsp;<span class="word-long">Long</span>
+    </h1>
+
+    <p class="hero-tagline">
+      See who is out. Feel the pulse of your city.<br>
+      <strong>Connect without the noise.</strong>
+    </p>
+
+    <!-- Waitlist form — hero -->
+    <div class="waitlist-wrap">
+      <form class="waitlist-form" id="waitlistFormA" novalidate>
+        <input
+          type="email"
+          class="waitlist-input"
+          id="emailA"
+          placeholder="your@email.com"
+          autocomplete="email"
+          required
+          aria-label="Email address"
+        />
+        <button type="submit" class="waitlist-btn">Join the waitlist</button>
+      </form>
+      <div class="form-success" id="successA">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="8" cy="8" r="7" stroke="#7fffd4" stroke-width="1.5"/>
+          <path d="M5 8l2 2 4-4" stroke="#7fffd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        You are on the list. We will be in touch.
+      </div>
+      <p class="form-note">No spam. No third parties. Just the app when it is ready.</p>
+    </div>
+
+  </section>
+
+  <!-- ============================================================
+       Pin showcase strip
+  ============================================================ -->
+  <div class="divider"></div>
+  <section class="pin-showcase">
+    <div class="container">
+      <p class="pin-showcase-label">Gender-inclusive pin system — every identity, first-class</p>
+      <div class="pin-strip">
+
+        <!-- Female: circle, pink -->
+        <div class="pin-item">
+          <div class="pin-svg-wrap">
+            <svg width="38" height="50" viewBox="0 0 38 50" fill="none" aria-label="Female pin">
+              <circle cx="19" cy="19" r="17" fill="#f7a8c4" fill-opacity="0.16" stroke="#f7a8c4" stroke-width="2.5"/>
+              <circle cx="19" cy="19" r="8" fill="#f7a8c4"/>
+              <line x1="19" y1="36" x2="19" y2="50" stroke="#f7a8c4" stroke-width="2.5" stroke-linecap="round"/>
+              <!-- Outer glow ring -->
+              <circle cx="19" cy="19" r="17" stroke="#f7a8c4" stroke-width="1" stroke-opacity="0.25"/>
+            </svg>
+          </div>
+          <span class="pin-item-label">Female</span>
+        </div>
+
+        <!-- Male: rounded square, blue -->
+        <div class="pin-item">
+          <div class="pin-svg-wrap">
+            <svg width="38" height="50" viewBox="0 0 38 50" fill="none" aria-label="Male pin">
+              <rect x="2" y="2" width="34" height="34" rx="6" fill="#4488ff" fill-opacity="0.16" stroke="#4488ff" stroke-width="2.5"/>
+              <rect x="13" y="13" width="12" height="12" rx="2" fill="#4488ff"/>
+              <line x1="19" y1="36" x2="19" y2="50" stroke="#4488ff" stroke-width="2.5" stroke-linecap="round"/>
+              <rect x="2" y="2" width="34" height="34" rx="6" stroke="#4488ff" stroke-width="1" stroke-opacity="0.25"/>
+            </svg>
+          </div>
+          <span class="pin-item-label">Male</span>
+        </div>
+
+        <!-- Trans woman: diamond, sky-to-pink -->
+        <div class="pin-item">
+          <div class="pin-svg-wrap">
+            <svg width="40" height="54" viewBox="0 0 40 54" fill="none" aria-label="Trans woman pin">
+              <defs>
+                <linearGradient id="gtw" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%"   stop-color="#55cdfc"/>
+                  <stop offset="100%" stop-color="#f7a8c4"/>
+                </linearGradient>
+              </defs>
+              <polygon points="20,2 38,20 20,38 2,20" fill="url(#gtw)" fill-opacity="0.18" stroke="url(#gtw)" stroke-width="2.5"/>
+              <polygon points="20,12 28,20 20,28 12,20" fill="url(#gtw)"/>
+              <polygon points="20,2 38,20 20,38 2,20" stroke="url(#gtw)" stroke-width="1" stroke-opacity="0.25" fill="none"/>
+              <line x1="20" y1="38" x2="20" y2="54" stroke="#55cdfc" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span class="pin-item-label">Trans woman</span>
+        </div>
+
+        <!-- Trans man: diamond, pink-to-sky -->
+        <div class="pin-item">
+          <div class="pin-svg-wrap">
+            <svg width="40" height="54" viewBox="0 0 40 54" fill="none" aria-label="Trans man pin">
+              <defs>
+                <linearGradient id="gtm" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%"   stop-color="#f7a8c4"/>
+                  <stop offset="100%" stop-color="#55cdfc"/>
+                </linearGradient>
+              </defs>
+              <polygon points="20,2 38,20 20,38 2,20" fill="url(#gtm)" fill-opacity="0.18" stroke="url(#gtm)" stroke-width="2.5"/>
+              <polygon points="20,12 28,20 20,28 12,20" fill="url(#gtm)"/>
+              <polygon points="20,2 38,20 20,38 2,20" stroke="url(#gtm)" stroke-width="1" stroke-opacity="0.25" fill="none"/>
+              <line x1="20" y1="38" x2="20" y2="54" stroke="#f7a8c4" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span class="pin-item-label">Trans man</span>
+        </div>
+
+        <!-- Non-binary: hexagon, gold-to-purple -->
+        <div class="pin-item">
+          <div class="pin-svg-wrap">
+            <svg width="40" height="56" viewBox="0 0 40 56" fill="none" aria-label="Non-binary pin">
+              <defs>
+                <linearGradient id="gnb" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%"   stop-color="#ffd700"/>
+                  <stop offset="100%" stop-color="#a855f7"/>
+                </linearGradient>
+              </defs>
+              <polygon points="20,2 35,10.5 35,28.5 20,37 5,28.5 5,10.5" fill="url(#gnb)" fill-opacity="0.18" stroke="url(#gnb)" stroke-width="2.5"/>
+              <polygon points="20,12 29,17 29,27 20,32 11,27 11,17" fill="url(#gnb)"/>
+              <polygon points="20,2 35,10.5 35,28.5 20,37 5,28.5 5,10.5" stroke="url(#gnb)" stroke-width="1" stroke-opacity="0.25" fill="none"/>
+              <line x1="20" y1="37" x2="20" y2="56" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span class="pin-item-label">Non-binary</span>
+        </div>
+
+      </div><!-- /.pin-strip -->
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ============================================================
+       Features
+  ============================================================ -->
+  <section class="features">
+    <div class="container">
+      <div class="section-header">
+        <h2>Built for the night</h2>
+        <p>Every feature is designed around how nightlife actually works.</p>
+      </div>
+
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <span class="feature-icon">📍</span>
+          <h3>Live map</h3>
+          <p>Nearby people appear as distinctive pins — shape and color reflect gender identity. No one is a generic dot.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">🌊</span>
+          <h3>NightPulse</h3>
+          <p>A real-time heatmap of activity intensity across your city's zones. Find where the night is actually happening before you go.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">✨</span>
+          <h3>Vibe signals</h3>
+          <p>Send a lightweight wave or spark — no pressure of a full message. Mutual vibes create a match automatically.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">💬</span>
+          <h3>Real-time chat</h3>
+          <p>Instant delivery, read receipts, and group channels. Messages arrive as fast as the network allows — no polling.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">🎥</span>
+          <h3>Video rooms</h3>
+          <p>Start a video or audio call directly in the app via LiveKit. No third-party apps, no links to copy.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">🔄</span>
+          <h3>Always on</h3>
+          <p>An adaptive background loop persists state across OS kills and heals from errors automatically — without user input.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Stats
+  ============================================================ -->
+  <div class="divider"></div>
+  <section class="stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-cell">
+          <div class="stat-number" style="color: var(--aqua);">5</div>
+          <div class="stat-label">Gender identities, all first-class</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-number" style="color: var(--orange);">&lt;1s</div>
+          <div class="stat-label">Real-time message delivery</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-number" style="color: var(--pink);">24/7</div>
+          <div class="stat-label">Continuous background operation</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ============================================================
+       Footer CTA
+  ============================================================ -->
+  <section class="footer-cta">
+    <div class="container">
+      <h2>Ready for a better night out?</h2>
+      <p>Join the waitlist and be among the first to access ANL.</p>
+
+      <!-- Waitlist form — footer -->
+      <div class="waitlist-wrap">
+        <form class="waitlist-form" id="waitlistFormB" novalidate>
+          <input
+            type="email"
+            class="waitlist-input"
+            id="emailB"
+            placeholder="your@email.com"
+            autocomplete="email"
+            required
+            aria-label="Email address"
+          />
+          <button type="submit" class="waitlist-btn">Get early access</button>
+        </form>
+        <div class="form-success" id="successB">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="7" stroke="#7fffd4" stroke-width="1.5"/>
+            <path d="M5 8l2 2 4-4" stroke="#7fffd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          You are on the list.
+        </div>
+        <p class="form-note">No spam. No third parties. Just the app when it is ready.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Footer
+  ============================================================ -->
+  <footer>
+    <div class="container">
+      <p>
+        &copy; 2026 All Night Long &nbsp;&middot;&nbsp;
+        <a href="#">Privacy</a> &nbsp;&middot;&nbsp;
+        <a href="#">Terms</a> &nbsp;&middot;&nbsp;
+        MIT License
+      </p>
+    </div>
+  </footer>
+
+  <script>
+  /* ============================================================
+     Floating pin field
+     Generates random SVG pins that drift upward across the hero
+     background, giving the impression of a live map in motion.
+  ============================================================ */
+  (function () {
+    'use strict';
+
+    var field = document.getElementById('pinField');
+    if (!field) return;
+
+    /* Color palette — matches CSS custom properties */
+    var colors = ['#7fffd4', '#ffa032', '#4488ff', '#f7a8c4', '#55cdfc', '#a855f7', '#ffd700'];
+
+    /* Gradient pairs for multi-color pins */
+    var gradients = [
+      ['#55cdfc', '#f7a8c4'],
+      ['#f7a8c4', '#55cdfc'],
+      ['#ffd700', '#a855f7'],
+    ];
+
+    /* Unique id counter for SVG gradient elements */
+    var gradId = 0;
+
+    /* ── Pin shape builders ── */
+    /* Each function accepts a color string and returns raw SVG markup. */
+
+    function buildCirclePin(color) {
+      return '<svg width="24" height="32" viewBox="0 0 24 32" fill="none">'
+        + '<circle cx="12" cy="12" r="10" fill="' + color + '" fill-opacity="0.22" stroke="' + color + '" stroke-width="2"/>'
+        + '<circle cx="12" cy="12" r="5"  fill="' + color + '"/>'
+        + '<line x1="12" y1="22" x2="12" y2="32" stroke="' + color + '" stroke-width="2" stroke-linecap="round"/>'
+        + '</svg>';
+    }
+
+    function buildSquarePin(color) {
+      return '<svg width="24" height="32" viewBox="0 0 24 32" fill="none">'
+        + '<rect x="1" y="1" width="22" height="22" rx="4" fill="' + color + '" fill-opacity="0.22" stroke="' + color + '" stroke-width="2"/>'
+        + '<rect x="8" y="8" width="8"  height="8"  rx="1.5" fill="' + color + '"/>'
+        + '<line x1="12" y1="23" x2="12" y2="32" stroke="' + color + '" stroke-width="2" stroke-linecap="round"/>'
+        + '</svg>';
+    }
+
+    function buildDiamondPin(c1, c2) {
+      var id = 'pg' + (gradId++);
+      return '<svg width="26" height="36" viewBox="0 0 26 36" fill="none">'
+        + '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="26" y2="26" gradientUnits="userSpaceOnUse">'
+        + '<stop offset="0%" stop-color="' + c1 + '"/>'
+        + '<stop offset="100%" stop-color="' + c2 + '"/>'
+        + '</linearGradient></defs>'
+        + '<polygon points="13,2 24,13 13,24 2,13" fill="url(#' + id + ')" fill-opacity="0.22" stroke="url(#' + id + ')" stroke-width="2"/>'
+        + '<polygon points="13,8 18,13 13,18 8,13" fill="url(#' + id + ')"/>'
+        + '<line x1="13" y1="24" x2="13" y2="36" stroke="' + c1 + '" stroke-width="2" stroke-linecap="round"/>'
+        + '</svg>';
+    }
+
+    function buildHexPin(c1, c2) {
+      var id = 'ph' + (gradId++);
+      return '<svg width="26" height="36" viewBox="0 0 26 36" fill="none">'
+        + '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="26" y2="26" gradientUnits="userSpaceOnUse">'
+        + '<stop offset="0%" stop-color="' + c1 + '"/>'
+        + '<stop offset="100%" stop-color="' + c2 + '"/>'
+        + '</linearGradient></defs>'
+        + '<polygon points="13,2 22,7 22,18 13,23 4,18 4,7" fill="url(#' + id + ')" fill-opacity="0.22" stroke="url(#' + id + ')" stroke-width="2"/>'
+        + '<polygon points="13,8 19,11 19,17 13,20 7,17 7,11" fill="url(#' + id + ')"/>'
+        + '<line x1="13" y1="23" x2="13" y2="36" stroke="' + c1 + '" stroke-width="2" stroke-linecap="round"/>'
+        + '</svg>';
+    }
+
+    /* ── Pick a random pin shape ── */
+    function buildRandomPin() {
+      var roll = Math.random();
+      if (roll < 0.28) {
+        return buildCirclePin(colors[Math.floor(Math.random() * colors.length)]);
+      } else if (roll < 0.52) {
+        return buildSquarePin(colors[Math.floor(Math.random() * colors.length)]);
+      } else if (roll < 0.76) {
+        var gd = gradients[Math.floor(Math.random() * gradients.length)];
+        return buildDiamondPin(gd[0], gd[1]);
+      } else {
+        var gh = gradients[Math.floor(Math.random() * gradients.length)];
+        return buildHexPin(gh[0], gh[1]);
+      }
+    }
+
+    /* ── Spawn one floating pin ── */
+    function spawnPin() {
+      var el = document.createElement('div');
+      el.className = 'pin-float';
+      el.innerHTML = buildRandomPin();
+
+      var duration = 14 + Math.random() * 18;   /* seconds */
+      var delay    = Math.random() * duration;   /* stagger so they don't all start at once */
+      var leftPct  = 2 + Math.random() * 95;
+      var startVh  = 60 + Math.random() * 55;
+      var scale    = 0.45 + Math.random() * 1.0;
+
+      el.style.cssText = [
+        'left: '              + leftPct  + 'vw',
+        'bottom: -'           + startVh  + 'vh',
+        'transform: scale('   + scale    + ')',
+        'animation-duration:' + duration + 's',
+        'animation-delay: -'  + delay    + 's',
+      ].join(';');
+
+      field.appendChild(el);
+
+      /* Remove after animation completes to avoid unbounded DOM growth */
+      el.addEventListener('animationend', function () { el.remove(); });
+    }
+
+    /* Seed the initial batch */
+    for (var i = 0; i < 22; i++) { spawnPin(); }
+
+    /* Keep a steady stream coming */
+    setInterval(spawnPin, 1600);
+  }());
+
+  /* ============================================================
+     Waitlist form handler
+     Visual confirmation only — no backend call in this build.
+     Wire up a real endpoint (Supabase, Mailchimp, etc.) here.
+  ============================================================ */
+  (function () {
+    'use strict';
+
+    function isValidEmail(v) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+    }
+
+    function bindWaitlist(formId, inputId, successId) {
+      var form    = document.getElementById(formId);
+      var input   = document.getElementById(inputId);
+      var success = document.getElementById(successId);
+      if (!form || !input || !success) return;
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        if (!isValidEmail(input.value)) {
+          /* Flash red border for bad input */
+          input.classList.add('error');
+          input.focus();
+          setTimeout(function () { input.classList.remove('error'); }, 1600);
+          return;
+        }
+
+        /* Show success — hide form */
+        form.style.display    = 'none';
+        success.style.display = 'flex';
+      });
+    }
+
+    bindWaitlist('waitlistFormA', 'emailA', 'successA');
+    bindWaitlist('waitlistFormB', 'emailB', 'successB');
+  }());
+  </script>
+</body>
+</html>

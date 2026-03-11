@@ -1,7 +1,7 @@
 // src/services/matching/MatchingEngine.ts — Weighted matching score calculator
 import type { MapUser, UserProfile, PresenceStatus } from '@types/index';
 import { distanceMi } from '@utils/geo';
-import { MATCH_WEIGHTS, PROXIMITY } from '@config/constants';
+import { MATCH_WEIGHTS } from '@config/constants';
 
 // ---------------------------------------------------------------------------
 // Score sub-component boundaries

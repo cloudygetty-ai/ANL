@@ -1,7 +1,7 @@
 // src/components/pins/PinMarker.tsx
 import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { COLORS } from '@config/constants';
 import type { MapUser } from '@types/index';
 

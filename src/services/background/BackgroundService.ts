@@ -85,6 +85,7 @@ export class BackgroundService {
     // configures the native module. If BackgroundFetch is unavailable
     // (e.g., in Expo Go), the system still runs — just without background wake.
     try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const BackgroundFetch = require('react-native-background-fetch');
       BackgroundFetch.default.configure(
         {

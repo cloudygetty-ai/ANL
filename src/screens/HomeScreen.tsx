@@ -1,6 +1,6 @@
 // src/screens/HomeScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSystemStore } from '@services/state/systemStore';
 import { getEventLoop } from '@core/SystemInitializer';
 

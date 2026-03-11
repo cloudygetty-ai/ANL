@@ -1,4 +1,5 @@
 // src/utils/Logger.test.ts
+/* eslint-disable no-console */
 import { logger } from './Logger';
 import type { LogEntry } from '../types/index';
 
@@ -6,9 +7,8 @@ import type { LogEntry } from '../types/index';
 // Global setup
 // ---------------------------------------------------------------------------
 
-// WHY: Logger.ts branches on __DEV__ for console output. Declaring it as true
-// here mirrors the React Native development environment and exercises that path.
-declare const __DEV__: boolean;
+// WHY: Logger.ts branches on __DEV__ for console output. Setting it true
+// mirrors the React Native development environment and exercises that path.
 (global as unknown as Record<string, unknown>).__DEV__ = true;
 
 // ---------------------------------------------------------------------------

@@ -87,16 +87,20 @@ class Logger {
     }
 
     // Output to console in development
+    // eslint-disable-next-line no-console
     if (__DEV__) {
       const prefix = `[${level}][${module}]`;
       switch (level) {
         case 'ERROR':
+          // eslint-disable-next-line no-console
           console.error(prefix, message, data ?? '');
           break;
         case 'WARN':
+          // eslint-disable-next-line no-console
           console.warn(prefix, message, data ?? '');
           break;
         default:
+          // eslint-disable-next-line no-console
           console.log(prefix, message, data ?? '');
       }
     }

@@ -38,10 +38,6 @@ function makeError(overrides: Partial<SystemError> = {}): SystemError {
   };
 }
 
-/** Build an array of n iteration time samples. */
-function makeSamples(values: number[]): void {
-  // Caller passes the monitor instance via closure — see each test.
-}
 
 // ---------------------------------------------------------------------------
 // Tests

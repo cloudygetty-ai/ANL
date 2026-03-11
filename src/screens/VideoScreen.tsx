@@ -137,7 +137,8 @@ const VideoScreen: React.FC<VideoScreenProps> = ({ route }) => {
   const localName = profile?.displayName ?? 'Guest';
 
   // Connection state
-  const [room, setRoom] = useState<VideoRoom | null>(null);
+  // WHY: _room holds the LiveKit room object once the SDK is wired in (TODO[NORMAL])
+  const [_room, setRoom] = useState<VideoRoom | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);

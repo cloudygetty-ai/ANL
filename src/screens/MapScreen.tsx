@@ -1,7 +1,7 @@
 // src/screens/MapScreen.tsx
 // Primary nearby-user map view. Tries to render a Mapbox map; falls back to
 // a simulated "ring view" when Mapbox is unavailable or errored.
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Dimensions,
   Pressable,
@@ -13,8 +13,8 @@ import {
 
 import { useMapStore } from '@services/state/mapStore';
 import { useLocation } from '@hooks/useLocation';
-import { bearing, distanceMi } from '@utils/geo';
-import { COLORS, PROXIMITY } from '@config/constants';
+import { bearing } from '@utils/geo';
+import { COLORS } from '@config/constants';
 import type { GenderFilter, MapUser } from '@types/index';
 
 import PinMarker from '@components/pins/PinMarker';

@@ -78,7 +78,7 @@ function MatchBar({ score }: { score: number }) {
         <View
           style={[
             styles.matchBarFill,
-            { width: `${score}%` as any, backgroundColor: barColor },
+            { width: `${score}%` as `${number}%`, backgroundColor: barColor },
           ]}
         />
       </View>
@@ -182,7 +182,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ user, onClose, onChat, onVide
           </View>
 
           {/* Bio */}
-          {user.vibeTags.length > 0 || true ? (
+          {user.vibeTags.length >= 0 ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>About</Text>
               {/* MapUser doesn't carry bio; show a friendly placeholder */}

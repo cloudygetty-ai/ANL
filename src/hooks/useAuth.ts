@@ -1,14 +1,15 @@
 // src/hooks/useAuth.ts
 import { useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseReady } from '@config/supabase';
 import { useUserStore } from '@services/state/userStore';
 import type { UserProfile } from '@types/index';
 
 export function useAuth() {
-  const { profile, isAuthed, setProfile, clearProfile, setAuthed } = useUserStore();
+  const { profile, isAuthed, setProfile, clearProfile } = useUserStore();
   const [isLoading, setIsLoading] = useState(true);
   // Keep session available to callers that need the raw JWT (e.g. video tokens)
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     // WHY: guard lets the app run without Supabase creds during local dev

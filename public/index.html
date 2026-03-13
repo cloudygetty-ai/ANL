@@ -210,9 +210,11 @@
       z-index: 2;
     }
 
-    .word-all   { color: var(--aqua); }
-    .word-night { color: var(--orange); }
-    .word-long  { color: var(--pink); }
+    .word-all   { color: #3d0066; }
+    .word-night { color: #3d0066; }
+    .word-long  { color: #3d0066; }
+
+    .word-first { color: #c0c0c0; }
 
     .hero-tagline {
       font-size: clamp(17px, 2.8vw, 22px);
@@ -521,7 +523,7 @@
   <!-- Navigation -->
   <nav>
     <div class="container">
-      <a href="#" class="nav-logo">ANL <span>All Night Long</span></a>
+      <a href="#" class="nav-logo" style="color:#c0c0c0;">ANL <span><span style="color:#c0c0c0;">A</span><span style="color:#6a1a99;">ll</span> <span style="color:#c0c0c0;">N</span><span style="color:#6a1a99;">ight</span> <span style="color:#c0c0c0;">L</span><span style="color:#6a1a99;">ong</span></span></a>
     </div>
   </nav>
 
@@ -544,7 +546,7 @@
     </div>
 
     <h1>
-      <span class="word-all">All</span>&nbsp;<span class="word-night">Night</span>&nbsp;<span class="word-long">Long</span>
+      <span class="word-all"><span class="word-first">A</span>ll</span>&nbsp;<span class="word-night"><span class="word-first">N</span>ight</span>&nbsp;<span class="word-long"><span class="word-first">L</span>ong</span>
     </h1>
 
     <p class="hero-tagline">

@@ -312,7 +312,7 @@
        Pin showcase strip
     ============================================================ */
     .pin-showcase {
-      padding: 64px 0;
+      padding: 80px 0 96px;
     }
 
     .pin-showcase-label {
@@ -322,14 +322,14 @@
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--text-muted);
-      margin-bottom: 40px;
+      margin-bottom: 56px;
     }
 
     .pin-strip {
       display: flex;
       align-items: flex-end;
       justify-content: center;
-      gap: clamp(28px, 6vw, 64px);
+      gap: clamp(32px, 7vw, 80px);
       flex-wrap: wrap;
     }
 
@@ -337,22 +337,32 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
+      gap: 18px;
     }
 
     .pin-item-label {
-      font-size: 12px;
+      font-size: 14px;
+      color: #e8e8f0;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .pin-item-shape {
+      font-size: 11px;
       color: var(--text-muted);
-      font-weight: 500;
+      font-weight: 400;
+      margin-top: -10px;
     }
 
     .pin-svg-wrap {
-      transition: transform 0.25s;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), filter 0.3s;
       cursor: default;
+      filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4));
     }
 
     .pin-svg-wrap:hover {
-      transform: scale(1.18) translateY(-6px);
+      transform: scale(1.2) translateY(-10px);
+      filter: drop-shadow(0 12px 28px rgba(0,0,0,0.5));
     }
 
     /* ============================================================
@@ -592,21 +602,21 @@
         <!-- Female: circle, pink -->
         <div class="pin-item">
           <div class="pin-svg-wrap">
-            <svg width="38" height="50" viewBox="0 0 38 50" fill="none" aria-label="Female pin">
+            <svg width="76" height="100" viewBox="0 0 38 50" fill="none" aria-label="Female pin">
               <circle cx="19" cy="19" r="17" fill="#f7a8c4" fill-opacity="0.16" stroke="#f7a8c4" stroke-width="2.5"/>
               <circle cx="19" cy="19" r="8" fill="#f7a8c4"/>
               <line x1="19" y1="36" x2="19" y2="50" stroke="#f7a8c4" stroke-width="2.5" stroke-linecap="round"/>
-              <!-- Outer glow ring -->
               <circle cx="19" cy="19" r="17" stroke="#f7a8c4" stroke-width="1" stroke-opacity="0.25"/>
             </svg>
           </div>
           <span class="pin-item-label">Female</span>
+          <span class="pin-item-shape">Circle</span>
         </div>
 
         <!-- Male: rounded square, blue -->
         <div class="pin-item">
           <div class="pin-svg-wrap">
-            <svg width="38" height="50" viewBox="0 0 38 50" fill="none" aria-label="Male pin">
+            <svg width="76" height="100" viewBox="0 0 38 50" fill="none" aria-label="Male pin">
               <rect x="2" y="2" width="34" height="34" rx="6" fill="#4488ff" fill-opacity="0.16" stroke="#4488ff" stroke-width="2.5"/>
               <rect x="13" y="13" width="12" height="12" rx="2" fill="#4488ff"/>
               <line x1="19" y1="36" x2="19" y2="50" stroke="#4488ff" stroke-width="2.5" stroke-linecap="round"/>
@@ -614,12 +624,13 @@
             </svg>
           </div>
           <span class="pin-item-label">Male</span>
+          <span class="pin-item-shape">Square</span>
         </div>
 
         <!-- Trans woman: diamond, sky-to-pink -->
         <div class="pin-item">
           <div class="pin-svg-wrap">
-            <svg width="40" height="54" viewBox="0 0 40 54" fill="none" aria-label="Trans woman pin">
+            <svg width="80" height="108" viewBox="0 0 40 54" fill="none" aria-label="Trans woman pin">
               <defs>
                 <linearGradient id="gtw" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
                   <stop offset="0%"   stop-color="#55cdfc"/>
@@ -633,12 +644,13 @@
             </svg>
           </div>
           <span class="pin-item-label">Trans woman</span>
+          <span class="pin-item-shape">Diamond · sky → pink</span>
         </div>
 
         <!-- Trans man: diamond, pink-to-sky -->
         <div class="pin-item">
           <div class="pin-svg-wrap">
-            <svg width="40" height="54" viewBox="0 0 40 54" fill="none" aria-label="Trans man pin">
+            <svg width="80" height="108" viewBox="0 0 40 54" fill="none" aria-label="Trans man pin">
               <defs>
                 <linearGradient id="gtm" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
                   <stop offset="0%"   stop-color="#f7a8c4"/>
@@ -652,12 +664,13 @@
             </svg>
           </div>
           <span class="pin-item-label">Trans man</span>
+          <span class="pin-item-shape">Diamond · pink → sky</span>
         </div>
 
         <!-- Non-binary: hexagon, gold-to-purple -->
         <div class="pin-item">
           <div class="pin-svg-wrap">
-            <svg width="40" height="56" viewBox="0 0 40 56" fill="none" aria-label="Non-binary pin">
+            <svg width="80" height="112" viewBox="0 0 40 56" fill="none" aria-label="Non-binary pin">
               <defs>
                 <linearGradient id="gnb" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
                   <stop offset="0%"   stop-color="#ffd700"/>
@@ -671,6 +684,7 @@
             </svg>
           </div>
           <span class="pin-item-label">Non-binary</span>
+          <span class="pin-item-shape">Hexagon · gold → purple</span>
         </div>
 
       </div><!-- /.pin-strip -->

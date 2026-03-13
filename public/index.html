@@ -504,6 +504,85 @@
     footer a:hover { color: var(--aqua); }
 
     /* ============================================================
+       Pin gallery — full 38-variant grid
+    ============================================================ */
+    .pin-gallery {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .pin-cat-section {
+      border-top: 1px solid var(--border);
+      padding-top: 28px;
+    }
+
+    .pin-cat-section:first-child {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .pin-cat-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .pin-cat-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .pin-cat-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .pin-cat-count {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-left: 2px;
+    }
+
+    .pin-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px 20px;
+      align-items: flex-end;
+    }
+
+    .pin-sm {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), filter 0.25s;
+      cursor: default;
+      filter: drop-shadow(0 3px 10px rgba(0,0,0,0.4));
+    }
+
+    .pin-sm:hover {
+      transform: scale(1.25) translateY(-8px);
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+    }
+
+    .pin-sm-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-align: center;
+      max-width: 62px;
+      line-height: 1.3;
+    }
+
+    /* ============================================================
        Responsive
     ============================================================ */
     @media (max-width: 600px) {
@@ -591,103 +670,499 @@
   </section>
 
   <!-- ============================================================
-       Pin showcase strip
+       Pin showcase — all 38 variants, 5 gender categories
   ============================================================ -->
   <div class="divider"></div>
   <section class="pin-showcase">
     <div class="container">
-      <p class="pin-showcase-label">Gender-inclusive pin system — every identity, first-class</p>
-      <div class="pin-strip">
+      <p class="pin-showcase-label">Gender-inclusive pin system — 38 variants, every identity first-class</p>
 
-        <!-- Female: circle, pink -->
-        <div class="pin-item">
-          <div class="pin-svg-wrap">
-            <svg width="76" height="100" viewBox="0 0 38 50" fill="none" aria-label="Female pin">
-              <circle cx="19" cy="19" r="17" fill="#f7a8c4" fill-opacity="0.16" stroke="#f7a8c4" stroke-width="2.5"/>
-              <circle cx="19" cy="19" r="8" fill="#f7a8c4"/>
-              <line x1="19" y1="36" x2="19" y2="50" stroke="#f7a8c4" stroke-width="2.5" stroke-linecap="round"/>
-              <circle cx="19" cy="19" r="17" stroke="#f7a8c4" stroke-width="1" stroke-opacity="0.25"/>
-            </svg>
+      <div class="pin-gallery">
+
+        <!-- ── Female — 11 variants ── -->
+        <div class="pin-cat-section">
+          <div class="pin-cat-header">
+            <span class="pin-cat-swatch" style="background:#f7a8c4;box-shadow:0 0 8px #f7a8c480;"></span>
+            <span class="pin-cat-title">Female</span>
+            <span class="pin-cat-count">11 variants</span>
           </div>
-          <span class="pin-item-label">Female</span>
-          <span class="pin-item-shape">Circle</span>
-        </div>
+          <div class="pin-row">
 
-        <!-- Male: rounded square, blue -->
-        <div class="pin-item">
-          <div class="pin-svg-wrap">
-            <svg width="76" height="100" viewBox="0 0 38 50" fill="none" aria-label="Male pin">
-              <rect x="2" y="2" width="34" height="34" rx="6" fill="#4488ff" fill-opacity="0.16" stroke="#4488ff" stroke-width="2.5"/>
-              <rect x="13" y="13" width="12" height="12" rx="2" fill="#4488ff"/>
-              <line x1="19" y1="36" x2="19" y2="50" stroke="#4488ff" stroke-width="2.5" stroke-linecap="round"/>
-              <rect x="2" y="2" width="34" height="34" rx="6" stroke="#4488ff" stroke-width="1" stroke-opacity="0.25"/>
-            </svg>
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Classic">
+                <path d="M12 1C7 1 3 5 3 10c0 6 9 19 9 19s9-13 9-19c0-5-4-9-9-9z" fill="#f7a8c4"/>
+                <circle cx="12" cy="10" r="5" fill="rgba(0,0,0,0.25)"/>
+              </svg>
+              <span class="pin-sm-label">Classic</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Peach">
+                <ellipse cx="12" cy="13" rx="9" ry="10" fill="#f7a8c4"/>
+                <path d="M9 4c2-3 4-3 6 0" fill="none" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+                <line x1="12" y1="23" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+                <path d="M9 4c1 0 3 1 3 3" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.2"/>
+              </svg>
+              <span class="pin-sm-label">Peach 🍑</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Heart Drop">
+                <path d="M12 26C11 25 3 18 3 11a6 6 0 0 1 9-4.5A6 6 0 0 1 21 11c0 7-8 14-9 15z" fill="#f7a8c4"/>
+              </svg>
+              <span class="pin-sm-label">Heart Drop</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Silhouette">
+                <circle cx="12" cy="6" r="4" fill="#f7a8c4"/>
+                <path d="M6 15c0-4 3-7 6-7s6 3 6 7v5H6z" fill="#f7a8c4"/>
+                <line x1="12" y1="26" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Silhouette</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Cartoon">
+                <circle cx="12" cy="12" r="10" fill="#f7a8c4" fill-opacity="0.18" stroke="#f7a8c4" stroke-width="1.8"/>
+                <circle cx="8.5" cy="11" r="1.5" fill="#f7a8c4"/>
+                <circle cx="15.5" cy="11" r="1.5" fill="#f7a8c4"/>
+                <path d="M9 15q3 2 6 0" fill="none" stroke="#f7a8c4" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="12" y1="22" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Cartoon</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Minimal">
+                <circle cx="12" cy="9" r="5" fill="#f7a8c4"/>
+                <line x1="12" y1="14" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Minimal</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Match Color">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="#f7a8c4" stroke-width="2.5"/>
+                <circle cx="12" cy="12" r="5" fill="#f7a8c4"/>
+                <line x1="12" y1="22" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Match Color</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Activity Size">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="#f7a8c4" stroke-width="2"/>
+                <circle cx="12" cy="12" r="6" fill="none" stroke="#f7a8c4" stroke-width="1.2" stroke-dasharray="3 2"/>
+                <circle cx="12" cy="12" r="2" fill="#f7a8c4"/>
+                <line x1="12" y1="22" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Activity Size</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Cluster Stack">
+                <circle cx="8"  cy="11" r="5" fill="#f7a8c4" fill-opacity="0.75"/>
+                <circle cx="16" cy="11" r="5" fill="#f7a8c4" fill-opacity="0.75"/>
+                <circle cx="12" cy="18" r="5" fill="#f7a8c4"/>
+                <line x1="12" y1="23" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Cluster Stack</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Jiggle">
+                <path d="M12 2C7 2 3 6 3 11c0 2 1 4 2 5 1 2 7 7 7 7s6-5 7-7c1-1 2-3 2-5 0-5-4-9-9-9z" fill="#f7a8c4" fill-opacity="0.2" stroke="#f7a8c4" stroke-width="1.8"/>
+                <path d="M8 9c1-1 3-1 4 0 1 1 3 1 4 0" fill="none" stroke="#f7a8c4" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="12" y1="25" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Jiggle</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Sitting + Shadow">
+                <ellipse cx="12" cy="27" rx="8" ry="2" fill="#f7a8c4" fill-opacity="0.2"/>
+                <circle cx="12" cy="8"  r="5" fill="#f7a8c4"/>
+                <rect x="5" y="17" width="14" height="8" rx="3" fill="#f7a8c4"/>
+                <line x1="8"  y1="25" x2="8"  y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+                <line x1="16" y1="25" x2="16" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Sitting</span>
+            </div>
+
           </div>
-          <span class="pin-item-label">Male</span>
-          <span class="pin-item-shape">Square</span>
-        </div>
+        </div><!-- /.female -->
 
-        <!-- Trans woman: diamond, sky-to-pink -->
-        <div class="pin-item">
-          <div class="pin-svg-wrap">
-            <svg width="80" height="108" viewBox="0 0 40 54" fill="none" aria-label="Trans woman pin">
-              <defs>
-                <linearGradient id="gtw" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%"   stop-color="#55cdfc"/>
-                  <stop offset="100%" stop-color="#f7a8c4"/>
-                </linearGradient>
-              </defs>
-              <polygon points="20,2 38,20 20,38 2,20" fill="url(#gtw)" fill-opacity="0.18" stroke="url(#gtw)" stroke-width="2.5"/>
-              <polygon points="20,12 28,20 20,28 12,20" fill="url(#gtw)"/>
-              <polygon points="20,2 38,20 20,38 2,20" stroke="url(#gtw)" stroke-width="1" stroke-opacity="0.25" fill="none"/>
-              <line x1="20" y1="38" x2="20" y2="54" stroke="#55cdfc" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
+        <!-- ── Male — 9 variants ── -->
+        <div class="pin-cat-section">
+          <div class="pin-cat-header">
+            <span class="pin-cat-swatch" style="background:#4488ff;box-shadow:0 0 8px #4488ff80;"></span>
+            <span class="pin-cat-title">Male</span>
+            <span class="pin-cat-count">9 variants</span>
           </div>
-          <span class="pin-item-label">Trans woman</span>
-          <span class="pin-item-shape">Diamond · sky → pink</span>
-        </div>
+          <div class="pin-row">
 
-        <!-- Trans man: diamond, pink-to-sky -->
-        <div class="pin-item">
-          <div class="pin-svg-wrap">
-            <svg width="80" height="108" viewBox="0 0 40 54" fill="none" aria-label="Trans man pin">
-              <defs>
-                <linearGradient id="gtm" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%"   stop-color="#f7a8c4"/>
-                  <stop offset="100%" stop-color="#55cdfc"/>
-                </linearGradient>
-              </defs>
-              <polygon points="20,2 38,20 20,38 2,20" fill="url(#gtm)" fill-opacity="0.18" stroke="url(#gtm)" stroke-width="2.5"/>
-              <polygon points="20,12 28,20 20,28 12,20" fill="url(#gtm)"/>
-              <polygon points="20,2 38,20 20,38 2,20" stroke="url(#gtm)" stroke-width="1" stroke-opacity="0.25" fill="none"/>
-              <line x1="20" y1="38" x2="20" y2="54" stroke="#f7a8c4" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Eggplant">
+                <rect x="8" y="2" width="8" height="20" rx="4" fill="#4488ff"/>
+                <line x1="12" y1="22" x2="12" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Eggplant 🍆</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Eggplant Drop">
+                <path d="M12 1C7 1 3 5 3 10c0 6 9 19 9 19s9-13 9-19c0-5-4-9-9-9z" fill="#4488ff"/>
+                <circle cx="12" cy="10" r="5" fill="rgba(0,0,0,0.22)"/>
+              </svg>
+              <span class="pin-sm-label">Drop</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Chest Pec">
+                <ellipse cx="8"  cy="11" rx="6" ry="8" fill="#4488ff"/>
+                <ellipse cx="16" cy="11" rx="6" ry="8" fill="#4488ff"/>
+                <line x1="12" y1="19" x2="12" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Chest/Pec</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Shield">
+                <path d="M12 1L22 5v13l-10 11L2 18V5z" fill="#4488ff" fill-opacity="0.2" stroke="#4488ff" stroke-width="2"/>
+                <path d="M12 6l6 3v8l-6 6-6-6V9z" fill="#4488ff"/>
+              </svg>
+              <span class="pin-sm-label">Shield</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Spade">
+                <path d="M12 2C8 6 2 9 5 15c1 3 4 4 6 2l-1 5h4l-1-5c2 2 5 1 6-2 3-6-3-9-7-13z" fill="#4488ff"/>
+                <line x1="12" y1="24" x2="12" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Spade ♠</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Flex Arm">
+                <path d="M3 20C3 20 2 14 5 10 7 7 9 8 11 6 13 4 15 1 18 3 21 5 21 10 18 12 16 13 14 12 12 14 10 16 10 20z" fill="#4488ff"/>
+                <line x1="11" y1="24" x2="11" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Flex 💪</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Diamond">
+                <polygon points="12,2 22,12 12,22 2,12" fill="#4488ff" fill-opacity="0.18" stroke="#4488ff" stroke-width="2"/>
+                <polygon points="12,8 18,12 12,16 6,12" fill="#4488ff"/>
+                <line x1="12" y1="22" x2="12" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Diamond</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Skull">
+                <ellipse cx="12" cy="11" rx="9" ry="9" fill="#4488ff" fill-opacity="0.18" stroke="#4488ff" stroke-width="1.8"/>
+                <circle cx="8.5"  cy="11" r="2.2" fill="#0a0a0f"/>
+                <circle cx="15.5" cy="11" r="2.2" fill="#0a0a0f"/>
+                <rect x="8" y="17" width="8" height="5" rx="1.5" fill="#4488ff" fill-opacity="0.4"/>
+                <line x1="12" y1="17" x2="12" y2="20" stroke="#0a0a0f" stroke-width="1"/>
+                <line x1="12" y1="22" x2="12" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Skull</span>
+            </div>
+
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Briefs">
+                <path d="M2 20V11Q12 1 22 11v9l-5-4-5 6-5-6z" fill="#4488ff" fill-opacity="0.2" stroke="#4488ff" stroke-width="1.8"/>
+                <line x1="12" y1="24" x2="12" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Briefs</span>
+            </div>
+
           </div>
-          <span class="pin-item-label">Trans man</span>
-          <span class="pin-item-shape">Diamond · pink → sky</span>
-        </div>
+        </div><!-- /.male -->
 
-        <!-- Non-binary: hexagon, gold-to-purple -->
-        <div class="pin-item">
-          <div class="pin-svg-wrap">
-            <svg width="80" height="112" viewBox="0 0 40 56" fill="none" aria-label="Non-binary pin">
-              <defs>
-                <linearGradient id="gnb" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%"   stop-color="#ffd700"/>
-                  <stop offset="100%" stop-color="#a855f7"/>
-                </linearGradient>
-              </defs>
-              <polygon points="20,2 35,10.5 35,28.5 20,37 5,28.5 5,10.5" fill="url(#gnb)" fill-opacity="0.18" stroke="url(#gnb)" stroke-width="2.5"/>
-              <polygon points="20,12 29,17 29,27 20,32 11,27 11,17" fill="url(#gnb)"/>
-              <polygon points="20,2 35,10.5 35,28.5 20,37 5,28.5 5,10.5" stroke="url(#gnb)" stroke-width="1" stroke-opacity="0.25" fill="none"/>
-              <line x1="20" y1="37" x2="20" y2="56" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
+        <!-- ── Trans Women — 9 variants · feminine/celestial shapes ── -->
+        <div class="pin-cat-section">
+          <div class="pin-cat-header">
+            <span class="pin-cat-swatch" style="background:linear-gradient(135deg,#55cdfc,#f7a8c4);box-shadow:0 0 8px #f7a8c480;"></span>
+            <span class="pin-cat-title">Trans Women</span>
+            <span class="pin-cat-count">9 variants · pink &amp; sky</span>
           </div>
-          <span class="pin-item-label">Non-binary</span>
-          <span class="pin-item-shape">Hexagon · gold → purple</span>
-        </div>
+          <div class="pin-row">
 
-      </div><!-- /.pin-strip -->
+            <!-- 1. Butterfly — WINGS: most visually distinct from TM -->
+            <div class="pin-sm">
+              <svg width="52" height="56" viewBox="0 0 26 30" fill="none" aria-label="Butterfly">
+                <path d="M13 17C10 14 3 12 3 6c0-3 3-5 6-2C11 7 13 14 13 17z" fill="#f7a8c4" fill-opacity="0.85"/>
+                <path d="M13 17c3-3 10-5 10-11 0-3-3-5-6-2C15 7 13 14 13 17z" fill="#55cdfc" fill-opacity="0.85"/>
+                <path d="M13 17C11 19 10 23 12 26" fill="none" stroke="#f7a8c4" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M13 17C15 19 14 23 12 26" fill="none" stroke="#55cdfc" stroke-width="1.2" stroke-linecap="round"/>
+                <line x1="13" y1="3" x2="13" y2="28" stroke="#c4a0b8" stroke-width="1" stroke-dasharray="2 2"/>
+                <path d="M11 3C12 1 13 1 13 3" fill="none" stroke="#55cdfc" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M15 3C14 1 13 1 13 3" fill="none" stroke="#f7a8c4" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Butterfly 🦋</span>
+            </div>
+
+            <!-- 2. Star ✨ — 5-point -->
+            <div class="pin-sm">
+              <svg width="48" height="56" viewBox="0 0 24 30" fill="none" aria-label="Star">
+                <defs>
+                  <linearGradient id="gstar" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#55cdfc"/>
+                    <stop offset="100%" stop-color="#f7a8c4"/>
+                  </linearGradient>
+                </defs>
+                <polygon points="12,2 14.4,9.8 22.5,9.8 15.9,14.9 18.3,22.7 12,18 5.7,22.7 8.1,14.9 1.5,9.8 9.6,9.8" fill="url(#gstar)"/>
+                <line x1="12" y1="23" x2="12" y2="30" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Star ✨</span>
+            </div>
+
+            <!-- 3. Phoenix — tall flame -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Phoenix">
+                <path d="M12 1C10 5 4 8 5 15c1 7 6 11 7 11s6-4 7-11C20 8 14 5 12 1z" fill="#f7a8c4"/>
+                <path d="M12 7C11 10 8 13 9 18c0 2 1 4 3 4s3-2 3-4c1-5-2-8-3-11z" fill="#55cdfc" fill-opacity="0.6"/>
+              </svg>
+              <span class="pin-sm-label">Phoenix 🔥</span>
+            </div>
+
+            <!-- 4. Trans Symbol ⚧ — circle + down cross + up-right arrow -->
+            <div class="pin-sm">
+              <svg width="48" height="56" viewBox="0 0 26 30" fill="none" aria-label="Trans Symbol">
+                <circle cx="12" cy="11" r="7" fill="none" stroke="#f7a8c4" stroke-width="2"/>
+                <circle cx="12" cy="11" r="3" fill="#f7a8c4"/>
+                <line x1="12" y1="18" x2="12" y2="27" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+                <line x1="8"  y1="23" x2="16" y2="23" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+                <line x1="17" y1="6"  x2="23" y2="1"  stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+                <polyline points="23,1 23,5 19,1" fill="none" stroke="#f7a8c4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="pin-sm-label">Trans Symbol ⚧</span>
+            </div>
+
+            <!-- 5. Hourglass — two triangles -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Hourglass">
+                <defs>
+                  <linearGradient id="ghg" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#55cdfc"/>
+                    <stop offset="100%" stop-color="#f7a8c4"/>
+                  </linearGradient>
+                </defs>
+                <polygon points="2,1 22,1 12,13" fill="url(#ghg)" fill-opacity="0.85"/>
+                <polygon points="2,25 22,25 12,13" fill="url(#ghg)" fill-opacity="0.6"/>
+                <line x1="2"  y1="1"  x2="22" y2="1"  stroke="url(#ghg)" stroke-width="1.5"/>
+                <line x1="2"  y1="25" x2="22" y2="25" stroke="url(#ghg)" stroke-width="1.5"/>
+                <line x1="12" y1="25" x2="12" y2="30" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Hourglass</span>
+            </div>
+
+            <!-- 6. Crescent Moon 🌙 -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Crescent Moon">
+                <path d="M18 4A9 9 0 1 0 18 22A7 7 0 1 1 18 4Z" fill="#f7a8c4"/>
+                <line x1="11" y1="22" x2="11" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Crescent 🌙</span>
+            </div>
+
+            <!-- 7. Venus ♀ — circle + cross below -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Venus">
+                <circle cx="12" cy="10" r="8" fill="none" stroke="#f7a8c4" stroke-width="2.2"/>
+                <circle cx="12" cy="10" r="3.5" fill="#f7a8c4"/>
+                <line x1="12" y1="18" x2="12" y2="27" stroke="#55cdfc" stroke-width="2.2" stroke-linecap="round"/>
+                <line x1="8"  y1="23" x2="16" y2="23" stroke="#55cdfc" stroke-width="2.2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Venus ♀</span>
+            </div>
+
+            <!-- 8. Lotus 🪷 — petal flower -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Lotus">
+                <path d="M12 20C8 20 4 16 6 10 8 6 12 10 12 14" fill="#f7a8c4" fill-opacity="0.9"/>
+                <path d="M12 20C16 20 20 16 18 10 16 6 12 10 12 14" fill="#55cdfc" fill-opacity="0.9"/>
+                <path d="M12 14C10 8 9 4 12 2 15 4 14 8 12 14z" fill="#f7a8c4"/>
+                <circle cx="12" cy="14" r="2.5" fill="white" fill-opacity="0.4"/>
+                <line x1="12" y1="21" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Lotus 🪷</span>
+            </div>
+
+            <!-- 9. Trans Flag Drop — teardrop with 5 stripes -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Trans Flag Drop">
+                <defs>
+                  <clipPath id="cptw">
+                    <path d="M12 1C7 1 3 5 3 10c0 6 9 19 9 19s9-13 9-19c0-5-4-9-9-9z"/>
+                  </clipPath>
+                </defs>
+                <rect x="0" y="0"  width="24" height="6"  fill="#55cdfc" clip-path="url(#cptw)"/>
+                <rect x="0" y="6"  width="24" height="6"  fill="#f7a8c4" clip-path="url(#cptw)"/>
+                <rect x="0" y="12" width="24" height="6"  fill="white"   clip-path="url(#cptw)"/>
+                <rect x="0" y="18" width="24" height="6"  fill="#f7a8c4" clip-path="url(#cptw)"/>
+                <rect x="0" y="24" width="24" height="6"  fill="#55cdfc" clip-path="url(#cptw)"/>
+                <path d="M12 1C7 1 3 5 3 10c0 6 9 19 9 19s9-13 9-19c0-5-4-9-9-9z" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+              </svg>
+              <span class="pin-sm-label">Trans Flag</span>
+            </div>
+
+          </div>
+        </div><!-- /.trans-women -->
+
+        <!-- ── Trans Men — 9 variants · masculine/angular shapes ── -->
+        <div class="pin-cat-section">
+          <div class="pin-cat-header">
+            <span class="pin-cat-swatch" style="background:linear-gradient(135deg,#55cdfc,#f7a8c4);box-shadow:0 0 8px #55cdfc80;"></span>
+            <span class="pin-cat-title">Trans Men</span>
+            <span class="pin-cat-count">9 variants · sky &amp; pink</span>
+          </div>
+          <div class="pin-row">
+
+            <!-- 1. Mars ♂ — circle + diagonal arrow -->
+            <div class="pin-sm">
+              <svg width="52" height="56" viewBox="0 0 28 30" fill="none" aria-label="Mars">
+                <circle cx="11" cy="18" r="9" fill="none" stroke="#55cdfc" stroke-width="2.2"/>
+                <circle cx="11" cy="18" r="4"  fill="#55cdfc"/>
+                <line x1="17" y1="12" x2="25" y2="4"  stroke="#55cdfc" stroke-width="2.2" stroke-linecap="round"/>
+                <polyline points="21,4 25,4 25,8" fill="none" stroke="#55cdfc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="11" y1="27" x2="11" y2="30" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Mars ♂</span>
+            </div>
+
+            <!-- 2. Lightning ⚡ — angular bolt (very distinct from TW) -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Lightning">
+                <polygon points="15,1 7,14 13,14 8,29 20,12 14,12" fill="#55cdfc"/>
+                <polygon points="15,1 7,14 13,14 8,29 20,12 14,12" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="0.8"/>
+              </svg>
+              <span class="pin-sm-label">Lightning ⚡</span>
+            </div>
+
+            <!-- 3. Fist ✊ — blocky rectangular -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Fist">
+                <rect x="4" y="10" width="16" height="13" rx="3" fill="#55cdfc"/>
+                <rect x="4" y="7"  width="4"  height="6"  rx="2" fill="#55cdfc"/>
+                <line x1="8"  y1="10" x2="8"  y2="7.5" stroke="rgba(0,0,0,0.2)" stroke-width="0.8"/>
+                <line x1="12" y1="10" x2="12" y2="6"   stroke="rgba(0,0,0,0.2)" stroke-width="0.8"/>
+                <line x1="16" y1="10" x2="16" y2="7.5" stroke="rgba(0,0,0,0.2)" stroke-width="0.8"/>
+                <rect x="8"  y="6" width="4" height="5" rx="2" fill="#55cdfc"/>
+                <rect x="12" y="5" width="4" height="6" rx="2" fill="#55cdfc"/>
+                <rect x="16" y="6" width="4" height="5" rx="2" fill="#55cdfc"/>
+                <line x1="10" y1="23" x2="10" y2="30" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Fist ✊</span>
+            </div>
+
+            <!-- 4. Warrior Shield — shield with cross -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Warrior Shield">
+                <path d="M12 1L22 5v13l-10 11L2 18V5z" fill="#55cdfc" fill-opacity="0.2" stroke="#55cdfc" stroke-width="2"/>
+                <line x1="12" y1="4"  x2="12" y2="27" stroke="#55cdfc" stroke-width="1.5"/>
+                <line x1="5"  y1="13" x2="19" y2="13" stroke="#55cdfc" stroke-width="1.5"/>
+              </svg>
+              <span class="pin-sm-label">Warrior Shield</span>
+            </div>
+
+            <!-- 5. Dragon 🐉 — angular head with horns -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Dragon">
+                <polygon points="12,3 22,7 22,18 16,22 8,22 2,18 2,7" fill="#55cdfc" fill-opacity="0.2" stroke="#55cdfc" stroke-width="2"/>
+                <polygon points="5,7  3,2  7,6"  fill="#55cdfc"/>
+                <polygon points="19,7 21,2 17,6" fill="#55cdfc"/>
+                <circle cx="8.5"  cy="13" r="2" fill="#55cdfc"/>
+                <circle cx="15.5" cy="13" r="2" fill="#55cdfc"/>
+                <path d="M9 18q3-2 6 0" fill="none" stroke="#55cdfc" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="12" y1="22" x2="12" y2="30" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Dragon 🐉</span>
+            </div>
+
+            <!-- 6. Flame 🔥 — sky-coded flame -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Flame">
+                <path d="M12 1C10 5 4 8 5 15c1 7 6 11 7 11s6-4 7-11C20 8 14 5 12 1z" fill="#55cdfc"/>
+                <path d="M12 7C11 10 8 13 9 18c0 2 1 4 3 4s3-2 3-4c1-5-2-8-3-11z" fill="#f7a8c4" fill-opacity="0.5"/>
+              </svg>
+              <span class="pin-sm-label">Flame 🔥</span>
+            </div>
+
+            <!-- 7. Trans Symbol ⚧ — sky primary -->
+            <div class="pin-sm">
+              <svg width="48" height="56" viewBox="0 0 26 30" fill="none" aria-label="Trans Symbol TM">
+                <circle cx="12" cy="11" r="7" fill="none" stroke="#55cdfc" stroke-width="2"/>
+                <circle cx="12" cy="11" r="3" fill="#55cdfc"/>
+                <line x1="12" y1="18" x2="12" y2="27" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+                <line x1="8"  y1="23" x2="16" y2="23" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+                <line x1="17" y1="6"  x2="23" y2="1"  stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+                <polyline points="23,1 23,5 19,1" fill="none" stroke="#55cdfc" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="pin-sm-label">Trans Symbol ⚧</span>
+            </div>
+
+            <!-- 8. Axe 🪓 — angular blade -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Axe">
+                <line x1="13" y1="5" x2="13" y2="29" stroke="#55cdfc" stroke-width="3" stroke-linecap="round"/>
+                <path d="M13 5C13 5 5 3 4 9c-1 6 9 7 9 7z" fill="#55cdfc"/>
+                <path d="M13 5C13 5 5 3 4 9c-1 6 9 7 9 7z" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="0.8"/>
+              </svg>
+              <span class="pin-sm-label">Axe 🪓</span>
+            </div>
+
+            <!-- 9. Trans Flag Drop — sky primary -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Trans Flag Drop TM">
+                <defs>
+                  <clipPath id="cptm">
+                    <path d="M12 1C7 1 3 5 3 10c0 6 9 19 9 19s9-13 9-19c0-5-4-9-9-9z"/>
+                  </clipPath>
+                </defs>
+                <rect x="0" y="0"  width="24" height="6"  fill="#f7a8c4" clip-path="url(#cptm)"/>
+                <rect x="0" y="6"  width="24" height="6"  fill="#55cdfc" clip-path="url(#cptm)"/>
+                <rect x="0" y="12" width="24" height="6"  fill="white"   clip-path="url(#cptm)"/>
+                <rect x="0" y="18" width="24" height="6"  fill="#55cdfc" clip-path="url(#cptm)"/>
+                <rect x="0" y="24" width="24" height="6"  fill="#f7a8c4" clip-path="url(#cptm)"/>
+                <path d="M12 1C7 1 3 5 3 10c0 6 9 19 9 19s9-13 9-19c0-5-4-9-9-9z" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+              </svg>
+              <span class="pin-sm-label">Trans Flag</span>
+            </div>
+
+          </div>
+        </div><!-- /.trans-men -->
+
+        <!-- ── Non-binary ── -->
+        <div class="pin-cat-section">
+          <div class="pin-cat-header">
+            <span class="pin-cat-swatch" style="background:linear-gradient(135deg,#ffd700,#a855f7);box-shadow:0 0 8px #a855f780;"></span>
+            <span class="pin-cat-title">Non-binary</span>
+            <span class="pin-cat-count">Hexagon · gold &amp; purple</span>
+          </div>
+          <div class="pin-row">
+            <div class="pin-sm">
+              <svg width="52" height="64" viewBox="0 0 26 32" fill="none" aria-label="Non-binary">
+                <defs>
+                  <linearGradient id="gnb2" x1="0" y1="0" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%"   stop-color="#ffd700"/>
+                    <stop offset="100%" stop-color="#a855f7"/>
+                  </linearGradient>
+                </defs>
+                <polygon points="13,1 23,6.5 23,19.5 13,25 3,19.5 3,6.5" fill="url(#gnb2)" fill-opacity="0.18" stroke="url(#gnb2)" stroke-width="2.2"/>
+                <polygon points="13,8 19,11.5 19,18 13,21.5 7,18 7,11.5" fill="url(#gnb2)"/>
+                <line x1="13" y1="25" x2="13" y2="32" stroke="#ffd700" stroke-width="2.2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Non-binary</span>
+            </div>
+          </div>
+        </div><!-- /.nonbinary -->
+
+      </div><!-- /.pin-gallery -->
     </div>
   </section>
   <div class="divider"></div>
@@ -752,8 +1227,8 @@
     <div class="container">
       <div class="stats-grid">
         <div class="stat-cell">
-          <div class="stat-number" style="color: var(--aqua);">5</div>
-          <div class="stat-label">Gender identities, all first-class</div>
+          <div class="stat-number" style="color: var(--aqua);">38+</div>
+          <div class="stat-label">Pin variants across 5 gender identities</div>
         </div>
         <div class="stat-cell">
           <div class="stat-number" style="color: var(--orange);">&lt;1s</div>

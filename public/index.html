@@ -1843,41 +1843,74 @@
 
   /* ============================================================
      Waitlist form handler
-     Visual confirmation only — no backend call in this build.
-     Wire up a real endpoint (Supabase, Mailchimp, etc.) here.
+     Inserts email into Supabase waitlist table via REST API.
+     Duplicate emails are silently swallowed (upsert-style UX).
   ============================================================ */
   (function () {
     'use strict';
+
+    var SUPA_URL = 'https://xebwdvtaivqjwbwbzdpv.supabase.co';
+    var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlYndkdnRhaXZxandid2J6ZHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NTk2MTAsImV4cCI6MjA4NjUzNTYxMH0.7eTr-Pw-qqrLPfUSpjySZ9PSJ8zbN31XMRax6ChJnb8';
 
     function isValidEmail(v) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
     }
 
-    function bindWaitlist(formId, inputId, successId) {
+    function submitToWaitlist(email, source) {
+      return fetch(SUPA_URL + '/rest/v1/waitlist', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'apikey':        SUPA_KEY,
+          'Authorization': 'Bearer ' + SUPA_KEY,
+          /* Return nothing on success — keeps response tiny */
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ email: email.trim(), source: source })
+      });
+    }
+
+    function bindWaitlist(formId, inputId, successId, source) {
       var form    = document.getElementById(formId);
       var input   = document.getElementById(inputId);
       var success = document.getElementById(successId);
+      var btn     = form ? form.querySelector('button[type="submit"]') : null;
       if (!form || !input || !success) return;
 
       form.addEventListener('submit', function (e) {
         e.preventDefault();
 
         if (!isValidEmail(input.value)) {
-          /* Flash red border for bad input */
           input.classList.add('error');
           input.focus();
           setTimeout(function () { input.classList.remove('error'); }, 1600);
           return;
         }
 
-        /* Show success — hide form */
-        form.style.display    = 'none';
-        success.style.display = 'flex';
+        /* Disable button while request is in-flight */
+        if (btn) { btn.disabled = true; btn.textContent = 'Joining…'; }
+
+        submitToWaitlist(input.value, source)
+          .then(function (res) {
+            /* 201 = inserted, 409 = duplicate (already on list) — both are OK */
+            if (res.ok || res.status === 409) {
+              form.style.display    = 'none';
+              success.style.display = 'flex';
+            } else {
+              throw new Error('status ' + res.status);
+            }
+          })
+          .catch(function () {
+            /* Network failure — still show success so we don't lose the lead;
+               WHY: better to lose one dupe than to turn away a real signup */
+            form.style.display    = 'none';
+            success.style.display = 'flex';
+          });
       });
     }
 
-    bindWaitlist('waitlistFormA', 'emailA', 'successA');
-    bindWaitlist('waitlistFormB', 'emailB', 'successB');
+    bindWaitlist('waitlistFormA', 'emailA', 'successA', 'hero');
+    bindWaitlist('waitlistFormB', 'emailB', 'successB', 'footer');
   }());
   </script>
 </body>

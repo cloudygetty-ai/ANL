@@ -1318,6 +1318,287 @@
   <div class="divider"></div>
 
   <!-- ============================================================
+       Pin photo placement — interactive style picker
+  ============================================================ -->
+  <section class="pin-showcase" style="padding: 80px 0 96px;">
+    <div class="container">
+      <p class="pin-showcase-label">Choose how your photo sits on the pin</p>
+
+      <!-- Toggle buttons -->
+      <div id="pinStyleToggle" style="display:flex;justify-content:center;gap:0;margin:0 auto 48px;max-width:400px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <button onclick="setPinStyle('frame')"  id="pst-frame"  style="flex:1;padding:11px 0;font-size:12px;font-weight:700;letter-spacing:0.06em;border:none;cursor:pointer;transition:background 0.2s,color 0.2s;background:#1e1e2e;color:var(--text-muted);">Frame</button>
+        <button onclick="setPinStyle('hybrid')" id="pst-hybrid" style="flex:1;padding:11px 0;font-size:12px;font-weight:700;letter-spacing:0.06em;border:none;cursor:pointer;transition:background 0.2s,color 0.2s;background:var(--purple);color:#fff;border-left:1px solid var(--border);border-right:1px solid var(--border);">Hybrid ✦</button>
+        <button onclick="setPinStyle('fill')"   id="pst-fill"   style="flex:1;padding:11px 0;font-size:12px;font-weight:700;letter-spacing:0.06em;border:none;cursor:pointer;transition:background 0.2s,color 0.2s;background:#1e1e2e;color:var(--text-muted);">Full Fill</button>
+      </div>
+
+      <!-- Pin stage — three panels, one visible at a time -->
+      <div style="position:relative;min-height:160px;">
+
+        <!-- FRAME panel -->
+        <div id="pins-frame" style="display:none;justify-content:center;align-items:flex-end;gap:32px;">
+          <!-- Frame: Classic (female) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs>
+                <radialGradient id="pfr1" cx="38%" cy="30%" r="65%"><stop offset="0%" stop-color="#ffdde8"/><stop offset="60%" stop-color="#f7a8c4"/><stop offset="100%" stop-color="#c4607a"/></radialGradient>
+                <clipPath id="cpfr1"><circle cx="22" cy="17" r="12"/></clipPath>
+              </defs>
+              <path d="M22 2C14 2 6 8 6 17c0 13 16 39 16 39s16-26 16-39C38 8 30 2 22 2z" fill="url(#pfr1)" stroke="#c46080" stroke-width="0.8"/>
+              <circle cx="22" cy="17" r="13" fill="white"/>
+              <circle cx="22" cy="17" r="12" fill="#1c1830" clip-path="url(#cpfr1)"/>
+              <path d="M4 34Q10 26 22 26Q34 26 40 34L44 44 0 44Z" fill="#3a5a7a" clip-path="url(#cpfr1)"/>
+              <rect x="20" y="25" width="4" height="6" rx="2" fill="#c9956c" clip-path="url(#cpfr1)"/>
+              <circle cx="22" cy="20" r="7" fill="#c9956c" clip-path="url(#cpfr1)"/>
+              <ellipse cx="22" cy="14" rx="7.5" ry="5.5" fill="#2a1505" clip-path="url(#cpfr1)"/>
+              <circle cx="19.5" cy="20" r="1.3" fill="#120800" clip-path="url(#cpfr1)"/>
+              <circle cx="24.5" cy="20" r="1.3" fill="#120800" clip-path="url(#cpfr1)"/>
+              <circle cx="20.1" cy="19.4" r="0.45" fill="white" clip-path="url(#cpfr1)"/>
+              <circle cx="25.1" cy="19.4" r="0.45" fill="white" clip-path="url(#cpfr1)"/>
+              <path d="M19.5 23.5q2.5 1.8 5 0" fill="none" stroke="#7a3a1a" stroke-width="0.85" stroke-linecap="round" clip-path="url(#cpfr1)"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Classic</span>
+          </div>
+          <!-- Frame: Skull (male) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs>
+                <radialGradient id="pfr2" cx="40%" cy="28%" r="62%"><stop offset="0%" stop-color="#c0d8ff"/><stop offset="58%" stop-color="#5588ee"/><stop offset="100%" stop-color="#1422aa"/></radialGradient>
+                <clipPath id="cpfr2"><circle cx="22" cy="14" r="11"/></clipPath>
+              </defs>
+              <path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z" fill="url(#pfr2)" stroke="#1422aa" stroke-width="0.7"/>
+              <rect x="12" y="25" width="20" height="9" rx="3" fill="#5588ee" fill-opacity="0.85" stroke="#1422aa" stroke-width="0.6"/>
+              <line x1="16" y1="25" x2="16" y2="34" stroke="#1422aa" stroke-width="0.7" stroke-opacity="0.5"/>
+              <line x1="22" y1="25" x2="22" y2="34" stroke="#1422aa" stroke-width="0.7" stroke-opacity="0.5"/>
+              <line x1="28" y1="25" x2="28" y2="34" stroke="#1422aa" stroke-width="0.7" stroke-opacity="0.5"/>
+              <line x1="22" y1="34" x2="22" y2="57" stroke="#4488ff" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="22" cy="14" r="12" fill="white"/>
+              <circle cx="22" cy="14" r="11" fill="#1c1830" clip-path="url(#cpfr2)"/>
+              <ellipse cx="22" cy="28" rx="13" ry="8" fill="#3a5a7a" clip-path="url(#cpfr2)"/>
+              <rect x="20" y="23" width="4" height="5" rx="2" fill="#c9956c" clip-path="url(#cpfr2)"/>
+              <circle cx="22" cy="17" r="7" fill="#c9956c" clip-path="url(#cpfr2)"/>
+              <ellipse cx="22" cy="11" rx="7.5" ry="5" fill="#2a1505" clip-path="url(#cpfr2)"/>
+              <circle cx="19.5" cy="17" r="1.3" fill="#120800" clip-path="url(#cpfr2)"/>
+              <circle cx="24.5" cy="17" r="1.3" fill="#120800" clip-path="url(#cpfr2)"/>
+              <circle cx="20.1" cy="16.4" r="0.45" fill="white" clip-path="url(#cpfr2)"/>
+              <circle cx="25.1" cy="16.4" r="0.45" fill="white" clip-path="url(#cpfr2)"/>
+              <path d="M19.5 20.5q2.5 1.8 5 0" fill="none" stroke="#7a3a1a" stroke-width="0.85" stroke-linecap="round" clip-path="url(#cpfr2)"/>
+              <ellipse cx="17.5" cy="13" rx="4" ry="4.5" fill="#080a24" fill-opacity="0.72"/>
+              <ellipse cx="26.5" cy="13" rx="4" ry="4.5" fill="#080a24" fill-opacity="0.72"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Skull</span>
+          </div>
+          <!-- Frame: Butterfly (TW) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="80" height="104" viewBox="0 0 48 58" fill="none">
+              <defs><clipPath id="cpfr3"><circle cx="24" cy="22" r="10"/></clipPath></defs>
+              <path d="M24 26C20 22 9 19 9 10c0-5 5-8 11-3C22 9 24 22 24 26z" fill="#f7a8c4" fill-opacity="0.88"/>
+              <path d="M24 26c4-4 15-7 15-16 0-5-5-8-11-3C26 9 24 22 24 26z" fill="#55cdfc" fill-opacity="0.88"/>
+              <path d="M24 26C22 29 18 32 21 36" fill="none" stroke="#f7a8c4" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M24 26C26 29 28 32 27 36" fill="none" stroke="#55cdfc" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="24" y1="4" x2="24" y2="36" stroke="#c4a0b8" stroke-width="0.9" stroke-dasharray="2 2"/>
+              <path d="M22 5C23 2 24 2 24 4" fill="none" stroke="#55cdfc" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M26 5C25 2 24 2 24 4" fill="none" stroke="#f7a8c4" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="24" y1="36" x2="24" y2="56" stroke="#f7a8c4" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="24" cy="22" r="11" fill="white"/>
+              <circle cx="24" cy="22" r="10" fill="#1c1830" clip-path="url(#cpfr3)"/>
+              <ellipse cx="24" cy="34" rx="12" ry="8" fill="#3a5a7a" clip-path="url(#cpfr3)"/>
+              <rect x="22" y="29" width="4" height="5" rx="2" fill="#c9956c" clip-path="url(#cpfr3)"/>
+              <circle cx="24" cy="24" r="6.5" fill="#c9956c" clip-path="url(#cpfr3)"/>
+              <ellipse cx="24" cy="18.5" rx="7" ry="5" fill="#2a1505" clip-path="url(#cpfr3)"/>
+              <circle cx="21.5" cy="24" r="1.2" fill="#120800" clip-path="url(#cpfr3)"/>
+              <circle cx="26.5" cy="24" r="1.2" fill="#120800" clip-path="url(#cpfr3)"/>
+              <circle cx="22.1" cy="23.4" r="0.4" fill="white" clip-path="url(#cpfr3)"/>
+              <circle cx="27.1" cy="23.4" r="0.4" fill="white" clip-path="url(#cpfr3)"/>
+              <path d="M21.5 27q2.5 1.8 5 0" fill="none" stroke="#7a3a1a" stroke-width="0.8" stroke-linecap="round" clip-path="url(#cpfr3)"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Butterfly</span>
+          </div>
+        </div>
+
+        <!-- HYBRID panel (default visible) -->
+        <div id="pins-hybrid" style="display:flex;justify-content:center;align-items:flex-end;gap:32px;">
+          <!-- Hybrid: Classic (female) — big photo circle, colored pointed tip below -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs>
+                <radialGradient id="phb1" cx="38%" cy="30%" r="65%"><stop offset="0%" stop-color="#ffdde8"/><stop offset="60%" stop-color="#f7a8c4"/><stop offset="100%" stop-color="#c4607a"/></radialGradient>
+                <clipPath id="cphb1"><circle cx="22" cy="15" r="15"/></clipPath>
+              </defs>
+              <!-- Identity color fills entire teardrop (tip always visible) -->
+              <path d="M22 2C14 2 6 8 6 17c0 13 16 39 16 39s16-26 16-39C38 8 30 2 22 2z" fill="url(#phb1)" stroke="#c46080" stroke-width="0.8"/>
+              <!-- Large photo punches through the head -->
+              <circle cx="22" cy="15" r="15.5" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+              <circle cx="22" cy="15" r="15" fill="#1c1830" clip-path="url(#cphb1)"/>
+              <path d="M2 38Q8 28 22 28Q36 28 42 38L44 56 0 56Z" fill="#3a5a7a" clip-path="url(#cphb1)"/>
+              <rect x="20" y="27" width="4" height="7" rx="2" fill="#c9956c" clip-path="url(#cphb1)"/>
+              <circle cx="22" cy="20" r="9" fill="#c9956c" clip-path="url(#cphb1)"/>
+              <ellipse cx="22" cy="12" rx="9.5" ry="7" fill="#2a1505" clip-path="url(#cphb1)"/>
+              <circle cx="19" cy="20" r="1.6" fill="#120800" clip-path="url(#cphb1)"/>
+              <circle cx="25" cy="20" r="1.6" fill="#120800" clip-path="url(#cphb1)"/>
+              <circle cx="19.7" cy="19.3" r="0.55" fill="white" clip-path="url(#cphb1)"/>
+              <circle cx="25.7" cy="19.3" r="0.55" fill="white" clip-path="url(#cphb1)"/>
+              <path d="M19 24q3 2.2 6 0" fill="none" stroke="#7a3a1a" stroke-width="0.9" stroke-linecap="round" clip-path="url(#cphb1)"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Classic</span>
+          </div>
+          <!-- Hybrid: Skull (male) — photo fills dome, jaw+eye sockets stay identity blue -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs>
+                <radialGradient id="phb2" cx="40%" cy="28%" r="62%"><stop offset="0%" stop-color="#c0d8ff"/><stop offset="58%" stop-color="#5588ee"/><stop offset="100%" stop-color="#1422aa"/></radialGradient>
+                <clipPath id="cphb2"><path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z"/></clipPath>
+              </defs>
+              <!-- Identity: jaw + needle (always blue) -->
+              <rect x="12" y="25" width="20" height="9" rx="3" fill="url(#phb2)" stroke="#1422aa" stroke-width="0.7"/>
+              <line x1="16" y1="25" x2="16" y2="34" stroke="#1422aa" stroke-width="0.8" stroke-opacity="0.55"/>
+              <line x1="22" y1="25" x2="22" y2="34" stroke="#1422aa" stroke-width="0.8" stroke-opacity="0.55"/>
+              <line x1="28" y1="25" x2="28" y2="34" stroke="#1422aa" stroke-width="0.8" stroke-opacity="0.55"/>
+              <line x1="22" y1="34" x2="22" y2="57" stroke="#4488ff" stroke-width="2.5" stroke-linecap="round"/>
+              <!-- Photo fills skull dome -->
+              <path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z" fill="#1c1830"/>
+              <ellipse cx="22" cy="36" rx="17" ry="12" fill="#3a5a7a" clip-path="url(#cphb2)"/>
+              <rect x="20" y="25" width="4" height="8" rx="2" fill="#c9956c" clip-path="url(#cphb2)"/>
+              <circle cx="22" cy="14" r="10" fill="#c9956c" clip-path="url(#cphb2)"/>
+              <ellipse cx="22" cy="5.5" rx="10.5" ry="7.5" fill="#2a1505" clip-path="url(#cphb2)"/>
+              <circle cx="18.5" cy="14" r="1.5" fill="#120800" clip-path="url(#cphb2)"/>
+              <circle cx="25.5" cy="14" r="1.5" fill="#120800" clip-path="url(#cphb2)"/>
+              <circle cx="19.1" cy="13.4" r="0.5" fill="white" clip-path="url(#cphb2)"/>
+              <circle cx="26.1" cy="13.4" r="0.5" fill="white" clip-path="url(#cphb2)"/>
+              <path d="M18.5 18q3.5 2 7 0" fill="none" stroke="#7a3a1a" stroke-width="0.9" stroke-linecap="round" clip-path="url(#cphb2)"/>
+              <!-- Identity dome border -->
+              <path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z" fill="none" stroke="#4488ff" stroke-width="1.5"/>
+              <!-- Eye socket overlays (identity bleeds through) -->
+              <ellipse cx="17.5" cy="12" rx="4.5" ry="5.5" fill="#080a24" fill-opacity="0.68"/>
+              <ellipse cx="26.5" cy="12" rx="4.5" ry="5.5" fill="#080a24" fill-opacity="0.68"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Skull</span>
+          </div>
+          <!-- Hybrid: Butterfly (TW) — photo circle at body center, full wings as identity color -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="80" height="104" viewBox="0 0 48 58" fill="none">
+              <defs><clipPath id="cphb3"><circle cx="24" cy="18" r="13"/></clipPath></defs>
+              <!-- Full wings: identity color always visible -->
+              <path d="M24 26C20 22 9 19 9 10c0-5 5-8 11-3C22 9 24 22 24 26z" fill="#f7a8c4" fill-opacity="0.88"/>
+              <path d="M24 26c4-4 15-7 15-16 0-5-5-8-11-3C26 9 24 22 24 26z" fill="#55cdfc" fill-opacity="0.88"/>
+              <path d="M24 26C22 29 18 32 21 36" fill="none" stroke="#f7a8c4" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M24 26C26 29 28 32 27 36" fill="none" stroke="#55cdfc" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="24" y1="4" x2="24" y2="36" stroke="#c4a0b8" stroke-width="0.9" stroke-dasharray="2 2"/>
+              <path d="M22 5C23 2 24 2 24 4" fill="none" stroke="#55cdfc" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M26 5C25 2 24 2 24 4" fill="none" stroke="#f7a8c4" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="24" y1="36" x2="24" y2="56" stroke="#f7a8c4" stroke-width="2.5" stroke-linecap="round"/>
+              <!-- Large photo circle punches over wing center -->
+              <circle cx="24" cy="18" r="13.5" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
+              <circle cx="24" cy="18" r="13" fill="#1c1830" clip-path="url(#cphb3)"/>
+              <ellipse cx="24" cy="34" rx="14" ry="9" fill="#3a5a7a" clip-path="url(#cphb3)"/>
+              <rect x="22" y="29" width="4" height="6" rx="2" fill="#c9956c" clip-path="url(#cphb3)"/>
+              <circle cx="24" cy="21" r="8.5" fill="#c9956c" clip-path="url(#cphb3)"/>
+              <ellipse cx="24" cy="13.5" rx="9" ry="7" fill="#2a1505" clip-path="url(#cphb3)"/>
+              <circle cx="21" cy="21" r="1.5" fill="#120800" clip-path="url(#cphb3)"/>
+              <circle cx="27" cy="21" r="1.5" fill="#120800" clip-path="url(#cphb3)"/>
+              <circle cx="21.6" cy="20.4" r="0.5" fill="white" clip-path="url(#cphb3)"/>
+              <circle cx="27.6" cy="20.4" r="0.5" fill="white" clip-path="url(#cphb3)"/>
+              <path d="M21 25q3 2 6 0" fill="none" stroke="#7a3a1a" stroke-width="0.85" stroke-linecap="round" clip-path="url(#cphb3)"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Butterfly</span>
+          </div>
+        </div>
+
+        <!-- FILL panel -->
+        <div id="pins-fill" style="display:none;justify-content:center;align-items:flex-end;gap:32px;">
+          <!-- Fill: Classic (female) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs><clipPath id="cpfl1"><path d="M22 2C14 2 6 8 6 17c0 13 16 39 16 39s16-26 16-39C38 8 30 2 22 2z"/></clipPath></defs>
+              <path d="M22 2C14 2 6 8 6 17c0 13 16 39 16 39s16-26 16-39C38 8 30 2 22 2z" fill="#1c1830"/>
+              <path d="M2 42Q8 32 22 32Q36 32 42 42 44 52 44 58 0 58 0 58z" fill="#3a5a7a" clip-path="url(#cpfl1)"/>
+              <rect x="20" y="31" width="4" height="8" rx="2" fill="#c9956c" clip-path="url(#cpfl1)"/>
+              <circle cx="22" cy="24" r="11" fill="#c9956c" clip-path="url(#cpfl1)"/>
+              <ellipse cx="22" cy="14.5" rx="11.5" ry="9" fill="#2a1505" clip-path="url(#cpfl1)"/>
+              <circle cx="18.5" cy="24" r="1.7" fill="#120800" clip-path="url(#cpfl1)"/>
+              <circle cx="25.5" cy="24" r="1.7" fill="#120800" clip-path="url(#cpfl1)"/>
+              <circle cx="19.2" cy="23.3" r="0.6" fill="white" clip-path="url(#cpfl1)"/>
+              <circle cx="26.2" cy="23.3" r="0.6" fill="white" clip-path="url(#cpfl1)"/>
+              <path d="M18.5 28q3.5 2.2 7 0" fill="none" stroke="#7a3a1a" stroke-width="1" stroke-linecap="round" clip-path="url(#cpfl1)"/>
+              <path d="M22 2C14 2 6 8 6 17c0 13 16 39 16 39s16-26 16-39C38 8 30 2 22 2z" fill="none" stroke="#f7a8c4" stroke-width="2.5"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Classic</span>
+          </div>
+          <!-- Fill: Skull (male) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs><clipPath id="cpfl2"><path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z"/></clipPath></defs>
+              <path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z" fill="#1c1830"/>
+              <ellipse cx="22" cy="38" rx="17" ry="12" fill="#3a5a7a" clip-path="url(#cpfl2)"/>
+              <rect x="20" y="26" width="4" height="8" rx="2" fill="#c9956c" clip-path="url(#cpfl2)"/>
+              <circle cx="22" cy="14" r="10" fill="#c9956c" clip-path="url(#cpfl2)"/>
+              <ellipse cx="22" cy="5.5" rx="10.5" ry="7.5" fill="#2a1505" clip-path="url(#cpfl2)"/>
+              <circle cx="18.5" cy="14" r="1.5" fill="#120800" clip-path="url(#cpfl2)"/>
+              <circle cx="25.5" cy="14" r="1.5" fill="#120800" clip-path="url(#cpfl2)"/>
+              <circle cx="19.1" cy="13.4" r="0.5" fill="white" clip-path="url(#cpfl2)"/>
+              <circle cx="26.1" cy="13.4" r="0.5" fill="white" clip-path="url(#cpfl2)"/>
+              <path d="M18.5 18q3.5 2 7 0" fill="none" stroke="#7a3a1a" stroke-width="0.9" stroke-linecap="round" clip-path="url(#cpfl2)"/>
+              <path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z" fill="none" stroke="#4488ff" stroke-width="2.5"/>
+              <rect x="12" y="28" width="20" height="9" rx="3" fill="#1c1830" stroke="#4488ff" stroke-width="1.5"/>
+              <line x1="16" y1="28" x2="16" y2="37" stroke="#4488ff" stroke-width="0.8" stroke-opacity="0.55"/>
+              <line x1="22" y1="28" x2="22" y2="37" stroke="#4488ff" stroke-width="0.8" stroke-opacity="0.55"/>
+              <line x1="28" y1="28" x2="28" y2="37" stroke="#4488ff" stroke-width="0.8" stroke-opacity="0.55"/>
+              <ellipse cx="17.5" cy="12" rx="4.5" ry="5.5" fill="#080a24" fill-opacity="0.68"/>
+              <ellipse cx="26.5" cy="12" rx="4.5" ry="5.5" fill="#080a24" fill-opacity="0.68"/>
+              <line x1="22" y1="37" x2="22" y2="57" stroke="#4488ff" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Skull</span>
+          </div>
+          <!-- Fill: Shield (male) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs><clipPath id="cpfl3"><path d="M22 2L40 8V26L22 46L4 26V8Z"/></clipPath></defs>
+              <path d="M22 2L40 8V26L22 46L4 26V8Z" fill="#1c1830"/>
+              <path d="M2 36Q8 28 22 28Q36 28 42 36L44 50 0 50Z" fill="#3a5a7a" clip-path="url(#cpfl3)"/>
+              <rect x="20" y="27" width="4" height="7" rx="2" fill="#c9956c" clip-path="url(#cpfl3)"/>
+              <circle cx="22" cy="20" r="10" fill="#c9956c" clip-path="url(#cpfl3)"/>
+              <ellipse cx="22" cy="11.5" rx="10.5" ry="7.5" fill="#2a1505" clip-path="url(#cpfl3)"/>
+              <circle cx="18.5" cy="20" r="1.6" fill="#120800" clip-path="url(#cpfl3)"/>
+              <circle cx="25.5" cy="20" r="1.6" fill="#120800" clip-path="url(#cpfl3)"/>
+              <circle cx="19.1" cy="19.3" r="0.55" fill="white" clip-path="url(#cpfl3)"/>
+              <circle cx="26.1" cy="19.3" r="0.55" fill="white" clip-path="url(#cpfl3)"/>
+              <path d="M18.5 24q3.5 2.2 7 0" fill="none" stroke="#7a3a1a" stroke-width="0.9" stroke-linecap="round" clip-path="url(#cpfl3)"/>
+              <path d="M22 2L40 8V26L22 46L4 26V8Z" fill="none" stroke="#4488ff" stroke-width="2.5"/>
+              <line x1="22" y1="46" x2="22" y2="57" stroke="#4488ff" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Shield</span>
+          </div>
+        </div>
+
+      </div><!-- /pin stage -->
+
+      <!-- Description (updates with selection) -->
+      <p id="pinStyleDesc" style="text-align:center;font-size:13px;color:var(--text-muted);max-width:440px;margin:32px auto 0;line-height:1.8;">
+        Identity color fills the pointed tip — always readable on the map.<br>Photo fills the head — face-forward when you zoom in.
+      </p>
+
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <script>
+    function setPinStyle(style) {
+      ['frame','hybrid','fill'].forEach(function(s) {
+        document.getElementById('pins-' + s).style.display = s === style ? 'flex' : 'none';
+        var btn = document.getElementById('pst-' + s);
+        btn.style.background = s === style ? 'var(--purple)' : '#1e1e2e';
+        btn.style.color      = s === style ? '#fff' : 'var(--text-muted)';
+      });
+      var descs = {
+        frame:  'Identity color fills the entire pin — vivid at any zoom.<br>Your photo sits in a circle in the center.',
+        hybrid: 'Identity color fills the pointed tip — always readable on the map.<br>Photo fills the head — face-forward when you zoom in.',
+        fill:   'Your photo fills the whole pin shape.<br>The identity silhouette and border color tell the story.'
+      };
+      document.getElementById('pinStyleDesc').innerHTML = descs[style];
+    }
+    setPinStyle('hybrid');
+  </script>
+
+  <!-- ============================================================
        Features
   ============================================================ -->
   <section class="features">

@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>All Night Long — Nightlife, Redefined</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
   <meta name="description" content="ANL connects you to the people, places, and pulse of your city's nightlife. Live, real-time, and radically inclusive." />
   <style>
     /* ============================================================
@@ -83,9 +86,10 @@
     }
 
     .nav-logo {
+      font-family: 'Permanent Marker', cursive;
       font-size: 17px;
-      font-weight: 800;
-      letter-spacing: -0.3px;
+      font-weight: 400;
+      letter-spacing: 1px;
       color: var(--aqua);
       text-decoration: none;
     }
@@ -202,19 +206,27 @@
     }
 
     .hero h1 {
+      font-family: 'Permanent Marker', cursive;
       font-size: clamp(52px, 10vw, 96px);
-      font-weight: 900;
-      letter-spacing: -3px;
+      font-weight: 400;
+      letter-spacing: 2px;
       margin-bottom: 20px;
       position: relative;
       z-index: 2;
+      text-shadow:
+        3px 3px 0 rgba(0,0,0,0.5),
+        -1px -1px 0 rgba(168,85,247,0.15);
+      filter: drop-shadow(0 0 24px rgba(168,85,247,0.35));
     }
 
-    .word-all   { color: #3d0066; }
-    .word-night { color: #3d0066; }
-    .word-long  { color: #3d0066; }
+    .word-all   { color: #c084fc; }
+    .word-night { color: #f472b6; }
+    .word-long  { color: #67e8f9; }
 
-    .word-first { color: #c0c0c0; }
+    .word-first {
+      color: #ffffff;
+      font-size: 1.05em;
+    }
 
     .hero-tagline {
       font-size: clamp(17px, 2.8vw, 22px);

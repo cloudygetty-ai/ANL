@@ -1,2 +1,3 @@
-// src/services/location/index.ts — Barrel export for location service
-export { LocationService } from './LocationService';
+// src/services/location/index.ts
+export { LocationService, locationService, LOCATION_TASK } from './LocationService';
+export type { LocationUpdate } from './LocationService';

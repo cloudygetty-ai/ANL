@@ -1,2 +1,3 @@
-// src/services/auth/index.ts — Barrel export for auth service
-export { AuthService } from './AuthService';
+// src/services/auth/index.ts
+export { AuthService, authService } from './AuthService';
+export type { AuthSession, OTPResult } from './AuthService';

@@ -1,126 +1,106 @@
-// src/services/matching/MatchingEngine.ts — Weighted matching score calculator
-import type { MapUser, UserProfile, PresenceStatus } from '@types/index';
-import { distanceMi } from '@utils/geo';
-import { MATCH_WEIGHTS } from '@config/constants';
+// src/services/matching/MatchingEngine.ts
+// Weighted compatibility score: distance, interests, age, activity, premium
+import type { UserProfile } from '@types/index';
+import { distanceM } from '@utils/geo';
 
-// ---------------------------------------------------------------------------
-// Score sub-component boundaries
-// ---------------------------------------------------------------------------
+export interface MatchWeights {
+  distance:  number; // 0-1
+  interests: number;
+  age:       number;
+  activity:  number;
+  premium:   number;
+}
 
-// Maximum distance considered for proximity scoring (beyond this = 0 pts)
-const MAX_DISTANCE_MI = 25;
-
-// Maximum age difference considered for age-diff scoring (beyond this = 0 pts)
-const MAX_AGE_DIFF = 20;
-
-// Presence score look-up: higher means user is more immediately reachable
-const PRESENCE_SCORES: Record<PresenceStatus, number> = {
-  online: 1.0,
-  away: 0.5,
-  offline: 0.0,
+const DEFAULT_WEIGHTS: MatchWeights = {
+  distance:  0.35,
+  interests: 0.25,
+  age:       0.15,
+  activity:  0.20,
+  premium:   0.05,
 };
 
+export interface MatchResult {
+  userId: string;
+  score:  number;       // 0-100
+  breakdown: MatchWeights;
+}
+
 export class MatchingEngine {
-  /**
-   * Computes a 0–100 match score between a candidate MapUser and the
-   * viewing user's profile.
-   *
-   * Score = weighted sum of five components:
-   *   - Proximity   (35%) — closer distance → higher score
-   *   - Interests   (25%) — Jaccard similarity of vibeTags
-   *   - Age diff    (15%) — smaller age gap → higher score
-   *   - Activity    (15%) — bonus if candidate is out tonight
-   *   - Presence    (10%) — online > away > offline
-   */
-  score(user: MapUser, profile: UserProfile): number {
-    if (!profile.location) {
-      // WHY: Without the viewer's location we cannot compute proximity,
-      // which is the heaviest weight. Return 0 rather than a misleading score.
-      return 0;
-    }
+  private weights: MatchWeights;
 
-    const proximity = this.proximityScore(
-      user.latitude,
-      user.longitude,
-      profile.location.latitude,
-      profile.location.longitude,
-    );
+  constructor(weights: Partial<MatchWeights> = {}) {
+    this.weights = { ...DEFAULT_WEIGHTS, ...weights };
+  }
 
-    const interests = this.interestsScore(user.vibeTags, profile.vibeTags);
-    const ageDiff = this.ageDiffScore(user.age, profile.age);
-    const activity = user.isOutTonight ? 1.0 : 0.0;
-    const presence = PRESENCE_SCORES[user.presence];
+  /** Score a candidate profile against the current user */
+  score(viewer: UserProfile, candidate: UserProfile): MatchResult {
+    const breakdown: MatchWeights = {
+      distance:  this.distanceScore(viewer, candidate),
+      interests: this.interestScore(viewer, candidate),
+      age:       this.ageScore(viewer, candidate),
+      activity:  this.activityScore(candidate),
+      premium:   candidate.isPremium ? 1 : 0,
+    };
 
     const raw =
-      proximity  * MATCH_WEIGHTS.proximity  +
-      interests  * MATCH_WEIGHTS.interests  +
-      ageDiff    * MATCH_WEIGHTS.ageDiff    +
-      activity   * MATCH_WEIGHTS.activity   +
-      presence   * MATCH_WEIGHTS.presence;
+      breakdown.distance  * this.weights.distance  +
+      breakdown.interests * this.weights.interests +
+      breakdown.age       * this.weights.age       +
+      breakdown.activity  * this.weights.activity  +
+      breakdown.premium   * this.weights.premium;
 
-    // Clamp to [0, 100] and round to integer for clean display
-    return Math.round(Math.min(Math.max(raw * 100, 0), 100));
+    return {
+      userId: candidate.id,
+      score:  Math.round(Math.min(100, Math.max(0, raw * 100))),
+      breakdown,
+    };
   }
 
-  /**
-   * Sorts a list of MapUsers by their match score against the given profile,
-   * highest score first.
-   * Does not mutate the input array.
-   */
-  rank(users: MapUser[], profile: UserProfile): MapUser[] {
-    return [...users].sort(
-      (a, b) => this.score(b, profile) - this.score(a, profile),
-    );
+  /** Sort and filter a list of candidates */
+  rank(viewer: UserProfile, candidates: UserProfile[], minScore = 40): UserProfile[] {
+    return candidates
+      .map(c => ({ profile: c, result: this.score(viewer, c) }))
+      .filter(({ result }) => result.score >= minScore)
+      .sort((a, b) => b.result.score - a.result.score)
+      .map(({ profile, result }) => ({ ...profile, match: result.score }));
   }
 
-  // ---------------------------------------------------------------------------
-  // Sub-component scoring (each returns 0–1)
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Converts distance in miles to a 0–1 proximity score using an inverse
-   * linear decay. A user within 1 mile scores ~0.96; at MAX_DISTANCE_MI = 0.
-   *
-   * WHY inverse linear (not exponential): it keeps the gradient gradual
-   * enough that users 5–10 miles away still get meaningful scores.
-   */
-  private proximityScore(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number,
-  ): number {
-    const miles = distanceMi(lat1, lon1, lat2, lon2);
-    if (miles >= MAX_DISTANCE_MI) return 0;
-    return 1 - miles / MAX_DISTANCE_MI;
+  private distanceScore(viewer: UserProfile, candidate: UserProfile): number {
+    if (!viewer.coords || !candidate.coords) return 0.5;
+    const meters = distanceM(viewer.coords, candidate.coords);
+    // Full score < 500m, zero at 8km
+    if (meters <= 500)  return 1.0;
+    if (meters >= 8000) return 0.0;
+    return 1 - (meters - 500) / 7500;
   }
 
-  /**
-   * Jaccard similarity: |intersection| / |union| of the two tag sets.
-   * Returns 0 when both sets are empty (no information, not a perfect match).
-   */
-  private interestsScore(tagsA: string[], tagsB: string[]): number {
-    if (tagsA.length === 0 || tagsB.length === 0) return 0;
+  private interestScore(viewer: UserProfile, candidate: UserProfile): number {
+    const a = new Set(viewer.vibeTagIds);
+    const b = new Set(candidate.vibeTagIds);
+    if (a.size === 0 || b.size === 0) return 0.5;
+    const intersection = [...a].filter(x => b.has(x)).length;
+    const union = new Set([...a, ...b]).size;
+    return intersection / union; // Jaccard similarity
+  }
 
-    const setA = new Set(tagsA.map((t) => t.toLowerCase()));
-    const setB = new Set(tagsB.map((t) => t.toLowerCase()));
+  private ageScore(viewer: UserProfile, candidate: UserProfile): number {
+    const diff = Math.abs(viewer.age - candidate.age);
+    if (diff <= 2)  return 1.0;
+    if (diff <= 5)  return 0.8;
+    if (diff <= 10) return 0.5;
+    if (diff <= 15) return 0.25;
+    return 0.1;
+  }
 
-    let intersection = 0;
-    for (const tag of setA) {
-      if (setB.has(tag)) intersection++;
+  private activityScore(candidate: UserProfile): number {
+    if (candidate.presence === 'online') {
+      const minsAgo = (Date.now() - candidate.lastActiveAt) / 60000;
+      if (minsAgo <= 5)   return 1.0;
+      if (minsAgo <= 30)  return 0.8;
+      if (minsAgo <= 120) return 0.5;
     }
-
-    const union = setA.size + setB.size - intersection;
-    return union === 0 ? 0 : intersection / union;
-  }
-
-  /**
-   * Converts age difference to a 0–1 score using inverse linear decay.
-   * Same age = 1.0; MAX_AGE_DIFF or more = 0.
-   */
-  private ageDiffScore(ageA: number, ageB: number): number {
-    const diff = Math.abs(ageA - ageB);
-    if (diff >= MAX_AGE_DIFF) return 0;
-    return 1 - diff / MAX_AGE_DIFF;
+    return candidate.presence === 'away' ? 0.3 : 0.1;
   }
 }
+
+export const matchingEngine = new MatchingEngine();

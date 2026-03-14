@@ -1,50 +1,59 @@
 // src/App.tsx
-// Root application component. Boots the continuous system, waits for it to
-// be ready, then hands off to RootNavigator which owns all navigation logic.
-// SafeAreaProvider must wrap all navigation to ensure system UI insets are
-// respected on iOS notch and Android cutout devices.
-import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { StatusBar, LogBox } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { initializeSystem, shutdownSystem } from '@core/SystemInitializer';
-import { logger } from '@utils/Logger';
-import RootNavigator from '@navigation/RootNavigator';
+import * as Notifications from 'expo-notifications';
+
+import RootNavigator from './navigation/RootNavigator';
+import { useAuthStore } from './stores/authStore';
+import { useSocketStore } from './stores/socketStore';
+import { setupPushNotifications } from './services/pushNotifications';
+
+LogBox.ignoreLogs(['Non-serializable values were found']);
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 export default function App() {
-  const [ready, setReady] = useState(false);
+  const { user, restoreSession } = useAuthStore();
+  const { connect, disconnect } = useSocketStore();
 
   useEffect(() => {
-    let mounted = true;
-    initializeSystem()
-      .then(() => { if (mounted) setReady(true); })
-      .catch((err) => {
-        logger.error('App', 'System init failed', err);
-        // WHY: degrade gracefully — the system is designed to self-heal,
-        // so we still render even if initialization threw
-        if (mounted) setReady(true);
-      });
-
-    return () => {
-      mounted = false;
-      shutdownSystem().catch((err) => logger.warn('App', 'Shutdown error', err));
-    };
+    restoreSession();
   }, []);
 
-  if (!ready) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#7fffd4" />
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (user) {
+      connect(user.token);
+      setupPushNotifications(user.id);
+    } else {
+      disconnect();
+    }
+    return () => disconnect();
+  }, [user?.id]);
 
   return (
-    <SafeAreaProvider>
-      <RootNavigator />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StripeProvider
+          publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!}
+          merchantIdentifier="merchant.app.allnightlong"
+          urlScheme="anl"
+        >
+          <StatusBar barStyle="light-content" backgroundColor="#04040a" />
+          <NavigationContainer>
+            <RootNavigator />
+          </NavigationContainer>
+        </StripeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: { flex: 1, backgroundColor: '#0a0a0f', justifyContent: 'center', alignItems: 'center' },
-});

@@ -1,281 +1,135 @@
-// src/services/auth/AuthService.ts — Supabase phone OTP authentication service
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-var-requires */
+// src/services/auth/AuthService.ts
+// Stack: Supabase Auth — phone OTP, session management, token refresh
 import type { UserProfile } from '@types/index';
-import { logger } from '@utils/Logger';
-import { supabase, isSupabaseReady } from '@config/supabase';
 
-const MODULE = 'AuthService';
+let supabase: any = null;
+const sb = () => {
+  if (supabase) return supabase;
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    supabase = createClient(
+      process.env.EXPO_PUBLIC_SUPABASE_URL    ?? '',
+      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    );
+  } catch { /* not installed */ }
+  return supabase;
+};
+
+export interface AuthSession {
+  userId:      string;
+  phone:       string;
+  accessToken: string;
+  expiresAt:   number;
+}
+
+export interface OTPResult {
+  success: boolean;
+  error?:  string;
+}
 
 export class AuthService {
-  /**
-   * Sends an OTP to the given phone number via Supabase SMS.
-   * Phone must be in E.164 format (e.g. "+12125551234").
-   */
-  async sendOTP(phone: string): Promise<void> {
-    if (!isSupabaseReady) {
-      logger.warn(MODULE, 'Supabase not ready — OTP not sent (dev mode)');
-      return;
-    }
+  /** Send OTP to phone number (E.164 format: +12015551234) */
+  async sendOTP(phone: string): Promise<OTPResult> {
+    const client = sb();
+    if (!client) return { success: false, error: 'Supabase not configured' };
 
-    try {
-      const { error } = await supabase.auth.signInWithOtp({ phone });
-      if (error) throw error;
-      logger.info(MODULE, 'OTP sent', { phone });
-    } catch (err) {
-      logger.error(MODULE, 'sendOTP failed', err);
-      throw err;
-    }
+    const { error } = await client.auth.signInWithOtp({ phone });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
   }
 
-  /**
-   * Verifies the OTP token the user received via SMS.
-   * Returns the Supabase Session on success.
-   */
-  async verifyOTP(
-    phone: string,
-    token: string,
-  ): Promise<import('@supabase/supabase-js').Session> {
-    if (!isSupabaseReady) {
-      logger.warn(MODULE, 'Supabase not ready — using mock session (dev mode)');
-      // WHY: Return a minimal stub so UI flows continue in dev without a real backend
-      return {
-        access_token: 'mock-access-token',
-        refresh_token: 'mock-refresh-token',
-        expires_in: 3600,
-        expires_at: Math.floor(Date.now() / 1000) + 3600,
-        token_type: 'bearer',
-        user: {
-          id: 'mock-user-id',
-          aud: 'authenticated',
-          role: 'authenticated',
-          email: undefined,
-          phone,
-          app_metadata: {},
-          user_metadata: {},
-          identities: [],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          factors: [],
-        },
-      } as unknown as import('@supabase/supabase-js').Session;
-    }
+  /** Verify OTP code — returns session on success */
+  async verifyOTP(phone: string, token: string): Promise<AuthSession | null> {
+    const client = sb();
+    if (!client) return null;
 
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone,
-        token,
-        type: 'sms',
-      });
+    const { data, error } = await client.auth.verifyOtp({
+      phone,
+      token,
+      type: 'sms',
+    });
 
-      if (error) throw error;
-      if (!data.session) throw new Error('No session returned from OTP verification');
+    if (error || !data.session) return null;
 
-      logger.info(MODULE, 'OTP verified', { userId: data.session.user.id });
-      return data.session;
-    } catch (err) {
-      logger.error(MODULE, 'verifyOTP failed', err);
-      throw err;
-    }
+    return {
+      userId:      data.session.user.id,
+      phone:       data.session.user.phone ?? phone,
+      accessToken: data.session.access_token,
+      expiresAt:   data.session.expires_at ?? Date.now() / 1000 + 3600,
+    };
   }
 
-  /**
-   * Returns the currently active Supabase session, or null if signed out.
-   */
-  async getSession(): Promise<import('@supabase/supabase-js').Session | null> {
-    if (!isSupabaseReady) return null;
+  /** Get current session (auto-refreshes if needed) */
+  async getSession(): Promise<AuthSession | null> {
+    const client = sb();
+    if (!client) return null;
 
-    try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) throw error;
-      return data.session;
-    } catch (err) {
-      logger.error(MODULE, 'getSession failed', err);
-      return null;
-    }
+    const { data } = await client.auth.getSession();
+    const session = data?.session;
+    if (!session) return null;
+
+    return {
+      userId:      session.user.id,
+      phone:       session.user.phone ?? '',
+      accessToken: session.access_token,
+      expiresAt:   session.expires_at ?? 0,
+    };
   }
 
-  /**
-   * Signs the current user out and clears the local session.
-   */
+  /** Sign out and clear session */
   async signOut(): Promise<void> {
-    if (!isSupabaseReady) {
-      logger.warn(MODULE, 'Supabase not ready — signOut skipped (dev mode)');
-      return;
-    }
-
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      logger.info(MODULE, 'Signed out');
-    } catch (err) {
-      logger.error(MODULE, 'signOut failed', err);
-      throw err;
-    }
+    const client = sb();
+    if (client) await client.auth.signOut();
   }
 
-  /**
-   * Fetches the user's profile row from the 'users' table.
-   * If no row exists yet, inserts a minimal default profile and returns it.
-   */
-  async getOrCreateProfile(
-    userId: string,
-    phone: string,
-  ): Promise<UserProfile> {
-    if (!isSupabaseReady) {
-      logger.warn(MODULE, 'Supabase not ready — returning mock profile');
-      return this.buildMockProfile(userId, phone);
-    }
+  /** Fetch or create user profile row */
+  async getOrCreateProfile(userId: string, phone: string): Promise<UserProfile | null> {
+    const client = sb();
+    if (!client) return null;
 
-    try {
-      // Attempt to fetch existing profile
-      const { data: existing, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+    const { data: existing } = await client
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        // PGRST116 = "row not found" — that is expected on first login
-        throw fetchError;
-      }
+    if (existing) return existing as UserProfile;
 
-      if (existing) {
-        logger.debug(MODULE, 'Profile loaded', { userId });
-        return this.rowToProfile(existing);
-      }
+    const { data: created, error } = await client
+      .from('users')
+      .insert({
+        id:          userId,
+        phone,
+        display_name: '',
+        gender:       'f',
+        age:          18,
+        presence:     'online',
+        blocked_ids:  [],
+        vibe_tag_ids: [],
+        photos:       [],
+        is_verified:  false,
+        is_premium:   false,
+      })
+      .select()
+      .single();
 
-      // No existing row — insert defaults
-      const defaults = this.buildDefaultRow(userId, phone);
-      const { data: created, error: insertError } = await supabase
-        .from('users')
-        .insert(defaults)
-        .select('*')
-        .single();
-
-      if (insertError) throw insertError;
-
-      logger.info(MODULE, 'Profile created', { userId });
-      return this.rowToProfile(created);
-    } catch (err) {
-      logger.error(MODULE, 'getOrCreateProfile failed', err);
-      throw err;
-    }
+    if (error) { console.warn('[AuthService] createProfile:', error); return null; }
+    return created as UserProfile;
   }
 
-  /**
-   * Applies a partial update to the user's profile row.
-   * Only the provided fields are changed; all others remain intact.
-   */
-  async updateProfile(
-    userId: string,
-    updates: Partial<UserProfile>,
-  ): Promise<void> {
-    if (!isSupabaseReady) {
-      logger.warn(MODULE, 'Supabase not ready — updateProfile skipped (dev mode)');
-      return;
-    }
+  /** Update profile fields */
+  async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<boolean> {
+    const client = sb();
+    if (!client) return false;
 
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update(this.profileToRow(updates))
-        .eq('id', userId);
+    const { error } = await client
+      .from('users')
+      .update(updates)
+      .eq('id', userId);
 
-      if (error) throw error;
-      logger.debug(MODULE, 'Profile updated', { userId, updates });
-    } catch (err) {
-      logger.error(MODULE, 'updateProfile failed', err);
-      throw err;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Private helpers
-  // ---------------------------------------------------------------------------
-
-  /** Maps a raw Supabase DB row to our typed UserProfile. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private rowToProfile(row: Record<string, any>): UserProfile {
-    return {
-      id: row.id as string,
-      phone: row.phone as string,
-      displayName: (row.display_name as string) ?? '',
-      age: (row.age as number) ?? 21,
-      gender: row.gender ?? 'non_binary',
-      bio: (row.bio as string) ?? '',
-      avatarUrl: (row.avatar_url as string | null) ?? null,
-      vibeTags: (row.vibe_tags as string[]) ?? [],
-      isOutTonight: (row.is_out_tonight as boolean) ?? false,
-      isPremium: (row.is_premium as boolean) ?? false,
-      location: row.latitude != null && row.longitude != null
-        ? { latitude: row.latitude as number, longitude: row.longitude as number }
-        : null,
-      presence: (row.presence as UserProfile['presence']) ?? 'offline',
-      lastActiveAt: row.last_active_at
-        ? new Date(row.last_active_at as string).getTime()
-        : Date.now(),
-      createdAt: row.created_at
-        ? new Date(row.created_at as string).getTime()
-        : Date.now(),
-    };
-  }
-
-  /** Maps a partial UserProfile to DB column names for updates. */
-  private profileToRow(profile: Partial<UserProfile>): Record<string, unknown> {
-    const row: Record<string, unknown> = {};
-    if (profile.displayName !== undefined) row.display_name = profile.displayName;
-    if (profile.age !== undefined) row.age = profile.age;
-    if (profile.gender !== undefined) row.gender = profile.gender;
-    if (profile.bio !== undefined) row.bio = profile.bio;
-    if (profile.avatarUrl !== undefined) row.avatar_url = profile.avatarUrl;
-    if (profile.vibeTags !== undefined) row.vibe_tags = profile.vibeTags;
-    if (profile.isOutTonight !== undefined) row.is_out_tonight = profile.isOutTonight;
-    if (profile.isPremium !== undefined) row.is_premium = profile.isPremium;
-    if (profile.location !== undefined) {
-      row.latitude = profile.location?.latitude ?? null;
-      row.longitude = profile.location?.longitude ?? null;
-    }
-    if (profile.presence !== undefined) row.presence = profile.presence;
-    if (profile.lastActiveAt !== undefined) {
-      row.last_active_at = new Date(profile.lastActiveAt).toISOString();
-    }
-    return row;
-  }
-
-  /** Returns the minimal row payload inserted on first login. */
-  private buildDefaultRow(userId: string, phone: string): Record<string, unknown> {
-    return {
-      id: userId,
-      phone,
-      display_name: '',
-      age: 21,
-      gender: 'non_binary',
-      bio: '',
-      avatar_url: null,
-      vibe_tags: [],
-      is_out_tonight: false,
-      is_premium: false,
-      presence: 'online',
-      last_active_at: new Date().toISOString(),
-    };
-  }
-
-  /** Builds a mock profile for development without a backend. */
-  private buildMockProfile(userId: string, phone: string): UserProfile {
-    return {
-      id: userId,
-      phone,
-      displayName: 'Dev User',
-      age: 25,
-      gender: 'non_binary',
-      bio: 'Mock profile for local development',
-      avatarUrl: null,
-      vibeTags: ['music', 'rooftops'],
-      isOutTonight: true,
-      isPremium: false,
-      location: { latitude: 40.7128, longitude: -74.006 },
-      presence: 'online',
-      lastActiveAt: Date.now(),
-      createdAt: Date.now(),
-    };
+    return !error;
   }
 }
+
+export const authService = new AuthService();

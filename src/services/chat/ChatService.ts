@@ -1,390 +1,213 @@
-// src/services/chat/ChatService.ts — Supabase Realtime chat service
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-var-requires */
+// src/services/chat/ChatService.ts
+// Stack: Supabase Realtime — Postgres + WebSocket subscriptions
+// Supports: DM threads, event group chats, venue rooms, neighborhood channels
 import type { Channel, ChatMessage } from '@types/index';
-import { logger } from '@utils/Logger';
-import { CHAT } from '@config/constants';
-import { supabase, isSupabaseReady } from '@config/supabase';
 
-const MODULE = 'ChatService';
+// Lazy Supabase import — won't break TS compile without native deps
+let supabase: any = null;
+const getSupabase = () => {
+  if (supabase) return supabase;
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    supabase = createClient(
+      process.env.EXPO_PUBLIC_SUPABASE_URL    ?? '',
+      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    );
+  } catch { /* not installed yet */ }
+  return supabase;
+};
 
-// ---------------------------------------------------------------------------
-// Mock data — used when Supabase is not configured (local dev)
-// ---------------------------------------------------------------------------
-
+// ── In-memory state for offline/dev mode ──────────────────────────────────────
 const MOCK_CHANNELS: Channel[] = [
   {
     id: 'ch-rooftop',
-    name: 'Rooftop Crew',
-    isGroup: true,
-    members: ['user-1', 'user-2', 'user-3'],
-    lastMessage: 'See you at 10?',
-    lastMessageAt: Date.now() - 5 * 60_000,
+    type: 'event',
+    name: 'Late Night Rooftop 🎉',
+    memberCount: 34,
+    unreadCount: 7,
+    members: ['u1','u2','u3'],
+    createdAt: Date.now() - 3600000,
+    eventId: 'e1',
+  },
+  {
+    id: 'ch-barnight',
+    type: 'event',
+    name: 'Bar Night 🍸',
+    memberCount: 18,
     unreadCount: 2,
-    avatarUrl: null,
+    members: ['u4','u5'],
+    createdAt: Date.now() - 7200000,
+    eventId: 'e2',
   },
   {
-    id: 'ch-jazz',
-    name: 'Jazz Lounge',
-    isGroup: true,
-    members: ['user-1', 'user-4', 'user-5'],
-    lastMessage: 'Tables are reserved',
-    lastMessageAt: Date.now() - 15 * 60_000,
+    id: 'ch-les',
+    type: 'neighborhood',
+    name: '📍 Lower East Side',
+    memberCount: 47,
     unreadCount: 0,
-    avatarUrl: null,
-  },
-  {
-    id: 'ch-dm-alex',
-    name: 'Alex M.',
-    isGroup: false,
-    members: ['user-1', 'user-2'],
-    lastMessage: 'What are you vibing to tonight?',
-    lastMessageAt: Date.now() - 30 * 60_000,
-    unreadCount: 1,
-    avatarUrl: null,
-  },
-  {
-    id: 'ch-dm-sam',
-    name: 'Sam K.',
-    isGroup: false,
-    members: ['user-1', 'user-6'],
-    lastMessage: null,
-    lastMessageAt: null,
-    unreadCount: 0,
-    avatarUrl: null,
+    members: [],
+    createdAt: Date.now() - 86400000,
   },
 ];
 
 const MOCK_MESSAGES: Record<string, ChatMessage[]> = {
   'ch-rooftop': [
-    {
-      id: 'msg-1',
-      channelId: 'ch-rooftop',
-      senderId: 'user-2',
-      senderName: 'Alex M.',
-      content: 'Anyone heading up early?',
-      type: 'text',
-      createdAt: Date.now() - 20 * 60_000,
-      readBy: ['user-1'],
-    },
-    {
-      id: 'msg-2',
-      channelId: 'ch-rooftop',
-      senderId: 'user-3',
-      senderName: 'Sam K.',
-      content: 'See you at 10?',
-      type: 'text',
-      createdAt: Date.now() - 5 * 60_000,
-      readBy: [],
-    },
+    { id:'m1', channelId:'ch-rooftop', senderId:'u2', senderName:'Mia',  content:'anyone on the roof yet? 🔥', type:'text', readBy:[], createdAt: Date.now()-600000 },
+    { id:'m2', channelId:'ch-rooftop', senderId:'u3', senderName:'Dre',  content:'heading up now', type:'text', readBy:[], createdAt: Date.now()-300000 },
+    { id:'m3', channelId:'ch-rooftop', senderId:'u4', senderName:'Luna', content:'omw 🦋', type:'text', readBy:[], createdAt: Date.now()-60000 },
   ],
-  'ch-dm-alex': [
-    {
-      id: 'msg-3',
-      channelId: 'ch-dm-alex',
-      senderId: 'user-2',
-      senderName: 'Alex M.',
-      content: 'What are you vibing to tonight?',
-      type: 'text',
-      createdAt: Date.now() - 30 * 60_000,
-      readBy: [],
-    },
+  'ch-barnight': [
+    { id:'m4', channelId:'ch-barnight', senderId:'u5', senderName:'Jade', content:'back bar is packed', type:'text', readBy:[], createdAt: Date.now()-900000 },
   ],
 };
 
-// ---------------------------------------------------------------------------
-// Service
-// ---------------------------------------------------------------------------
+type MessageHandler = (msg: ChatMessage) => void;
+const subscribers: Record<string, MessageHandler[]> = {};
 
 export class ChatService {
-  /**
-   * Returns all channels the given user is a member of.
-   * Falls back to mock data when Supabase is not configured.
-   */
-  async getChannels(userId: string): Promise<Channel[]> {
-    if (!isSupabaseReady) {
-      logger.debug(MODULE, 'getChannels — mock mode', { userId });
-      return MOCK_CHANNELS;
-    }
+  private userId: string;
+  private realtimeChannel: any = null;
 
-    try {
-      // channel_members is a join table: { channel_id, user_id }
-      const { data, error } = await supabase
-        .from('channel_members')
-        .select(`
-          channels (
-            id, name, is_group, avatar_url,
-            channel_members ( user_id ),
-            messages (
-              content, created_at,
-              order: created_at.desc,
-              limit: 1
-            )
-          )
-        `)
-        .eq('user_id', userId);
-
-      if (error) throw error;
-
-      // WHY: The nested query shape is normalised here rather than letting
-      // callers deal with raw Supabase join objects.
-      return (data ?? []).map((row): Channel => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ch = (row as any).channels;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const lastMsg = (ch.messages as any[])?.[0] ?? null;
-        return {
-          id: ch.id as string,
-          name: ch.name as string,
-          isGroup: ch.is_group as boolean,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          members: ((ch.channel_members as any[]) ?? []).map((m: any) => m.user_id as string),
-          lastMessage: lastMsg ? (lastMsg.content as string) : null,
-          lastMessageAt: lastMsg
-            ? new Date(lastMsg.created_at as string).getTime()
-            : null,
-          unreadCount: 0, // TODO[NORMAL]: compute from message_reads table
-          avatarUrl: (ch.avatar_url as string | null) ?? null,
-        };
-      });
-    } catch (err) {
-      logger.error(MODULE, 'getChannels failed', err);
-      return MOCK_CHANNELS;
-    }
+  constructor(userId: string) {
+    this.userId = userId;
   }
 
-  /**
-   * Returns up to `limit` most-recent messages for the given channel,
-   * ordered oldest-first so UI can render top-to-bottom.
-   */
-  async getMessages(
-    channelId: string,
-    limit: number = CHAT.pageSize,
-  ): Promise<ChatMessage[]> {
-    if (!isSupabaseReady) {
-      logger.debug(MODULE, 'getMessages — mock mode', { channelId });
-      return MOCK_MESSAGES[channelId] ?? [];
-    }
+  /** Fetch all channels the current user is in */
+  async getChannels(): Promise<Channel[]> {
+    const sb = getSupabase();
+    if (!sb) return MOCK_CHANNELS;
 
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('id, channel_id, sender_id, sender_name, content, type, created_at, read_by')
-        .eq('channel_id', channelId)
-        .order('created_at', { ascending: false })
-        .limit(limit);
+    const { data, error } = await sb
+      .from('channels')
+      .select('*, messages(content, created_at, sender_id)')
+      .contains('member_ids', [this.userId])
+      .order('updated_at', { ascending: false });
 
-      if (error) throw error;
-
-      // Reverse so the result is oldest-first
-      return ((data ?? []) as Array<Record<string, unknown>>)
-        .map(this.rowToMessage)
-        .reverse();
-    } catch (err) {
-      logger.error(MODULE, 'getMessages failed', err);
-      return MOCK_MESSAGES[channelId] ?? [];
-    }
+    if (error) { console.warn('[ChatService] getChannels:', error); return MOCK_CHANNELS; }
+    return data ?? MOCK_CHANNELS;
   }
 
-  /**
-   * Returns (or creates) the DM channel between two users.
-   * Tries a Supabase RPC first; if unavailable, falls back to a local insert.
-   */
-  async getOrCreateDM(
-    userId: string,
-    otherUserId: string,
-  ): Promise<Channel> {
-    if (!isSupabaseReady) {
-      const mockDM: Channel = {
-        id: `dm-${userId}-${otherUserId}`,
-        name: 'Direct Message',
-        isGroup: false,
-        members: [userId, otherUserId],
-        lastMessage: null,
-        lastMessageAt: null,
-        unreadCount: 0,
-        avatarUrl: null,
-      };
-      logger.debug(MODULE, 'getOrCreateDM — mock mode');
-      return mockDM;
-    }
+  /** Fetch message history for a channel */
+  async getMessages(channelId: string, limit = 50): Promise<ChatMessage[]> {
+    const sb = getSupabase();
+    if (!sb) return MOCK_MESSAGES[channelId] ?? [];
 
-    try {
-      // WHY: RPC encapsulates the "find-or-create" logic server-side to
-      // avoid race conditions when two users initiate a DM simultaneously.
-      const { data, error } = await supabase.rpc('get_or_create_dm', {
-        user_a: userId,
-        user_b: otherUserId,
-      });
+    const { data, error } = await sb
+      .from('messages')
+      .select('*')
+      .eq('channel_id', channelId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-      if (error) throw error;
+    if (error) { console.warn('[ChatService] getMessages:', error); return MOCK_MESSAGES[channelId] ?? []; }
+    return (data ?? []).reverse();
+  }
 
+  /** Create or fetch a DM channel between two users */
+  async getOrCreateDM(otherUserId: string): Promise<Channel> {
+    const sb = getSupabase();
+    const dmId = [this.userId, otherUserId].sort().join(':');
+    if (!sb) {
       return {
-        id: (data as Record<string, unknown>).id as string,
-        name: (data as Record<string, unknown>).name as string ?? '',
-        isGroup: false,
-        members: [userId, otherUserId],
-        lastMessage: null,
-        lastMessageAt: null,
+        id: `dm-${dmId}`,
+        type: 'dm',
+        name: 'Direct Message',
+        memberCount: 2,
         unreadCount: 0,
-        avatarUrl: null,
+        members: [this.userId, otherUserId],
+        createdAt: Date.now(),
       };
-    } catch (err) {
-      logger.error(MODULE, 'getOrCreateDM failed', err);
-      throw err;
     }
+
+    const { data: existing } = await sb
+      .from('channels')
+      .select('*')
+      .eq('dm_id', dmId)
+      .single();
+
+    if (existing) return existing;
+
+    const { data: created } = await sb
+      .from('channels')
+      .insert({ type: 'dm', dm_id: dmId, member_ids: [this.userId, otherUserId] })
+      .select()
+      .single();
+
+    return created;
   }
 
-  /**
-   * Inserts a new message into the channel.
-   * Type defaults to 'text'. Vibe messages are rendered differently by the UI.
-   */
-  async send(
-    channelId: string,
-    senderId: string,
-    senderName: string,
-    content: string,
-    type: 'text' | 'vibe' = 'text',
-  ): Promise<ChatMessage> {
-    const optimistic: ChatMessage = {
-      id: `local-${Date.now()}`,
+  /** Send a message */
+  async send(channelId: string, content: string, type: ChatMessage['type'] = 'text'): Promise<ChatMessage> {
+    const msg: ChatMessage = {
+      id:          `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       channelId,
-      senderId,
-      senderName,
+      senderId:    this.userId,
+      senderName:  'You',
       content,
       type,
-      createdAt: Date.now(),
-      readBy: [senderId],
+      readBy:      [this.userId],
+      createdAt:   Date.now(),
     };
 
-    if (!isSupabaseReady) {
-      logger.debug(MODULE, 'send — mock mode', { channelId, content });
-      return optimistic;
+    const sb = getSupabase();
+    if (sb) {
+      await sb.from('messages').insert({
+        id:         msg.id,
+        channel_id: channelId,
+        sender_id:  this.userId,
+        content,
+        type,
+      });
+    } else {
+      // Mock: push locally and notify subscribers
+      if (!MOCK_MESSAGES[channelId]) MOCK_MESSAGES[channelId] = [];
+      MOCK_MESSAGES[channelId].push(msg);
+      (subscribers[channelId] ?? []).forEach(fn => fn(msg));
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          channel_id: channelId,
-          sender_id: senderId,
-          sender_name: senderName,
-          content,
-          type,
-          read_by: [senderId],
-        })
-        .select('id, channel_id, sender_id, sender_name, content, type, created_at, read_by')
-        .single();
-
-      if (error) throw error;
-
-      logger.debug(MODULE, 'Message sent', { channelId, type });
-      return this.rowToMessage(data as Record<string, unknown>);
-    } catch (err) {
-      logger.error(MODULE, 'send failed', err);
-      throw err;
-    }
+    return msg;
   }
 
-  /**
-   * Subscribes to new messages on a channel via Supabase Realtime.
-   * Returns an unsubscribe function — call it when the component unmounts.
-   */
-  subscribe(
-    channelId: string,
-    callback: (msg: ChatMessage) => void,
-  ): () => void {
-    if (!isSupabaseReady) {
-      logger.debug(MODULE, 'subscribe — mock mode, no-op subscription');
-      return () => {};
-    }
+  /** Subscribe to new messages in a channel */
+  subscribe(channelId: string, onMessage: MessageHandler): () => void {
+    const sb = getSupabase();
 
-    const realtimeChannel = supabase
-      .channel(`messages:${channelId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
+    if (sb) {
+      this.realtimeChannel = sb
+        .channel(`messages:${channelId}`)
+        .on('postgres_changes', {
+          event:  'INSERT',
           schema: 'public',
-          table: 'messages',
+          table:  'messages',
           filter: `channel_id=eq.${channelId}`,
-        },
-        (payload) => {
-          try {
-            const msg = this.rowToMessage(
-              payload.new as Record<string, unknown>,
-            );
-            callback(msg);
-          } catch (err) {
-            logger.error(MODULE, 'Realtime message parse error', err);
-          }
-        },
-      )
-      .subscribe((status) => {
-        logger.debug(MODULE, `Realtime status: ${status}`, { channelId });
-      });
+        }, (payload: any) => {
+          onMessage(payload.new as ChatMessage);
+        })
+        .subscribe();
 
+      return () => { sb.removeChannel(this.realtimeChannel); };
+    }
+
+    // Mock subscription
+    if (!subscribers[channelId]) subscribers[channelId] = [];
+    subscribers[channelId].push(onMessage);
     return () => {
-      supabase.removeChannel(realtimeChannel).catch((err) => {
-        logger.warn(MODULE, 'Failed to remove Realtime channel', err);
-      });
+      subscribers[channelId] = subscribers[channelId].filter(fn => fn !== onMessage);
     };
   }
 
-  /**
-   * Records that the given user has read all messages in the channel.
-   * Uses an upsert to avoid duplicate rows in the message_reads table.
-   */
-  async markRead(channelId: string, userId: string): Promise<void> {
-    if (!isSupabaseReady) return;
-
-    try {
-      const { error } = await supabase.from('message_reads').upsert(
-        { channel_id: channelId, user_id: userId, read_at: new Date().toISOString() },
-        { onConflict: 'channel_id,user_id' },
-      );
-      if (error) throw error;
-      logger.debug(MODULE, 'markRead', { channelId, userId });
-    } catch (err) {
-      logger.error(MODULE, 'markRead failed', err);
-    }
+  /** Mark all messages in a channel as read */
+  async markRead(channelId: string): Promise<void> {
+    const sb = getSupabase();
+    if (!sb) return;
+    await sb.from('message_reads').upsert({ channel_id: channelId, user_id: this.userId, read_at: new Date().toISOString() });
   }
 
-  /**
-   * Adds a user to a channel's member list.
-   * Uses upsert so the call is idempotent (safe to call multiple times).
-   */
-  async joinChannel(channelId: string, userId: string): Promise<void> {
-    if (!isSupabaseReady) return;
-
-    try {
-      const { error } = await supabase.from('channel_members').upsert(
-        { channel_id: channelId, user_id: userId, joined_at: new Date().toISOString() },
-        { onConflict: 'channel_id,user_id' },
-      );
-      if (error) throw error;
-      logger.info(MODULE, 'Joined channel', { channelId, userId });
-    } catch (err) {
-      logger.error(MODULE, 'joinChannel failed', err);
-      throw err;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Private helpers
-  // ---------------------------------------------------------------------------
-
-  /** Maps a raw DB row to our typed ChatMessage. */
-  private rowToMessage(row: Record<string, unknown>): ChatMessage {
-    return {
-      id: row.id as string,
-      channelId: (row.channel_id ?? row.channelId) as string,
-      senderId: (row.sender_id ?? row.senderId) as string,
-      senderName: (row.sender_name ?? row.senderName) as string,
-      content: row.content as string,
-      type: (row.type as ChatMessage['type']) ?? 'text',
-      createdAt: row.created_at
-        ? new Date(row.created_at as string).getTime()
-        : Date.now(),
-      readBy: (row.read_by as string[]) ?? [],
-    };
+  /** Join a proximity-based group (event or neighborhood) */
+  async joinChannel(channelId: string): Promise<void> {
+    const sb = getSupabase();
+    if (!sb) return;
+    await sb.rpc('join_channel', { p_channel_id: channelId, p_user_id: this.userId });
   }
 }

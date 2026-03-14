@@ -1,2 +1,3 @@
-// src/services/matching/index.ts — Barrel export for matching service
-export { MatchingEngine } from './MatchingEngine';
+// src/services/matching/index.ts
+export { MatchingEngine, matchingEngine } from './MatchingEngine';
+export type { MatchResult, MatchWeights } from './MatchingEngine';

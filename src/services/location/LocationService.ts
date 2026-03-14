@@ -1,180 +1,117 @@
-// src/services/location/LocationService.ts — Expo Location wrapper with fuzzy privacy layer
-import { logger } from '@utils/Logger';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// src/services/location/LocationService.ts
+// GPS polling with Expo Location, fuzzy coords before broadcast,
+// background updates via expo-task-manager
+import type { LatLng } from '@types/index';
 import { fuzzyCoords } from '@utils/geo';
-import { PROXIMITY } from '@config/constants';
 
-const MODULE = 'LocationService';
+let ExpoLocation: any = null;
+const loc = () => {
+  if (ExpoLocation) return ExpoLocation;
+  try { ExpoLocation = require('expo-location'); } catch { /* intentional */ }
+  return ExpoLocation;
+};
 
-// WHY: NYC fallback so dev flows work without a device or simulator location
-const DEV_LAT = 40.7128;
-const DEV_LON = -74.006;
+export const LOCATION_TASK = 'anl-background-location';
 
-// Default polling interval when watchPositionAsync is not used (background-safe)
-const DEFAULT_INTERVAL_MS = 60_000;
-
-interface Coords {
-  latitude: number;
-  longitude: number;
+export interface LocationUpdate {
+  exact:  LatLng;
+  fuzzy:  LatLng;
+  accuracy: number;
+  ts:     number;
 }
 
-type LocationCallback = (coords: Coords) => void;
+type LocationHandler = (update: LocationUpdate) => void;
+const subscribers: LocationHandler[] = [];
+
+let watchSubscription: any = null;
+let lastLocation: LocationUpdate | null = null;
 
 export class LocationService {
-  private watchSubscription: { remove: () => void } | null = null;
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
-
-  /**
-   * Requests foreground location permission from the OS.
-   * Returns true if granted, false otherwise.
-   * In dev (no Expo Location available) always returns true.
-   */
+  /** Request foreground + background permissions */
   async requestPermissions(): Promise<boolean> {
-    try {
-      const Location = await this.importLocation();
-      if (!Location) {
-        logger.warn(MODULE, 'expo-location unavailable — skipping permission request');
-        return true;
-      }
+    const L = loc();
+    if (!L) return false;
 
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      const granted = status === 'granted';
-      logger.info(MODULE, `Location permission: ${status}`);
-      return granted;
-    } catch (err) {
-      logger.error(MODULE, 'requestPermissions failed', err);
-      return false;
-    }
+    const { status: fg } = await L.requestForegroundPermissionsAsync();
+    if (fg !== 'granted') return false;
+
+    const { status: bg } = await L.requestBackgroundPermissionsAsync();
+    return bg === 'granted';
   }
 
-  /**
-   * Returns the device's current location with a fuzz of PROXIMITY.fuzzMeters
-   * applied so the exact position is never exposed to other users.
-   * Falls back to NYC coordinates in dev.
-   */
-  async getCurrentLocation(): Promise<Coords> {
+  /** Get current position once */
+  async getCurrentLocation(): Promise<LocationUpdate | null> {
+    const L = loc();
+    if (!L) return this.mockLocation();
+
     try {
-      const Location = await this.importLocation();
-
-      if (!Location) {
-        return this.devFuzzed();
-      }
-
-      const result = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+      const pos = await L.getCurrentPositionAsync({
+        accuracy: L.Accuracy.Balanced,
       });
-
-      return fuzzyCoords(
-        result.coords.latitude,
-        result.coords.longitude,
-        PROXIMITY.fuzzMeters,
-      );
-    } catch (err) {
-      logger.error(MODULE, 'getCurrentLocation failed — using dev fallback', err);
-      return this.devFuzzed();
-    }
-  }
-
-  /**
-   * Starts continuous location watching.
-   * In production uses Location.watchPositionAsync for OS-managed updates.
-   * Falls back to a setInterval poll when watchPositionAsync is unavailable
-   * (e.g. Expo Go, web, CI).
-   *
-   * @param callback  Called each time a new location arrives.
-   * @param intervalMs  Polling interval used by the fallback path. Default 60 s.
-   */
-  async startWatching(
-    callback: LocationCallback,
-    intervalMs: number = DEFAULT_INTERVAL_MS,
-  ): Promise<void> {
-    this.stopWatching(); // Ensure no duplicate watchers
-
-    try {
-      const Location = await this.importLocation();
-
-      if (Location) {
-        // WHY: watchPositionAsync is the preferred mechanism — the OS batches
-        // updates efficiently. The fallback poll is for environments where the
-        // native module is absent.
-        this.watchSubscription = await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.Balanced,
-            timeInterval: intervalMs,
-            distanceInterval: 20, // meters — skip update if user barely moved
-          },
-          (position) => {
-            const coords = fuzzyCoords(
-              position.coords.latitude,
-              position.coords.longitude,
-              PROXIMITY.fuzzMeters,
-            );
-            callback(coords);
-          },
-        );
-
-        logger.info(MODULE, 'Location watch started (native)', { intervalMs });
-        return;
-      }
-    } catch (err) {
-      logger.warn(MODULE, 'watchPositionAsync unavailable — falling back to poll', err);
-    }
-
-    // Fallback: poll getCurrentLocation on a timer
-    this.pollTimer = setInterval(async () => {
-      try {
-        const coords = await this.getCurrentLocation();
-        callback(coords);
-      } catch (err) {
-        logger.error(MODULE, 'Location poll error', err);
-      }
-    }, intervalMs);
-
-    // Deliver an immediate first reading without waiting for the first tick
-    this.getCurrentLocation()
-      .then(callback)
-      .catch((err) => logger.error(MODULE, 'Initial location read failed', err));
-
-    logger.info(MODULE, 'Location watch started (poll fallback)', { intervalMs });
-  }
-
-  /**
-   * Stops all active location watching, releasing both the native subscription
-   * and any polling timer.
-   */
-  stopWatching(): void {
-    if (this.watchSubscription) {
-      this.watchSubscription.remove();
-      this.watchSubscription = null;
-      logger.debug(MODULE, 'Native location watch stopped');
-    }
-
-    if (this.pollTimer !== null) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
-      logger.debug(MODULE, 'Location poll timer stopped');
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Private helpers
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Attempts to dynamically import expo-location.
-   * Returns null instead of throwing if the module is not available
-   * (e.g. web build, CI environment, Expo Go without native modules).
-   */
-  private async importLocation(): Promise<typeof import('expo-location') | null> {
-    try {
-      const Location = await import('expo-location');
-      return Location;
+      return this.toUpdate(pos.coords);
     } catch {
-      return null;
+      return this.mockLocation();
     }
   }
 
-  /** Returns the NYC dev coordinates with fuzz applied. */
-  private devFuzzed(): Coords {
-    return fuzzyCoords(DEV_LAT, DEV_LON, PROXIMITY.fuzzMeters);
+  /** Start continuous watch (foreground) */
+  async startWatching(onUpdate: LocationHandler): Promise<void> {
+    subscribers.push(onUpdate);
+    if (watchSubscription) return;
+
+    const L = loc();
+    if (!L) {
+      // Mock: emit every 30s in dev
+      const mock = setInterval(() => {
+        const u = this.mockLocation();
+        lastLocation = u;
+        subscribers.forEach(fn => fn(u));
+      }, 30000);
+      watchSubscription = { remove: () => clearInterval(mock) };
+      return;
+    }
+
+    watchSubscription = await L.watchPositionAsync(
+      { accuracy: L.Accuracy.Balanced, timeInterval: 15000, distanceInterval: 20 },
+      (pos: any) => {
+        const u = this.toUpdate(pos.coords);
+        lastLocation = u;
+        subscribers.forEach(fn => fn(u));
+      }
+    );
+  }
+
+  /** Stop watching */
+  stopWatching(handler: LocationHandler): void {
+    const idx = subscribers.indexOf(handler);
+    if (idx >= 0) subscribers.splice(idx, 1);
+    if (subscribers.length === 0 && watchSubscription) {
+      watchSubscription.remove?.();
+      watchSubscription = null;
+    }
+  }
+
+  /** Last known location */
+  getLastLocation(): LocationUpdate | null {
+    return lastLocation;
+  }
+
+  private toUpdate(coords: any): LocationUpdate {
+    const exact: LatLng = { lat: coords.latitude, lng: coords.longitude };
+    return {
+      exact,
+      fuzzy:    fuzzyCoords(exact, 150),
+      accuracy: coords.accuracy ?? 10,
+      ts:       Date.now(),
+    };
+  }
+
+  private mockLocation(): LocationUpdate {
+    // NYC default for dev
+    const exact: LatLng = { lat: 40.7128, lng: -74.006 };
+    return { exact, fuzzy: fuzzyCoords(exact), accuracy: 15, ts: Date.now() };
   }
 }
+
+export const locationService = new LocationService();

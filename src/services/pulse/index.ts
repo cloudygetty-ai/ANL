@@ -1,2 +1,1 @@
-// src/services/pulse/index.ts — Barrel export for NightPulse service
-export { NightPulseService } from './NightPulseService';
+export { NightPulseService, nightPulse, pulseColor } from './NightPulseService';

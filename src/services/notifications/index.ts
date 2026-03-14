@@ -1,2 +1,3 @@
-// src/services/notifications/index.ts — Barrel export for notifications service
-export { PushService } from './PushService';
+// src/services/notifications/index.ts
+export { PushService, pushService } from './PushService';
+export type { PushPayload, PushEventType } from './PushService';

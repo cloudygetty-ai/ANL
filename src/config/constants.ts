@@ -1,52 +1,59 @@
-// src/config/constants.ts — Design tokens and scoring weights
+// src/config/constants.ts
+export const APP_NAME    = 'ALLNIGHTLONG';
+export const APP_VERSION = '1.0.0';
 
-export const COLORS = {
-  bg: '#0a0a0f',
-  card: '#111118',
-  text: '#f0eee8',
-  textMuted: '#8b8a99',
-  accent: '#7fffd4',
-  border: 'rgba(255,255,255,0.07)',
-
-  female: '#ffa032',
-  male: '#4488ff',
-  transWoman: '#f7a8c4',
-  transMan: '#55cdfc',
-  nonBinary: '#c084fc',
-
-  success: '#22c55e',
-  warning: '#f59e0b',
-  error: '#ef4444',
-  info: '#3b82f6',
-} as const;
-
-export const MATCH_WEIGHTS = {
-  proximity: 0.35,
-  interests: 0.25,
-  ageDiff: 0.15,
-  activity: 0.15,
-  presence: 0.10,
-} as const;
+export const LATE_NIGHT_START_HOUR = 22; // 10pm
+export const LATE_NIGHT_END_HOUR   = 5;  // 5am
 
 export const PROXIMITY = {
-  nearbyRadiusMi: 5,
-  closeRadiusMi: 1,
-  fuzzMeters: 50,
-} as const;
+  NEARBY_M:    1600,  // 1 mile — shown on map
+  CLOSE_M:     400,   // 0.25 mile — "close" badge
+  FUZZ_M:      120,   // location fuzzing radius
+  MAX_M:       8000,  // max discovery radius
+};
 
 export const PRESENCE = {
-  onlineThresholdMs: 5 * 60 * 1000,
-  awayThresholdMs: 30 * 60 * 1000,
-  expireMs: 2 * 60 * 60 * 1000,
-} as const;
+  ACTIVE_TTL_MS:   2 * 60 * 60 * 1000,  // 2h — auto-offline
+  UPDATE_INTERVAL: 60 * 1000,            // 60s location update
+  PULSE_INTERVAL:  60 * 1000,            // 60s NightPulse refresh
+};
+
+export const MATCH = {
+  DISTANCE_WEIGHT:  0.30,
+  INTERESTS_WEIGHT: 0.25,
+  AGE_WEIGHT:       0.15,
+  ACTIVITY_WEIGHT:  0.20,
+  PREMIUM_WEIGHT:   0.10,
+};
 
 export const VIDEO = {
-  maxParticipants: 6,
-  controlsAutoHideMs: 5000,
-} as const;
+  MAX_GROUP_SIZE:   12,
+  CALL_TTL_MS:      60 * 60 * 1000,   // 1h max call
+  TOKEN_TTL:        '1h',
+};
 
 export const CHAT = {
-  pageSize: 50,
-  maxMessageLength: 2000,
-  typingTimeoutMs: 3000,
-} as const;
+  MAX_MESSAGE_LEN:  500,
+  EPHEMERAL_TTL_MS: 24 * 60 * 60 * 1000, // 24h
+  PAGE_SIZE:        50,
+};
+
+export const COLORS = {
+  bg:        '#04040a',
+  surface:   '#0d0d14',
+  surfaceUp: '#14141f',
+  border:    'rgba(168,85,247,0.18)',
+  purple:    '#a855f7',
+  pink:      '#ec4899',
+  amber:     '#fbbf24',
+  cyan:      '#22d3ee',
+  green:     '#4ade80',
+  red:       '#f87171',
+  text:      '#f0eee8',
+  textDim:   'rgba(240,238,232,0.5)',
+  textMuted: 'rgba(240,238,232,0.22)',
+  femalePin: '#ff3c64',
+  malePin:   '#7c3aed',
+  twPin:     '#f7a8c4',
+  tmPin:     '#55cdfc',
+};

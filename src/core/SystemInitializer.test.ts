@@ -60,13 +60,14 @@ jest.mock('@services/health/HealthMonitor', () => ({
 }));
 
 // BackgroundService
-const mockBgStart = jest.fn();
+const mockBgStart = jest.fn().mockResolvedValue(undefined); // async in main's version
 const mockBgStop = jest.fn();
 
 jest.mock('@services/background/BackgroundService', () => ({
   BackgroundService: jest.fn().mockImplementation(() => ({
     start: mockBgStart,
     stop: mockBgStop,
+    registerTask: jest.fn(),                              // added in main's BackgroundService
     getCurrentState: jest.fn().mockReturnValue('active'),
     onLifecycleChange: jest.fn().mockReturnValue(() => undefined),
     getConfig: jest.fn().mockReturnValue({}),

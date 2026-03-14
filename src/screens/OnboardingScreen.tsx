@@ -1,627 +1,307 @@
 // src/screens/OnboardingScreen.tsx
-// Multi-step onboarding flow with progress dots at the top.
-//   Step 1 — Phone number entry (calls AuthService.sendOTP)
-//   Step 2 — OTP verification  (calls AuthService.verifyOTP)
-//   Step 3 — Profile setup     (name, age, gender picker, bio, vibe tags)
-//
-// On step 3 completion the profile is saved to userStore and isOnboarded is
-// set to true, which triggers RootNavigator to render MainTabs.
-
-import React, { useRef, useState } from 'react';
+// Phone OTP → Profile setup — 4-step flow
+// Steps: Phone → Verify → Profile basics → Vibe/tags
+import React, { useState, useRef } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+  View, Text, StyleSheet, TextInput, TouchableOpacity,
+  KeyboardAvoidingView, Platform, Animated, ScrollView,
 } from 'react-native';
-
-import { GlowButton } from '@components';
-import { AuthService } from '@services/auth';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { authService } from '@services/auth';
 import { useUserStore } from '@services/state/userStore';
-import { COLORS } from '@config/constants';
-import type { Gender, UserProfile } from '@types/index';
+import GlowButton from '@components/ui/GlowButton';
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+const C = {
+  bg:      '#04040a',
+  surface: '#0d0d14',
+  border:  'rgba(168,85,247,0.2)',
+  purple:  '#a855f7',
+  amber:   '#fbbf24',
+  green:   '#4ade80',
+  red:     '#f87171',
+  text:    '#f0eee8',
+  textDim: 'rgba(240,238,232,0.5)',
+  textMuted: 'rgba(240,238,232,0.2)',
+};
 
-const TOTAL_STEPS = 3;
+type Step = 'phone' | 'verify' | 'profile' | 'vibe';
+type Gender = 'f' | 'm' | 'tw' | 'tm' | 'nb';
 
-const GENDER_OPTIONS: Array<{ key: Gender; label: string; color: string }> = [
-  { key: 'female',      label: 'Woman',       color: COLORS.female },
-  { key: 'male',        label: 'Man',         color: COLORS.male },
-  { key: 'trans_woman', label: 'Trans Woman', color: COLORS.transWoman },
-  { key: 'trans_man',   label: 'Trans Man',   color: COLORS.transMan },
-  { key: 'non_binary',  label: 'Non-Binary',  color: COLORS.nonBinary },
+const VIBE_TAGS = [
+  'Tonight only', 'Down for anything', 'No strings', 'Good vibes only',
+  'Spontaneous', 'Late night magic', 'Come find me', 'Free tonight',
+  "Let's link", 'Adventurous', 'Just got out', 'Dream energy',
 ];
 
-const VIBE_SUGGESTIONS = [
-  'rooftops', 'jazz', 'dancing', 'music', 'art', 'foodie',
-  'chill', 'creative', 'techno', 'bars', 'karaoke', 'live music',
+const GENDER_OPTIONS: { key: Gender; label: string; emoji: string }[] = [
+  { key: 'f',  label: 'Woman',       emoji: '🍑' },
+  { key: 'm',  label: 'Man',         emoji: '🍆' },
+  { key: 'tw', label: 'Trans Woman', emoji: '🦋' },
+  { key: 'tm', label: 'Trans Man',   emoji: '⚡' },
+  { key: 'nb', label: 'Non-binary',  emoji: '✨' },
 ];
 
-// ---------------------------------------------------------------------------
-// Module-level service
-// ---------------------------------------------------------------------------
+const OnboardingScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
+  const [step,        setStep]        = useState<Step>('phone');
+  const [phone,       setPhone]       = useState('');
+  const [otp,         setOtp]         = useState('');
+  const [name,        setName]        = useState('');
+  const [age,         setAge]         = useState('');
+  const [gender,      setGender]      = useState<Gender>('f');
+  const [selectedTags,setSelectedTags]= useState<string[]>([]);
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState('');
 
-const authService = new AuthService();
+  const setProfile  = useUserStore(s => s.setProfile);
+  const setOnboarded = useUserStore(s => s.setOnboarded);
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
+  const slideAnim = useRef(new Animated.Value(0)).current;
 
-/** Progress dot row shown at the top of every step. */
-function ProgressDots({ current }: { current: number }) {
-  return (
-    <View style={styles.dotsRow}>
-      {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-        <View
-          key={i}
-          style={[
-            styles.dot,
-            i === current - 1 && styles.dotActive,
-            i < current - 1 && styles.dotDone,
-          ]}
-        />
-      ))}
-    </View>
-  );
-}
+  const animateIn = () => {
+    slideAnim.setValue(40);
+    Animated.spring(slideAnim, { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }).start();
+  };
 
-/** Uppercase label above a field. */
-function FieldLabel({ text }: { text: string }) {
-  return <Text style={styles.fieldLabel}>{text}</Text>;
-}
+  const goTo = (s: Step) => { setStep(s); animateIn(); setError(''); };
 
-/** Dark-themed text input used across all steps. */
-function StyledInput({
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType,
-  maxLength,
-  multiline,
-  autoFocus,
-  onSubmitEditing,
-}: {
-  value: string;
-  onChangeText: (t: string) => void;
-  placeholder: string;
-  keyboardType?: React.ComponentProps<typeof TextInput>['keyboardType'];
-  maxLength?: number;
-  multiline?: boolean;
-  autoFocus?: boolean;
-  onSubmitEditing?: () => void;
-}) {
-  return (
-    <TextInput
-      style={[styles.input, multiline && styles.inputMultiline]}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor={COLORS.textMuted}
-      keyboardType={keyboardType}
-      maxLength={maxLength}
-      multiline={multiline}
-      autoFocus={autoFocus}
-      onSubmitEditing={onSubmitEditing}
-      returnKeyType={multiline ? 'default' : 'done'}
-    />
-  );
-}
+  const handleSendOTP = async () => {
+    if (phone.length < 10) { setError('Enter a valid phone number'); return; }
+    setLoading(true);
+    const formatted = phone.startsWith('+') ? phone : `+1${phone.replace(/\D/g, '')}`;
+    const result = await authService.sendOTP(formatted);
+    setLoading(false);
+    if (!result.success) { setError(result.error ?? 'Failed to send code'); return; }
+    goTo('verify');
+  };
 
-/** Inline red error message. Hidden when text is null. */
-function ErrorMessage({ text }: { text: string | null }) {
-  if (!text) return null;
-  return <Text style={styles.errorText}>{text}</Text>;
-}
+  const handleVerifyOTP = async () => {
+    if (otp.length !== 6) { setError('Enter the 6-digit code'); return; }
+    setLoading(true);
+    const formatted = phone.startsWith('+') ? phone : `+1${phone.replace(/\D/g, '')}`;
+    const session = await authService.verifyOTP(formatted, otp);
+    setLoading(false);
+    if (!session) { setError('Invalid code — try again'); return; }
+    goTo('profile');
+  };
 
-// ---------------------------------------------------------------------------
-// Step 1 — Phone number
-// ---------------------------------------------------------------------------
+  const handleSaveProfile = async () => {
+    if (!name.trim())           { setError('Enter your name'); return; }
+    if (!age || parseInt(age) < 18) { setError('You must be 18+'); return; }
+    goTo('vibe');
+  };
 
-interface Step1Props {
-  onNext: (phone: string) => void;
-}
+  const handleComplete = async () => {
+    setLoading(true);
+    const session = await authService.getSession();
+    if (!session) { setError('Session expired — restart'); setLoading(false); return; }
 
-function Step1Phone({ onNext }: Step1Props) {
-  const [phone, setPhone] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+    const profile = await authService.getOrCreateProfile(session.userId, session.phone);
+    if (!profile) { setError('Could not save profile'); setLoading(false); return; }
 
-  async function handleSend() {
-    const cleaned = phone.trim();
-    if (!cleaned) { setError('Please enter your phone number.'); return; }
+    await authService.updateProfile(session.userId, {
+      displayName:  name.trim(),
+      age:          parseInt(age),
+      gender,
+      vibeTagIds:   selectedTags,
+      presence:     'online',
+      lastActiveAt: Date.now(),
+    });
 
-    // Minimal E.164 sanity check — full validation happens on the server
-    if (!/^\+?[1-9]\d{7,14}$/.test(cleaned.replace(/[\s\-()\s]/g, ''))) {
-      setError('Enter a valid phone number including country code (e.g. +12125551234).');
-      return;
-    }
+    setProfile({ ...profile, displayName: name.trim(), age: parseInt(age), gender, vibeTagIds: selectedTags });
+    setOnboarded(true);
+    setLoading(false);
+    onComplete();
+  };
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      const e164 = cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
-      await authService.sendOTP(e164);
-      onNext(e164);
-    } catch {
-      setError('Could not send code. Check your number and try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  return (
-    <View style={styles.stepRoot}>
-      <Text style={styles.stepTitle}>What's your number?</Text>
-      <Text style={styles.stepSub}>
-        We'll send a one-time code to verify it's you.{'\n'}Standard SMS rates may apply.
-      </Text>
-
-      <FieldLabel text="Phone number" />
-      <StyledInput
-        value={phone}
-        onChangeText={(t) => { setPhone(t); setError(null); }}
-        placeholder="+1 212 555 1234"
-        keyboardType="phone-pad"
-        autoFocus
-        onSubmitEditing={handleSend}
-      />
-      <ErrorMessage text={error} />
-
-      <View style={styles.stepAction}>
-        <GlowButton
-          title={isLoading ? 'Sending...' : 'Send Code'}
-          onPress={handleSend}
-          disabled={isLoading}
-          size="lg"
-        />
-      </View>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Step 2 — OTP verification
-// ---------------------------------------------------------------------------
-
-interface Step2Props {
-  phone: string;
-  onNext: () => void;
-}
-
-function Step2OTP({ phone, onNext }: Step2Props) {
-  const [otp, setOtp] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { setAuthed } = useUserStore();
-  const inputRefs = useRef<Array<TextInput | null>>([null, null, null, null, null, null]);
-
-  function handleDigitChange(index: number, value: string) {
-    const digit = value.replace(/\D/g, '').slice(-1);
-    const chars = otp.padEnd(6, ' ').split('');
-    chars[index] = digit || ' ';
-    const next = chars.join('').trimEnd();
-    setOtp(next);
-    setError(null);
-    if (digit && index < 5) inputRefs.current[index + 1]?.focus();
-  }
-
-  function handleKeyPress(index: number, key: string) {
-    if (key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-      const chars = otp.padEnd(6, ' ').split('');
-      chars[index - 1] = ' ';
-      setOtp(chars.join('').trimEnd());
-    }
-  }
-
-  async function handleVerify() {
-    const code = otp.replace(/\s/g, '');
-    if (code.length !== 6) { setError('Enter all 6 digits.'); return; }
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      await authService.verifyOTP(phone, code);
-      setAuthed(true);
-      onNext();
-    } catch {
-      setError('Invalid code. Check your SMS and try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  return (
-    <View style={styles.stepRoot}>
-      <Text style={styles.stepTitle}>Enter your code</Text>
-      <Text style={styles.stepSub}>Sent to {phone}</Text>
-
-      {/* 6-digit OTP boxes */}
-      <View style={styles.otpRow}>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <TextInput
-            key={i}
-            ref={(r) => { inputRefs.current[i] = r; }}
-            style={styles.otpBox}
-            value={otp[i] && otp[i] !== ' ' ? otp[i] : ''}
-            onChangeText={(v) => handleDigitChange(i, v)}
-            onKeyPress={({ nativeEvent }) => handleKeyPress(i, nativeEvent.key)}
-            keyboardType="number-pad"
-            maxLength={1}
-            textAlign="center"
-            autoFocus={i === 0}
-            selectionColor={COLORS.accent}
-          />
-        ))}
-      </View>
-
-      <ErrorMessage text={error} />
-
-      <View style={styles.stepAction}>
-        <GlowButton
-          title={isLoading ? 'Verifying...' : 'Verify'}
-          onPress={handleVerify}
-          disabled={isLoading}
-          size="lg"
-        />
-      </View>
-
-      <TouchableOpacity
-        style={styles.resendBtn}
-        onPress={() => authService.sendOTP(phone)}
-      >
-        <Text style={styles.resendText}>Resend code</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Step 3 — Profile setup
-// ---------------------------------------------------------------------------
-
-interface Step3Props {
-  onDone: () => void;
-}
-
-function Step3Profile({ onDone }: Step3Props) {
-  const { profile, updateProfile, setOnboarded } = useUserStore();
-
-  const [name, setName] = useState(profile?.displayName ?? '');
-  const [age, setAge] = useState(profile?.age ? String(profile.age) : '');
-  const [gender, setGender] = useState<Gender>(profile?.gender ?? 'non_binary');
-  const [bio, setBio] = useState(profile?.bio ?? '');
-  const [vibeTags, setVibeTags] = useState<string[]>(profile?.vibeTags ?? []);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  function toggleVibe(tag: string) {
-    setVibeTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag].slice(0, 5)
     );
-  }
-
-  async function handleDone() {
-    if (!name.trim()) { setError('Your name is required.'); return; }
-    const ageNum = parseInt(age, 10);
-    if (isNaN(ageNum) || ageNum < 18 || ageNum > 99) {
-      setError('Enter a valid age (18–99).');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      const updates: Partial<UserProfile> = {
-        displayName: name.trim(),
-        age: ageNum,
-        gender,
-        bio: bio.trim(),
-        vibeTags,
-      };
-      updateProfile(updates);
-      // TODO[NORMAL]: persist to AuthService.updateProfile(userId, updates) once
-      // userId is available in the store after verifyOTP.
-      setOnboarded(true);
-      onDone();
-    } catch {
-      setError('Could not save your profile. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  };
 
   return (
-    <ScrollView
-      style={styles.stepScroll}
-      contentContainerStyle={styles.stepScrollContent}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={styles.stepTitle}>Set up your profile</Text>
-      <Text style={styles.stepSub}>This is what others see when they find you.</Text>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
 
-      <FieldLabel text="Display name" />
-      <StyledInput
-        value={name}
-        onChangeText={(t) => { setName(t); setError(null); }}
-        placeholder="How should we call you?"
-        maxLength={30}
-        autoFocus
-      />
+          {/* Brand */}
+          <View style={styles.brand}>
+            <Text style={styles.brandText}>ALL<Text style={{ color: C.amber }}>NIGHT</Text>LONG</Text>
+            <Text style={styles.brandSub}>🌙 LATE NIGHT · REAL PROXIMITY</Text>
+          </View>
 
-      <FieldLabel text="Age" />
-      <StyledInput
-        value={age}
-        onChangeText={(t) => { setAge(t.replace(/\D/g, '')); setError(null); }}
-        placeholder="e.g. 24"
-        keyboardType="number-pad"
-        maxLength={2}
-      />
+          <Animated.View style={{ transform: [{ translateY: slideAnim }] }}>
 
-      <FieldLabel text="I am a..." />
-      <View style={styles.genderGrid}>
-        {GENDER_OPTIONS.map((opt) => {
-          const active = gender === opt.key;
-          return (
-            <TouchableOpacity
-              key={opt.key}
-              style={[
-                styles.genderChip,
-                active && { backgroundColor: opt.color + '22', borderColor: opt.color },
-              ]}
-              onPress={() => setGender(opt.key)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.genderDot, { backgroundColor: opt.color }]} />
-              <Text style={[styles.genderLabel, active && { color: opt.color }]}>
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+            {/* ── STEP: Phone ── */}
+            {step === 'phone' && (
+              <View style={styles.stepWrap}>
+                <Text style={styles.stepTitle}>What's your number?</Text>
+                <Text style={styles.stepSub}>We'll text you a code. No spam, ever.</Text>
+                <TextInput
+                  style={styles.input}
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="+1 (201) 555-0100"
+                  placeholderTextColor={C.textMuted}
+                  keyboardType="phone-pad"
+                  autoFocus
+                  maxLength={15}
+                />
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+                <GlowButton label={loading ? 'Sending...' : 'Send Code'} onPress={handleSendOTP} disabled={loading} size="lg" />
+              </View>
+            )}
 
-      <FieldLabel text="Bio (optional)" />
-      <StyledInput
-        value={bio}
-        onChangeText={setBio}
-        placeholder="Tell people what you're about tonight..."
-        maxLength={160}
-        multiline
-      />
-      <Text style={styles.charCount}>{bio.length}/160</Text>
+            {/* ── STEP: Verify ── */}
+            {step === 'verify' && (
+              <View style={styles.stepWrap}>
+                <Text style={styles.stepTitle}>Enter the code</Text>
+                <Text style={styles.stepSub}>Sent to {phone}</Text>
+                <TextInput
+                  style={[styles.input, styles.inputOTP]}
+                  value={otp}
+                  onChangeText={setOtp}
+                  placeholder="000000"
+                  placeholderTextColor={C.textMuted}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoFocus
+                />
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+                <GlowButton label={loading ? 'Verifying...' : 'Verify'} onPress={handleVerifyOTP} disabled={loading} size="lg" />
+                <TouchableOpacity onPress={() => goTo('phone')} style={styles.backLink}>
+                  <Text style={styles.backLinkText}>← Change number</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
-      <FieldLabel text="Your vibes" />
-      <View style={styles.vibeGrid}>
-        {VIBE_SUGGESTIONS.map((tag) => {
-          const active = vibeTags.includes(tag);
-          return (
-            <TouchableOpacity
-              key={tag}
-              style={[styles.vibeChip, active && styles.vibeChipActive]}
-              onPress={() => toggleVibe(tag)}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.vibeChipLabel, active && styles.vibeChipLabelActive]}>
-                {tag}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+            {/* ── STEP: Profile ── */}
+            {step === 'profile' && (
+              <View style={styles.stepWrap}>
+                <Text style={styles.stepTitle}>Set up your profile</Text>
+                <Text style={styles.stepSub}>Keep it real — people see this.</Text>
 
-      <ErrorMessage text={error} />
+                <Text style={styles.inputLabel}>Name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Your name"
+                  placeholderTextColor={C.textMuted}
+                  autoFocus
+                  maxLength={30}
+                />
 
-      <View style={styles.stepAction}>
-        <GlowButton
-          title={isLoading ? 'Saving...' : "Let's go"}
-          onPress={handleDone}
-          disabled={isLoading}
-          size="lg"
-        />
-      </View>
-    </ScrollView>
-  );
-}
+                <Text style={styles.inputLabel}>Age (must be 18+)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={age}
+                  onChangeText={setAge}
+                  placeholder="25"
+                  placeholderTextColor={C.textMuted}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
 
-// ---------------------------------------------------------------------------
-// Main OnboardingScreen
-// ---------------------------------------------------------------------------
+                <Text style={styles.inputLabel}>I am a...</Text>
+                <View style={styles.genderGrid}>
+                  {GENDER_OPTIONS.map(opt => (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[styles.genderPill, gender === opt.key && styles.genderPillActive]}
+                      onPress={() => setGender(opt.key)}
+                    >
+                      <Text style={styles.genderEmoji}>{opt.emoji}</Text>
+                      <Text style={[styles.genderLabel, gender === opt.key && { color: C.text }]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
-const OnboardingScreen: React.FC = () => {
-  const [step, setStep] = useState(1);
-  const [phone, setPhone] = useState('');
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+                <GlowButton label="Continue →" onPress={handleSaveProfile} size="lg" />
+              </View>
+            )}
 
-  function goToStep2(verifiedPhone: string) {
-    setPhone(verifiedPhone);
-    setStep(2);
-  }
+            {/* ── STEP: Vibe ── */}
+            {step === 'vibe' && (
+              <View style={styles.stepWrap}>
+                <Text style={styles.stepTitle}>What's your vibe tonight?</Text>
+                <Text style={styles.stepSub}>Pick up to 5. People nearby will see this.</Text>
+                <View style={styles.tagsGrid}>
+                  {VIBE_TAGS.map(tag => {
+                    const active = selectedTags.includes(tag);
+                    return (
+                      <TouchableOpacity
+                        key={tag}
+                        style={[styles.tagPill, active && styles.tagPillActive]}
+                        onPress={() => toggleTag(tag)}
+                      >
+                        <Text style={[styles.tagText, active && { color: C.text }]}>{tag}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+                <GlowButton
+                  label={loading ? 'Setting up...' : 'Drop In 🌙'}
+                  onPress={handleComplete}
+                  disabled={loading}
+                  size="lg"
+                  color={C.amber}
+                />
+              </View>
+            )}
 
-  function goToStep3() {
-    setStep(3);
-  }
+          </Animated.View>
 
-  // Step3Profile calls setOnboarded(true) directly, which causes RootNavigator
-  // to unmount this screen and show MainTabs. No navigation call needed here.
-  function handleProfileDone() {}
+          {/* Step dots */}
+          <View style={styles.stepDots}>
+            {(['phone', 'verify', 'profile', 'vibe'] as Step[]).map((s) => (
+              <View key={s} style={[styles.dot, step === s && styles.dotActive]} />
+            ))}
+          </View>
 
-  return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <Text style={styles.appName}>All Night Long</Text>
-        <ProgressDots current={step} />
-      </View>
-
-      {step === 1 && <Step1Phone onNext={goToStep2} />}
-      {step === 2 && <Step2OTP phone={phone} onNext={goToStep3} />}
-      {step === 3 && <Step3Profile onDone={handleProfileDone} />}
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
-
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.bg },
+  safe:   { flex: 1, backgroundColor: C.bg },
+  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40 },
 
-  // --- Top bar ---
-  topBar: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 36,
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: 16,
-  },
-  appName: {
-    color: COLORS.accent,
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
+  brand:    { alignItems: 'center', paddingVertical: 40 },
+  brandText:{ fontSize: 32, fontWeight: '900', color: C.text, letterSpacing: 3 },
+  brandSub: { fontSize: 10, color: C.textMuted, letterSpacing: 2, marginTop: 6 },
 
-  // --- Progress dots ---
-  dotsRow: { flexDirection: 'row', gap: 8 },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  dotActive: { backgroundColor: COLORS.accent, width: 24 },
-  dotDone: { backgroundColor: COLORS.accent + '60' },
+  stepWrap:  { gap: 16 },
+  stepTitle: { fontSize: 26, fontWeight: '900', color: C.text, letterSpacing: 0.5 },
+  stepSub:   { fontSize: 14, color: C.textDim, marginTop: -8, lineHeight: 20 },
 
-  // --- Step shared layout ---
-  stepRoot: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 36,
-    gap: 8,
-  },
-  stepScroll: { flex: 1 },
-  stepScrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 36,
-    paddingBottom: 60,
-    gap: 8,
-  },
-  stepTitle: {
-    color: COLORS.text,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-    marginBottom: 4,
-  },
-  stepSub: {
-    color: COLORS.textMuted,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  stepAction: { marginTop: 24 },
+  inputLabel: { fontSize: 11, fontWeight: '700', color: C.textMuted, letterSpacing: 1.5, marginBottom: -8 },
+  input:      { backgroundColor: C.surface, borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16, color: C.text, fontSize: 16, borderWidth: 1, borderColor: C.border },
+  inputOTP:   { fontSize: 28, fontWeight: '900', letterSpacing: 12, textAlign: 'center' },
 
-  // --- Field label ---
-  fieldLabel: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    marginTop: 16,
-  },
+  error:    { fontSize: 12, color: C.red, fontWeight: '600' },
 
-  // --- Text input ---
-  input: {
-    backgroundColor: COLORS.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: COLORS.text,
-    fontSize: 16,
-  },
-  inputMultiline: {
-    height: 100,
-    textAlignVertical: 'top',
-    paddingTop: 14,
-  },
-  charCount: { color: COLORS.textMuted, fontSize: 11, textAlign: 'right', marginTop: 4 },
+  genderGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  genderPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.03)' },
+  genderPillActive: { borderColor: C.purple, backgroundColor: 'rgba(168,85,247,0.15)' },
+  genderEmoji: { fontSize: 16 },
+  genderLabel: { fontSize: 13, fontWeight: '600', color: C.textDim },
 
-  // --- OTP boxes ---
-  otpRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 20,
-    marginBottom: 8,
-    justifyContent: 'center',
-  },
-  otpBox: {
-    width: 46,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: COLORS.card,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    color: COLORS.text,
-    fontSize: 22,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
+  tagsGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tagPill:      { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.03)' },
+  tagPillActive:{ borderColor: C.amber, backgroundColor: 'rgba(251,191,36,0.12)' },
+  tagText:      { fontSize: 13, fontWeight: '600', color: C.textDim },
 
-  // --- Resend ---
-  resendBtn: { marginTop: 20, alignSelf: 'center' },
-  resendText: { color: COLORS.accent, fontSize: 14, fontWeight: '600' },
+  backLink:     { alignItems: 'center', paddingTop: 4 },
+  backLinkText: { fontSize: 13, color: C.textMuted },
 
-  // --- Gender picker ---
-  genderGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
-  genderChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-  },
-  genderDot: { width: 8, height: 8, borderRadius: 4 },
-  genderLabel: { color: COLORS.textMuted, fontSize: 14, fontWeight: '600' },
-
-  // --- Vibe tags ---
-  vibeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  vibeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  vibeChipActive: {
-    backgroundColor: COLORS.accent + '18',
-    borderColor: COLORS.accent + '50',
-  },
-  vibeChipLabel: { color: COLORS.textMuted, fontSize: 13, fontWeight: '600' },
-  vibeChipLabelActive: { color: COLORS.accent },
-
-  // --- Error ---
-  errorText: { color: COLORS.error, fontSize: 13, marginTop: 8, lineHeight: 18 },
+  stepDots: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingTop: 32 },
+  dot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.15)' },
+  dotActive:{ backgroundColor: C.purple, width: 20 },
 });
 
 export default OnboardingScreen;

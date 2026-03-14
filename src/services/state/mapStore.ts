@@ -1,55 +1,51 @@
 // src/services/state/mapStore.ts
 import { create } from 'zustand';
-import type { MapUser, MapEvent, CameraState, MapMode, GenderFilter } from '@types/index';
+import type { MapUser, MapEvent, CameraState } from '@types/index';
+
+type FilterGender = 'all' | 'f' | 'm' | 'tw' | 'tm';
+type MapMode      = 'pins' | 'pulse';
 
 interface MapStore {
-  users: MapUser[];
-  events: MapEvent[];
-  selectedUser: MapUser | null;
-  filter: GenderFilter;
-  mode: MapMode;
-  camera: CameraState;
-
-  setUsers: (users: MapUser[]) => void;
-  setEvents: (events: MapEvent[]) => void;
-  selectUser: (user: MapUser | null) => void;
-  setFilter: (filter: GenderFilter) => void;
-  setMode: (mode: MapMode) => void;
-  setCamera: (camera: Partial<CameraState>) => void;
-  // WHY: derived selector lives here rather than in a component so any
-  // subscriber can get the filtered list without duplicating filter logic
-  filteredUsers: () => MapUser[];
+  users:          MapUser[];
+  events:         MapEvent[];
+  selectedUser:   MapUser | null;
+  filterGender:   FilterGender;
+  mapMode:        MapMode;
+  camera:         CameraState;
+  setUsers:       (users: MapUser[]) => void;
+  setEvents:      (events: MapEvent[]) => void;
+  selectUser:     (user: MapUser | null) => void;
+  setFilter:      (g: FilterGender) => void;
+  setMapMode:     (m: MapMode) => void;
+  setCamera:      (c: Partial<CameraState>) => void;
+  filteredUsers:  () => MapUser[];
 }
 
-// Default camera centered on Manhattan — overridden once location resolves
-const defaultCamera: CameraState = {
-  latitude: 40.7128,
-  longitude: -74.006,
-  zoom: 13,
-  pitch: 45,
-  heading: 0,
+const DEFAULT_CAMERA: CameraState = {
+  center:  { lat: 40.7128, lng: -74.006 },
+  zoom:    14.5,
+  pitch:   45,
+  bearing: -15,
 };
 
 export const useMapStore = create<MapStore>((set, get) => ({
-  users: [],
-  events: [],
+  users:        [],
+  events:       [],
   selectedUser: null,
-  filter: 'all',
-  mode: 'normal',
-  camera: defaultCamera,
+  filterGender: 'all',
+  mapMode:      'pins',
+  camera:       DEFAULT_CAMERA,
 
-  setUsers: (users) => set({ users }),
-  setEvents: (events) => set({ events }),
-  selectUser: (selectedUser) => set({ selectedUser }),
-  setFilter: (filter) => set({ filter }),
-  setMode: (mode) => set({ mode }),
-
-  // Merge partial camera updates so callers only need to specify what changed
-  setCamera: (camera) => set((s) => ({ camera: { ...s.camera, ...camera } })),
+  setUsers:   (users)   => set({ users }),
+  setEvents:  (events)  => set({ events }),
+  selectUser: (user)    => set({ selectedUser: user }),
+  setFilter:  (g)       => set({ filterGender: g }),
+  setMapMode: (m)       => set({ mapMode: m }),
+  setCamera:  (c)       => set((s) => ({ camera: { ...s.camera, ...c } })),
 
   filteredUsers: () => {
-    const { users, filter } = get();
-    if (filter === 'all') return users;
-    return users.filter((u) => u.gender === filter);
+    const { users, filterGender } = get();
+    if (filterGender === 'all') return users;
+    return users.filter(u => u.gender === filterGender);
   },
 }));

@@ -1,462 +1,291 @@
--- ============================================================
--- ANL — All Night Long
--- PostgreSQL Schema (Supabase)
--- ============================================================
--- Run this file against a fresh Supabase project to initialize
--- all tables, policies, RPCs, triggers, realtime subscriptions,
--- and seed data needed for the ANL app to operate.
--- ============================================================
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ANL — AllNightLong — Full Supabase Schema
+-- Run this in: Supabase Dashboard → SQL Editor → New query
+-- ═══════════════════════════════════════════════════════════════════════════
 
--- ------------------------------------------------------------
--- Extensions
--- ------------------------------------------------------------
-
--- uuid_generate_v4() for primary keys
+-- ── Extensions ───────────────────────────────────────────────────────────────
 create extension if not exists "uuid-ossp";
+create extension if not exists "postgis";     -- spatial queries
 
--- Geospatial support (used by PostGIS-based queries if needed)
-create extension if not exists "postgis";
-
--- ------------------------------------------------------------
--- Table: public.users
--- One row per authenticated user. Mirrors auth.users via the
--- id foreign key so deleting an auth user cascades here.
--- ------------------------------------------------------------
-create table public.users (
-  id                uuid         primary key references auth.users(id) on delete cascade,
-  phone             text         unique,
-  display_name      text         not null default '',
-  age               integer,
-  -- WHY: Explicit check list keeps invalid values out at the DB layer,
-  -- independent of any client-side validation.
-  gender            text         check (gender in ('female', 'male', 'trans_woman', 'trans_man', 'non_binary')),
-  bio               text         default '',
-  avatar_url        text,
-  vibe_tags         text[]       default '{}',
-  is_out_tonight    boolean      default false,
-  is_premium        boolean      default false,
-  latitude          double precision,
-  longitude         double precision,
-  presence          text         default 'offline'
-                                 check (presence in ('online', 'away', 'offline')),
-  last_active_at    timestamptz  default now(),
-  created_at        timestamptz  default now(),
-  updated_at        timestamptz  default now()
+-- ── Users ────────────────────────────────────────────────────────────────────
+create table users (
+  id            uuid primary key references auth.users(id) on delete cascade,
+  phone         text unique not null,
+  display_name  text not null default '',
+  age           smallint not null default 18 check (age >= 18),
+  gender        text not null default 'f' check (gender in ('f','m','tw','tm','nb')),
+  bio           text default '',
+  vibe          text default '',
+  position      text default 'na' check (position in ('top','bottom','vers','side','na')),
+  body_type     text,
+  height_cm     smallint,
+  vibe_tag_ids  text[] default '{}',
+  photos        text[] default '{}',           -- signed storage URLs
+  is_verified   boolean default false,
+  is_premium    boolean default false,
+  presence      text default 'offline' check (presence in ('online','away','offline')),
+  last_active_at timestamptz default now(),
+  push_token    text,
+  blocked_ids   uuid[] default '{}',
+  location      geography(Point, 4326),         -- PostGIS point (exact, server-only)
+  fuzzy_lat     double precision,               -- fuzzed for client
+  fuzzy_lng     double precision,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
 );
 
--- ------------------------------------------------------------
--- Table: public.vibe_tags
--- Reference table for the tag vocabulary shown in the UI.
--- The `name` column drives the display label.
--- ------------------------------------------------------------
-create table public.vibe_tags (
-  id        uuid  primary key default uuid_generate_v4(),
-  name      text  unique not null,
-  emoji     text,
-  category  text
-);
+create index on users using gist(location);    -- spatial index
+create index on users(presence, last_active_at desc);
+create index on users(gender);
 
--- ------------------------------------------------------------
--- Table: public.matches
--- Bidirectional match record between two users.
--- user_a and user_b are ordered deterministically by the app
--- (lower UUID first) to ensure the unique constraint fires
--- correctly regardless of which user initiates.
--- ------------------------------------------------------------
-create table public.matches (
-  id          uuid        primary key default uuid_generate_v4(),
-  user_a      uuid        references public.users(id) on delete cascade,
-  user_b      uuid        references public.users(id) on delete cascade,
-  score       integer     default 0,
-  status      text        default 'pending'
-                          check (status in ('pending', 'matched', 'declined')),
-  created_at  timestamptz default now(),
+-- ── Vibe tags ─────────────────────────────────────────────────────────────────
+create table vibe_tags (
+  id    text primary key,
+  label text not null,
+  emoji text
+);
+insert into vibe_tags values
+  ('tonight-only',    'Tonight only',      '🔥'),
+  ('down-for-anything','Down for anything', '😈'),
+  ('no-strings',      'No strings',        '🎯'),
+  ('good-vibes',      'Good vibes only',   '✨'),
+  ('spontaneous',     'Spontaneous',       '⚡'),
+  ('late-night-magic','Late night magic',  '🌙'),
+  ('come-find-me',    'Come find me',      '📍'),
+  ('free-tonight',    'Free tonight',      '🗓️'),
+  ('lets-link',       'Let''s link',       '🤝'),
+  ('adventurous',     'Adventurous',       '🧭'),
+  ('just-got-out',    'Just got out',      '👀'),
+  ('dream-energy',    'Dream energy',      '💭');
+
+-- ── Matches ──────────────────────────────────────────────────────────────────
+create table matches (
+  id         uuid primary key default gen_random_uuid(),
+  user_a     uuid not null references users(id) on delete cascade,
+  user_b     uuid not null references users(id) on delete cascade,
+  score_a    smallint,                          -- match % from A's perspective
+  score_b    smallint,
+  status     text default 'pending' check (status in ('pending','matched','rejected')),
+  created_at timestamptz default now(),
   unique(user_a, user_b)
 );
+create index on matches(user_a, status);
+create index on matches(user_b, status);
 
--- ------------------------------------------------------------
--- Table: public.channels
--- A channel is either a DM (is_group = false, exactly 2 members)
--- or a group chat (is_group = true, 2+ members).
--- Members are stored as a uuid[] for fast membership checks
--- inside RLS policies without an extra join table.
--- ------------------------------------------------------------
-create table public.channels (
-  id          uuid        primary key default uuid_generate_v4(),
-  name        text,
-  is_group    boolean     default false,
-  members     uuid[]      default '{}',
+-- ── Channels ─────────────────────────────────────────────────────────────────
+create table channels (
+  id           uuid primary key default gen_random_uuid(),
+  type         text not null check (type in ('dm','event','venue','neighborhood')),
+  name         text,
+  dm_id        text unique,                     -- sorted user pair key for DMs
+  member_ids   uuid[] default '{}',
+  event_id     uuid,
+  location     geography(Point, 4326),
+  updated_at   timestamptz default now(),
+  created_at   timestamptz default now()
+);
+create index on channels(type, updated_at desc);
+create index on channels using gist(location);
+
+-- ── Messages ─────────────────────────────────────────────────────────────────
+create table messages (
+  id          uuid primary key default gen_random_uuid(),
+  channel_id  uuid not null references channels(id) on delete cascade,
+  sender_id   uuid not null references users(id) on delete cascade,
+  content     text default '',
+  type        text default 'text' check (type in ('text','image','vibe','system')),
+  image_url   text,
+  read_by     uuid[] default '{}',
+  expires_at  timestamptz,                      -- ephemeral messages
   created_at  timestamptz default now()
 );
+create index on messages(channel_id, created_at desc);
 
--- ------------------------------------------------------------
--- Table: public.messages
--- A message belongs to a channel. sender_name is denormalized
--- here so deleted users leave readable history behind.
--- ------------------------------------------------------------
-create table public.messages (
-  id          uuid        primary key default uuid_generate_v4(),
-  channel_id  uuid        references public.channels(id) on delete cascade,
-  -- set null preserves message history when a user account is removed
-  sender_id   uuid        references public.users(id) on delete set null,
-  sender_name text        not null,
-  content     text        not null,
-  type        text        default 'text'
-                          check (type in ('text', 'vibe', 'system')),
-  created_at  timestamptz default now()
-);
-
--- ------------------------------------------------------------
--- Table: public.message_reads
--- Tracks per-user read receipts for each message.
--- Used to calculate unread counts in the chat UI.
--- ------------------------------------------------------------
-create table public.message_reads (
-  id          uuid        primary key default uuid_generate_v4(),
-  message_id  uuid        references public.messages(id) on delete cascade,
-  user_id     uuid        references public.users(id) on delete cascade,
+-- ── Message reads ─────────────────────────────────────────────────────────────
+create table message_reads (
+  channel_id  uuid references channels(id) on delete cascade,
+  user_id     uuid references users(id) on delete cascade,
   read_at     timestamptz default now(),
-  unique(message_id, user_id)
+  primary key (channel_id, user_id)
 );
 
--- ------------------------------------------------------------
--- Table: public.vibes
--- A vibe is a lightweight signal sent from one user to another
--- (e.g. a "wave", "like", or custom reaction emoji).
--- type is intentionally open — the app layer validates the
--- allowed set so new vibe types can be added without migrations.
--- ------------------------------------------------------------
-create table public.vibes (
-  id          uuid        primary key default uuid_generate_v4(),
-  from_user   uuid        references public.users(id) on delete cascade,
-  to_user     uuid        references public.users(id) on delete cascade,
-  type        text        default 'wave',
+-- ── Vibes (anonymous taps) ────────────────────────────────────────────────────
+create table vibes (
+  id           uuid primary key default gen_random_uuid(),
+  sender_id    uuid not null references users(id) on delete cascade,
+  receiver_id  uuid not null references users(id) on delete cascade,
+  created_at   timestamptz default now()
+);
+create index on vibes(receiver_id, created_at desc);
+
+-- ── Events (map pins) ─────────────────────────────────────────────────────────
+create table events (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,
+  type        text default 'party' check (type in ('party','bar','venue','popup')),
+  location    geography(Point, 4326) not null,
+  address     text,
+  channel_id  uuid references channels(id),
+  starts_at   timestamptz,
+  ends_at     timestamptz,
+  active_count int default 0,
   created_at  timestamptz default now()
 );
+create index on events using gist(location);
+create index on events(starts_at, ends_at);
 
--- ------------------------------------------------------------
--- Table: public.events
--- Nightlife events shown on the map and NightPulse screens.
--- Coordinates are plain doubles; PostGIS is available if
--- spatial indexing becomes a bottleneck later.
--- ------------------------------------------------------------
-create table public.events (
-  id             uuid        primary key default uuid_generate_v4(),
-  name           text        not null,
-  latitude       double precision not null,
-  longitude      double precision not null,
-  attendee_count integer     default 0,
-  category       text,
-  starts_at      timestamptz not null,
-  created_at     timestamptz default now()
+-- ── Night Pulse zones ────────────────────────────────────────────────────────
+create table pulse_zones (
+  id           text primary key,
+  name         text not null,
+  center       geography(Point, 4326),
+  radius_m     int default 500,
+  intensity    double precision default 0,
+  active_count int default 0,
+  trend        text default 'fading' check (trend in ('rising','peaking','fading')),
+  peak_hour    smallint,
+  updated_at   timestamptz default now()
 );
 
--- ------------------------------------------------------------
--- Table: public.pulse_zones
--- Named geographic zones used by NightPulse. intensity (0–1)
--- and active_users are updated periodically by the server-side
--- pulse aggregation job. updated_at is kept fresh by a trigger.
--- ------------------------------------------------------------
-create table public.pulse_zones (
-  id           uuid            primary key default uuid_generate_v4(),
-  name         text            not null,
-  latitude     double precision not null,
-  longitude    double precision not null,
-  intensity    double precision default 0
-                               check (intensity >= 0 and intensity <= 1),
-  active_users integer         default 0,
-  category     text,
-  updated_at   timestamptz     default now()
-);
-
--- ------------------------------------------------------------
--- Table: public.reports
--- User-submitted reports of abusive or policy-violating content.
--- Moderation workflow uses status to track resolution.
--- ------------------------------------------------------------
-create table public.reports (
-  id           uuid        primary key default uuid_generate_v4(),
-  reporter_id  uuid        references public.users(id),
-  reported_id  uuid        references public.users(id),
-  reason       text        not null,
-  details      text,
-  status       text        default 'pending',
+-- ── Reports / blocks ──────────────────────────────────────────────────────────
+create table reports (
+  id           uuid primary key default gen_random_uuid(),
+  reporter_id  uuid not null references users(id) on delete cascade,
+  reported_id  uuid not null references users(id) on delete cascade,
+  reason       text,
   created_at   timestamptz default now()
 );
 
--- ============================================================
--- Triggers
--- ============================================================
+-- ═══════════════════════════════════════════════════════════════════════════
+-- RLS Policies
+-- ═══════════════════════════════════════════════════════════════════════════
 
--- Automatically refreshes updated_at on any row update.
--- Called by the triggers below; do not call directly.
-create or replace function set_updated_at()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
+alter table users        enable row level security;
+alter table matches      enable row level security;
+alter table channels     enable row level security;
+alter table messages     enable row level security;
+alter table message_reads enable row level security;
+alter table vibes        enable row level security;
+alter table events       enable row level security;
+alter table pulse_zones  enable row level security;
+alter table reports      enable row level security;
 
-create trigger users_updated_at
-  before update on public.users
-  for each row execute function set_updated_at();
+-- Users: see others (with fuzzy coords only), edit own
+create policy "users_select" on users for select using (true);
+create policy "users_update" on users for update using (auth.uid() = id);
+create policy "users_insert" on users for insert with check (auth.uid() = id);
 
-create trigger pulse_zones_updated_at
-  before update on public.pulse_zones
-  for each row execute function set_updated_at();
-
--- ============================================================
--- Row Level Security
--- ============================================================
--- Every table that holds user data has RLS enabled.
--- Tables without RLS (vibe_tags, events, reports) are either
--- read-only reference data or admin-managed.
--- ============================================================
-
-alter table public.users          enable row level security;
-alter table public.channels       enable row level security;
-alter table public.messages       enable row level security;
-alter table public.vibes          enable row level security;
-alter table public.pulse_zones    enable row level security;
-alter table public.matches        enable row level security;
-
--- ------------------------------------------------------------
--- Users policies
--- ------------------------------------------------------------
-
--- Any authenticated or anonymous client can read any user profile.
--- This is intentional — profiles are the discovery surface of the app.
-create policy "Users are viewable by everyone"
-  on public.users
-  for select
-  using (true);
-
--- A user may only update their own row.
-create policy "Users can update own profile"
-  on public.users
-  for update
-  using (auth.uid() = id);
-
--- A user may only insert a row whose id matches their auth uid.
--- This fires on the post-signup trigger in the app.
-create policy "Users can insert own profile"
-  on public.users
-  for insert
-  with check (auth.uid() = id);
-
--- ------------------------------------------------------------
--- Messages policies
--- ------------------------------------------------------------
-
--- Only members of a channel can read its messages.
--- The subquery checks the members array column on channels.
-create policy "Messages readable by channel members"
-  on public.messages
-  for select
-  using (
-    exists (
-      select 1
-      from public.channels
-      where id = channel_id
-        and auth.uid() = any(members)
-    )
-  );
-
--- Only channel members may post new messages.
-create policy "Messages insertable by channel members"
-  on public.messages
-  for insert
+-- Messages: members only
+create policy "messages_select" on messages for select
+  using (channel_id in (
+    select id from channels where auth.uid() = any(member_ids)
+  ));
+create policy "messages_insert" on messages for insert
   with check (
-    exists (
-      select 1
-      from public.channels
-      where id = channel_id
-        and auth.uid() = any(members)
-    )
+    sender_id = auth.uid() and
+    channel_id in (select id from channels where auth.uid() = any(member_ids))
   );
 
--- ------------------------------------------------------------
--- Channels policies
--- ------------------------------------------------------------
+-- Channels: members see their channels
+create policy "channels_select" on channels for select
+  using (auth.uid() = any(member_ids) or type in ('event','venue','neighborhood'));
+create policy "channels_insert" on channels for insert with check (auth.uid() = any(member_ids));
 
--- A user can see only channels they are a member of.
-create policy "Channels readable by members"
-  on public.channels
-  for select
-  using (auth.uid() = any(members));
+-- Vibes: own sent/received
+create policy "vibes_select" on vibes for select
+  using (sender_id = auth.uid() or receiver_id = auth.uid());
+create policy "vibes_insert" on vibes for insert with check (sender_id = auth.uid());
 
--- Any authenticated user may create a channel (e.g. to open a DM).
--- The get_or_create_dm RPC is the preferred path for DM creation.
-create policy "Channels insertable by authenticated"
-  on public.channels
-  for insert
-  with check (auth.uid() is not null);
+-- Events: public read
+create policy "events_select" on events for select using (true);
 
--- ------------------------------------------------------------
--- Vibes policies
--- ------------------------------------------------------------
+-- Pulse zones: public read
+create policy "pulse_zones_select" on pulse_zones for select using (true);
 
--- Only the sender and recipient may see a vibe.
-create policy "Vibes readable by involved users"
-  on public.vibes
-  for select
-  using (auth.uid() = from_user or auth.uid() = to_user);
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Functions & Triggers
+-- ═══════════════════════════════════════════════════════════════════════════
 
--- A user may only send vibes from their own account.
-create policy "Vibes insertable by authenticated"
-  on public.vibes
-  for insert
-  with check (auth.uid() = from_user);
+-- Auto-update updated_at
+create or replace function set_updated_at()
+returns trigger language plpgsql as $$
+begin new.updated_at = now(); return new; end; $$;
 
--- ------------------------------------------------------------
--- Pulse zones policy
--- ------------------------------------------------------------
+create trigger users_updated_at    before update on users    for each row execute function set_updated_at();
+create trigger channels_updated_at before update on channels for each row execute function set_updated_at();
 
--- Pulse zone data is public — it drives the map heatmap for all users.
-create policy "Pulse zones are public"
-  on public.pulse_zones
-  for select
-  using (true);
-
--- ------------------------------------------------------------
--- Matches policies
--- ------------------------------------------------------------
-
--- Each user can see only their own match records.
-create policy "Matches readable by involved"
-  on public.matches
-  for select
-  using (auth.uid() = user_a or auth.uid() = user_b);
-
--- ============================================================
--- RPCs (Remote Procedure Calls)
--- ============================================================
-
--- ------------------------------------------------------------
--- get_nearby_users
--- Returns users within radius_mi miles of (lat, lon) who are
--- not marked offline. Uses spherical law of cosines — accurate
--- enough for city-scale distances without PostGIS overhead.
--- Falls back gracefully if no location data is set.
--- ------------------------------------------------------------
+-- Get nearby users (fuzzy coords, respects blocked list)
 create or replace function get_nearby_users(
-  lat       double precision,
-  lon       double precision,
-  radius_mi double precision default 5
+  p_lat       double precision,
+  p_lng       double precision,
+  p_radius_m  int default 5000,
+  p_gender    text default null,
+  p_viewer_id uuid default null
 )
-returns setof public.users as $$
-  select *
-  from public.users
-  where latitude  is not null
-    and longitude is not null
-    and (
-      acos(
-        -- Spherical law of cosines distance formula
-        sin(radians(lat)) * sin(radians(latitude)) +
-        cos(radians(lat)) * cos(radians(latitude)) * cos(radians(longitude - lon))
-      ) * 3959  -- Earth radius in miles
-    ) <= radius_mi
-    and presence != 'offline'
-  order by last_active_at desc;
-$$ language sql stable;
+returns table (
+  id           uuid,
+  display_name text,
+  age          smallint,
+  gender       text,
+  vibe         text,
+  vibe_tag_ids text[],
+  is_premium   boolean,
+  presence     text,
+  last_active_at timestamptz,
+  fuzzy_lat    double precision,
+  fuzzy_lng    double precision,
+  distance_m   double precision
+)
+language sql stable as $$
+  select
+    u.id, u.display_name, u.age, u.gender, u.vibe, u.vibe_tag_ids,
+    u.is_premium, u.presence, u.last_active_at,
+    u.fuzzy_lat, u.fuzzy_lng,
+    st_distance(u.location::geography, st_point(p_lng, p_lat)::geography) as distance_m
+  from users u
+  where
+    u.presence = 'online'
+    and u.id != coalesce(p_viewer_id, '00000000-0000-0000-0000-000000000000'::uuid)
+    and (p_viewer_id is null or not (u.id = any(
+      select unnest(blocked_ids) from users where id = p_viewer_id
+    )))
+    and st_dwithin(u.location::geography, st_point(p_lng, p_lat)::geography, p_radius_m)
+    and (p_gender is null or u.gender = p_gender)
+  order by distance_m asc
+  limit 100;
+$$;
 
--- ------------------------------------------------------------
--- get_or_create_dm
--- Looks up an existing 1:1 channel between two users, or
--- creates one if none exists. Returns the channel id.
--- This RPC ensures exactly one DM channel exists per pair
--- regardless of which user initiates the conversation.
--- ------------------------------------------------------------
-create or replace function get_or_create_dm(
-  user_a_id uuid,
-  user_b_id uuid
-)
-returns uuid as $$
+-- Get or create DM channel
+create or replace function get_or_create_dm(p_user_a uuid, p_user_b uuid)
+returns uuid language plpgsql as $$
 declare
-  channel_id uuid;
+  v_dm_id text;
+  v_channel_id uuid;
 begin
-  -- Check for an existing non-group channel containing both users
-  select id into channel_id
-  from public.channels
-  where is_group = false
-    and user_a_id = any(members)
-    and user_b_id = any(members)
-  limit 1;
-
-  -- If no channel exists, create one with both users as members
-  if channel_id is null then
-    insert into public.channels (is_group, members)
-    values (false, array[user_a_id, user_b_id])
-    returning id into channel_id;
+  v_dm_id := array_to_string(array(select unnest(array[p_user_a::text, p_user_b::text]) order by 1), ':');
+  select id into v_channel_id from channels where dm_id = v_dm_id;
+  if v_channel_id is null then
+    insert into channels (type, dm_id, member_ids)
+    values ('dm', v_dm_id, array[p_user_a, p_user_b])
+    returning id into v_channel_id;
   end if;
+  return v_channel_id;
+end; $$;
 
-  return channel_id;
-end;
-$$ language plpgsql;
-
--- ------------------------------------------------------------
--- get_pulse_snapshot
--- Returns a JSON snapshot of all pulse zones suitable for
--- the NightPulse screen. Includes a timestamp (epoch ms),
--- total active user count, and the id of the peak zone.
--- Called by the client on screen mount and on a poll interval.
--- ------------------------------------------------------------
+-- Pulse snapshot (called by NightPulseService)
 create or replace function get_pulse_snapshot()
-returns json as $$
+returns json language sql stable as $$
   select json_build_object(
-    'zones', coalesce(
-      json_agg(
-        json_build_object(
-          'id',          id,
-          'name',        name,
-          'latitude',    latitude,
-          'longitude',   longitude,
-          'intensity',   intensity,
-          'activeUsers', active_users,
-          'category',    category
-        )
-      ),
-      '[]'::json
-    ),
-    -- Millisecond epoch for direct comparison with Date.now() on the client
-    'timestamp',    extract(epoch from now()) * 1000,
-    'totalActive',  coalesce(sum(active_users), 0),
-    'peakZoneId',   (select id from public.pulse_zones order by intensity desc limit 1)
-  )
-  from public.pulse_zones;
-$$ language sql stable;
+    'zones',      (select json_agg(row_to_json(z)) from pulse_zones z),
+    'city_total', (select coalesce(sum(active_count), 0) from pulse_zones),
+    'updated_at', extract(epoch from now()) * 1000
+  );
+$$;
 
--- ============================================================
+-- ═══════════════════════════════════════════════════════════════════════════
 -- Realtime
--- ============================================================
--- Subscribe these tables to the realtime publication so clients
--- receive live updates over websockets without polling.
--- ============================================================
-
-alter publication supabase_realtime add table public.messages;
-alter publication supabase_realtime add table public.pulse_zones;
-alter publication supabase_realtime add table public.vibes;
-alter publication supabase_realtime add table public.users;
-
--- ============================================================
--- Seed data: vibe_tags
--- ============================================================
--- This is the initial tag vocabulary. Add new tags here and
--- re-run; the on conflict clause makes the insert idempotent.
--- ============================================================
-
-insert into public.vibe_tags (name, emoji, category) values
-  ('Night Owl',        '🦉', 'lifestyle'),
-  ('Dancer',           '💃', 'activity'),
-  ('Foodie',           '🍕', 'interest'),
-  ('Adventurer',       '🏔️', 'lifestyle'),
-  ('Creative',         '🎨', 'interest'),
-  ('Social Butterfly', '🦋', 'personality'),
-  ('Chill Vibes',      '😌', 'personality'),
-  ('Party Mode',       '🎉', 'lifestyle'),
-  ('Music Lover',      '🎵', 'interest'),
-  ('Fitness',          '💪', 'activity'),
-  ('Gamer',            '🎮', 'interest'),
-  ('Traveler',         '✈️', 'lifestyle')
-on conflict (name) do nothing;
+-- ═══════════════════════════════════════════════════════════════════════════
+alter publication supabase_realtime add table messages;
+alter publication supabase_realtime add table pulse_zones;
+alter publication supabase_realtime add table vibes;
+alter publication supabase_realtime add table users;

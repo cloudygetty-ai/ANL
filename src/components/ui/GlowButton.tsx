@@ -1,136 +1,79 @@
 // src/components/ui/GlowButton.tsx
 import React, { useRef } from 'react';
-import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  type ViewStyle,
-} from 'react-native';
-import { COLORS } from '@config/constants';
+import { TouchableOpacity, Text, StyleSheet, Animated } from 'react-native';
 
-// === Types ===
-
-type Variant = 'solid' | 'outline' | 'ghost';
-type Size = 'sm' | 'md' | 'lg';
-
-interface GlowButtonProps {
-  title: string;
-  onPress: () => void;
-  variant?: Variant;
-  size?: Size;
-  color?: string;
+interface Props {
+  label:     string;
+  onPress:   () => void;
+  color?:    string;
+  size?:     'sm' | 'md' | 'lg';
   disabled?: boolean;
+  icon?:     string;
+  variant?:  'solid' | 'outline' | 'ghost';
 }
 
-// === Size maps ===
-
-const PADDING_H: Record<Size, number> = { sm: 14, md: 22, lg: 30 };
-const PADDING_V: Record<Size, number> = { sm: 8, md: 13, lg: 18 };
-const FONT_SIZE: Record<Size, number> = { sm: 13, md: 15, lg: 17 };
-const BORDER_RADIUS: Record<Size, number> = { sm: 10, md: 14, lg: 18 };
-
-// === Component ===
-
-const GlowButton: React.FC<GlowButtonProps> = ({
-  title,
-  onPress,
-  variant = 'solid',
-  size = 'md',
-  color = COLORS.accent,
-  disabled = false,
+const GlowButton: React.FC<Props> = ({
+  label, onPress, color = '#a855f7',
+  size = 'md', disabled = false, icon, variant = 'solid',
 }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(1)).current;
 
-  function handlePressIn() {
-    Animated.spring(scaleAnim, {
-      toValue: 0.96,
-      useNativeDriver: true,
-      tension: 200,
-      friction: 10,
-    }).start();
-  }
+  const onPressIn = () =>
+    Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, tension: 200, friction: 10 }).start();
+  const onPressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start();
 
-  function handlePressOut() {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 200,
-      friction: 10,
-    }).start();
-  }
+  const heights = { sm: 40, md: 52, lg: 62 };
+  const fontSizes = { sm: 12, md: 14, lg: 16 };
+  const radii    = { sm: 12, md: 16, lg: 18 };
 
-  const containerStyle: ViewStyle[] = [
-    styles.base,
-    {
-      paddingHorizontal: PADDING_H[size],
-      paddingVertical: PADDING_V[size],
-      borderRadius: BORDER_RADIUS[size],
-      opacity: disabled ? 0.45 : 1,
-    },
-    variantContainerStyle(variant, color),
-  ];
+  const bg = variant === 'solid'   ? color
+           : variant === 'outline' ? 'transparent'
+           : 'rgba(255,255,255,0.04)';
 
-  const textColor = variant === 'solid' ? '#0a0a0f' : color;
+  const borderColor = variant === 'ghost' ? 'transparent' : color;
 
   return (
-    <Pressable
-      onPress={disabled ? undefined : onPress}
-      onPressIn={disabled ? undefined : handlePressIn}
-      onPressOut={disabled ? undefined : handlePressOut}
-      disabled={disabled}
-    >
-      <Animated.View style={[containerStyle, { transform: [{ scale: scaleAnim }] }]}>
-        <Text
-          style={[
-            styles.label,
-            { fontSize: FONT_SIZE[size], color: textColor },
-          ]}
-        >
-          {title}
+    <Animated.View style={{ transform: [{ scale }], opacity: disabled ? 0.4 : 1 }}>
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        disabled={disabled}
+        activeOpacity={1}
+        style={[
+          styles.btn,
+          {
+            height:       heights[size],
+            borderRadius: radii[size],
+            backgroundColor: bg,
+            borderWidth:  variant === 'solid' ? 0 : 1.5,
+            borderColor,
+            shadowColor:  color,
+            shadowOpacity: variant === 'solid' ? 0.5 : 0.25,
+            shadowRadius: variant === 'solid' ? 16 : 8,
+            shadowOffset: { width: 0, height: 4 },
+          },
+        ]}
+      >
+        {icon && <Text style={{ fontSize: fontSizes[size] + 4, marginRight: 8 }}>{icon}</Text>}
+        <Text style={[
+          styles.label,
+          {
+            fontSize: fontSizes[size],
+            color: variant === 'solid' ? '#fff' : color,
+          },
+        ]}>
+          {label}
         </Text>
-      </Animated.View>
-    </Pressable>
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
-// === Style helpers ===
-
-function variantContainerStyle(variant: Variant, color: string): ViewStyle {
-  switch (variant) {
-    case 'solid':
-      return {
-        backgroundColor: color,
-        // Glow shadow — appears beneath the button as a colored bloom
-        shadowColor: color,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.45,
-        shadowRadius: 12,
-        elevation: 8,
-      };
-    case 'outline':
-      return {
-        backgroundColor: 'transparent',
-        borderWidth: 1.5,
-        borderColor: color,
-      };
-    case 'ghost':
-      return {
-        backgroundColor: color + '18',
-      };
-  }
-}
-
 const styles = StyleSheet.create({
-  base: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  label: {
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
+  btn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, elevation: 6 },
+  label: { fontWeight: '800', letterSpacing: 0.5 },
 });
 
 export default GlowButton;

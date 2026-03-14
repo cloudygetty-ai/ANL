@@ -1,439 +1,226 @@
 // src/components/profile/ProfileCard.tsx
-import React, { useEffect, useRef } from 'react';
+// Full-screen profile card — used in map tap + discovery feed
+import React, { useRef, useEffect } from 'react';
 import {
-  Animated,
-  Dimensions,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+  View, Text, StyleSheet, TouchableOpacity,
+  Animated, Dimensions, ScrollView,
 } from 'react-native';
-import { COLORS } from '@config/constants';
-import { matchLabel } from '@utils/format';
-import { formatDistance } from '@utils/geo';
-import type { MapUser } from '@types/index';
+import type { UserProfile } from '@types/index';
+import { timeAgo, formatDistance, matchLabel } from '@utils/format';
 
-// === Constants ===
+const { width: _SW } = Dimensions.get('window');
 
-const { height: SCREEN_H } = Dimensions.get('window');
-const CARD_HEIGHT = SCREEN_H * 0.72;
-
-// Gender display labels
-const GENDER_LABEL: Record<MapUser['gender'], string> = {
-  female: 'Woman',
-  male: 'Man',
-  trans_woman: 'Trans Woman',
-  trans_man: 'Trans Man',
-  non_binary: 'Non-Binary',
+const C = {
+  bg:      '#0d0d14',
+  border:  'rgba(168,85,247,0.2)',
+  purple:  '#a855f7',
+  amber:   '#fbbf24',
+  green:   '#4ade80',
+  text:    '#f0eee8',
+  textDim: 'rgba(240,238,232,0.5)',
+  textMuted: 'rgba(240,238,232,0.2)',
 };
 
-// Gender colors for avatar ring
-const GENDER_COLOR: Record<MapUser['gender'], string> = {
-  female: COLORS.female,
-  male: COLORS.male,
-  trans_woman: COLORS.transWoman,
-  trans_man: COLORS.transMan,
-  non_binary: COLORS.nonBinary,
+const pinColor = (g: string, match: number): string => {
+  if (g === 'f')  return match >= 90 ? '#ff3c64' : match >= 75 ? '#ffa032' : '#ffcc44';
+  if (g === 'm')  return match >= 90 ? '#7c3aed' : '#a855f7';
+  if (g === 'tw') return '#f7a8c4';
+  return '#55cdfc';
 };
 
-// Match percentage -> bar color
-function matchBarColor(score: number): string {
-  if (score >= 70) return COLORS.success;
-  if (score >= 40) return COLORS.warning;
-  return COLORS.error;
+interface Props {
+  profile:  UserProfile;
+  onClose:  () => void;
+  onChat:   () => void;
+  onVideo:  () => void;
+  onVibe:   () => void;
+  onBlock?: () => void;
 }
 
-// === Types ===
+const ProfileCard: React.FC<Props> = ({ profile, onClose, onChat, onVideo, onVibe, onBlock }) => {
+  const slide = useRef(new Animated.Value(600)).current;
+  const fade  = useRef(new Animated.Value(0)).current;
 
-interface ProfileCardProps {
-  user: MapUser;
-  onClose: () => void;
-  onChat: () => void;
-  onVideo: () => void;
-}
-
-// === Sub-components ===
-
-function AvatarCircle({ user }: { user: MapUser }) {
-  const ringColor = GENDER_COLOR[user.gender];
-  const initial = user.displayName.charAt(0).toUpperCase();
-
-  return (
-    <View style={[styles.avatarRing, { borderColor: ringColor }]}>
-      <View style={[styles.avatarInner, { backgroundColor: ringColor + '33' }]}>
-        <Text style={[styles.avatarInitial, { color: ringColor }]}>{initial}</Text>
-      </View>
-    </View>
-  );
-}
-
-function MatchBar({ score }: { score: number }) {
-  const barColor = matchBarColor(score);
-  const label = matchLabel(score);
-  return (
-    <View style={styles.matchBarWrapper}>
-      <View style={styles.matchBarTrack}>
-        <View
-          style={[
-            styles.matchBarFill,
-            { width: `${score}%` as `${number}%`, backgroundColor: barColor },
-          ]}
-        />
-      </View>
-      <View style={styles.matchBarLabels}>
-        <Text style={[styles.matchPct, { color: barColor }]}>{score}% match</Text>
-        <Text style={styles.matchLabel}>{label}</Text>
-      </View>
-    </View>
-  );
-}
-
-function StatPill({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.statPill}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function VibePill({ tag }: { tag: string }) {
-  return (
-    <View style={styles.vibePill}>
-      <Text style={styles.vibeText}>{tag}</Text>
-    </View>
-  );
-}
-
-// === Component ===
-
-const ProfileCard: React.FC<ProfileCardProps> = ({ user, onClose, onChat, onVideo }) => {
-  const slideAnim = useRef(new Animated.Value(CARD_HEIGHT)).current;
-
-  // Slide up on mount
   useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      tension: 65,
-      friction: 11,
-    }).start();
-  }, [slideAnim]);
+    Animated.parallel([
+      Animated.spring(slide, { toValue: 0, tension: 70, friction: 13, useNativeDriver: true }),
+      Animated.timing(fade,  { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
-  function handleClose() {
-    Animated.timing(slideAnim, {
-      toValue: CARD_HEIGHT,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(onClose);
-  }
+  const dismiss = () => {
+    Animated.parallel([
+      Animated.timing(slide, { toValue: 600, duration: 250, useNativeDriver: true }),
+      Animated.timing(fade,  { toValue: 0,   duration: 200, useNativeDriver: true }),
+    ]).start(onClose);
+  };
 
-  const presenceLabel =
-    user.presence === 'online' ? 'Online now' : user.presence === 'away' ? 'Away' : 'Offline';
+  const col   = pinColor(profile.gender, profile.match ?? 0);
+  const match = profile.match ?? 0;
+  const isTW  = profile.gender === 'tw' || profile.gender === 'tm';
 
-  const presenceColor =
-    user.presence === 'online'
-      ? COLORS.success
-      : user.presence === 'away'
-      ? COLORS.warning
-      : COLORS.textMuted;
+  const GENDER_LABELS: Record<string, string> = {
+    f: 'Woman', m: 'Man', tw: 'Trans Woman', tm: 'Trans Man', nb: 'Non-binary',
+  };
 
   return (
-    <Modal visible transparent animationType="none" onRequestClose={handleClose}>
-      {/* Scrim — tap to dismiss */}
-      <Pressable style={styles.scrim} onPress={handleClose} />
+    <>
+      {/* Backdrop */}
+      <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: fade }]}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={dismiss} />
+      </Animated.View>
 
-      <Animated.View
-        style={[styles.card, { transform: [{ translateY: slideAnim }] }]}
-      >
-        {/* Drag handle */}
-        <View style={styles.handle} />
+      {/* Card */}
+      <Animated.View style={[styles.card, { transform: [{ translateY: slide }] }]}>
+        {/* Trans flag accent bar */}
+        {isTW && <View style={styles.transBar} />}
 
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header: avatar + name/meta */}
+        <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+          {/* Header */}
           <View style={styles.header}>
-            <AvatarCircle user={user} />
-            <View style={styles.headerText}>
-              <Text style={styles.name} numberOfLines={1}>
-                {user.displayName}
+            {/* Avatar */}
+            <View style={[styles.avatar, { borderColor: col, shadowColor: col }]}>
+              {profile.photos.length > 0 ? null : (
+                <Text style={styles.avatarLetter}>{profile.displayName[0]?.toUpperCase() ?? '?'}</Text>
+              )}
+              {profile.presence === 'online' && <View style={styles.onlineDot} />}
+            </View>
+
+            <View style={{ flex: 1, marginLeft: 16 }}>
+              <View style={styles.nameRow}>
+                <Text style={styles.name}>{profile.displayName}</Text>
+                <Text style={styles.age}>{profile.age}</Text>
+                {profile.isVerified && <Text style={styles.verified}>✓</Text>}
+              </View>
+              <Text style={[styles.genderLabel, { color: col }]}>
+                {GENDER_LABELS[profile.gender] ?? profile.gender}
               </Text>
-              <Text style={styles.meta}>
-                {user.age} · {GENDER_LABEL[user.gender]}
-              </Text>
-              <Text style={[styles.presenceLabel, { color: presenceColor }]}>
-                {presenceLabel}
-              </Text>
+              <Text style={styles.vibe}>"{profile.vibe}"</Text>
+            </View>
+
+            <TouchableOpacity onPress={dismiss} style={styles.closeBtn}>
+              <Text style={styles.closeBtnText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Match bar */}
+          <View style={styles.matchSection}>
+            <View style={styles.matchRow}>
+              <Text style={styles.matchTitle}>{matchLabel(match)}</Text>
+              <Text style={[styles.matchPct, { color: col }]}>{match}%</Text>
+            </View>
+            <View style={styles.matchTrack}>
+              <Animated.View style={[styles.matchFill, { width: `${match}%`, backgroundColor: col }]} />
             </View>
           </View>
 
-          {/* Match percentage bar */}
-          <MatchBar score={user.matchScore} />
-
           {/* Stats row */}
           <View style={styles.statsRow}>
-            <StatPill label="Distance" value={formatDistance(user.distanceMi)} />
-            <StatPill label="Age" value={String(user.age)} />
-            <StatPill label="Status" value={presenceLabel} />
+            {profile.distanceM !== undefined && (
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{formatDistance(profile.distanceM)}</Text>
+                <Text style={styles.statLabel}>away</Text>
+              </View>
+            )}
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{timeAgo(profile.lastActiveAt)}</Text>
+              <Text style={styles.statLabel}>active</Text>
+            </View>
+            {profile.isPremium && (
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: C.amber }]}>⭐ PRO</Text>
+                <Text style={styles.statLabel}>member</Text>
+              </View>
+            )}
           </View>
 
           {/* Bio */}
-          {user.vibeTags.length >= 0 ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>About</Text>
-              {/* MapUser doesn't carry bio; show a friendly placeholder */}
-              <Text style={styles.bio}>
-                {user.isOutTonight ? 'Out tonight  ' : ''}
-                {user.vibeTags.length > 0 ? '' : 'No bio yet.'}
-              </Text>
+          {profile.bio ? (
+            <View style={styles.bioSection}>
+              <Text style={styles.bioText}>{profile.bio}</Text>
             </View>
           ) : null}
 
           {/* Vibe tags */}
-          {user.vibeTags.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Vibes</Text>
-              <View style={styles.tagRow}>
-                {user.vibeTags.map((tag) => (
-                  <VibePill key={tag} tag={tag} />
-                ))}
-              </View>
+          {profile.vibeTagIds.length > 0 && (
+            <View style={styles.tagsRow}>
+              {profile.vibeTagIds.slice(0, 6).map((tag) => (
+                <View key={tag} style={[styles.tag, { borderColor: `${col}44` }]}>
+                  <Text style={[styles.tagText, { color: col }]}>{tag}</Text>
+                </View>
+              ))}
             </View>
           )}
         </ScrollView>
 
-        {/* Action buttons */}
+        {/* Actions */}
         <View style={styles.actions}>
-          <Pressable
-            style={[styles.btnSolid, { backgroundColor: COLORS.accent }]}
-            onPress={() => {}}
-          >
-            <Text style={[styles.btnText, { color: '#0a0a0f' }]}>Send Vibe</Text>
-          </Pressable>
-
-          <View style={styles.actionRow}>
-            <Pressable style={styles.btnOutline} onPress={onChat}>
-              <Text style={[styles.btnText, { color: COLORS.accent }]}>Chat</Text>
-            </Pressable>
-
-            <Pressable style={styles.btnOutline} onPress={onVideo}>
-              <Text style={[styles.btnText, { color: COLORS.accent }]}>Video</Text>
-            </Pressable>
-
-            <Pressable style={[styles.btnOutline, styles.btnDanger]}>
-              <Text style={[styles.btnText, { color: COLORS.error }]}>Block</Text>
-            </Pressable>
+          <TouchableOpacity style={[styles.actionPrimary, { backgroundColor: col }]} onPress={onVibe}>
+            <Text style={styles.actionPrimaryText}>Send a Vibe ✨</Text>
+          </TouchableOpacity>
+          <View style={styles.actionSecondary}>
+            <TouchableOpacity style={[styles.actionIcon, { borderColor: '#22d3ee' }]} onPress={onChat}>
+              <Text style={{ fontSize: 20 }}>💬</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionIcon, { borderColor: C.purple }]} onPress={onVideo}>
+              <Text style={{ fontSize: 20 }}>📹</Text>
+            </TouchableOpacity>
+            {onBlock && (
+              <TouchableOpacity style={[styles.actionIcon, { borderColor: 'rgba(255,255,255,0.1)' }]} onPress={onBlock}>
+                <Text style={{ fontSize: 20 }}>🚫</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Animated.View>
-    </Modal>
+    </>
   );
 };
 
-// === Styles ===
-
 const styles = StyleSheet.create({
-  scrim: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-  },
-  card: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: CARD_HEIGHT,
-    backgroundColor: COLORS.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 32,
-  },
-  handle: {
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 4,
-    width: 38,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.border,
-  },
-  scroll: {
-    padding: 20,
-    paddingBottom: 8,
-  },
+  backdrop:    { backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 10 },
+  card:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: C.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 1, borderColor: C.border, borderBottomWidth: 0, maxHeight: '85%', zIndex: 20, paddingBottom: 34 },
+  transBar:    { height: 4, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#f7a8c4' },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 18,
-  },
-  avatarRing: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 2,
-    padding: 3,
-  },
-  avatarInner: {
-    flex: 1,
-    borderRadius: 33,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  headerText: {
-    flex: 1,
-    gap: 2,
-  },
-  name: {
-    color: COLORS.text,
-    fontSize: 22,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  meta: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-  },
-  presenceLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
-  },
+  header:      { flexDirection: 'row', padding: 20, alignItems: 'flex-start' },
+  avatar:      { width: 64, height: 64, borderRadius: 32, backgroundColor: '#14141f', borderWidth: 2.5, alignItems: 'center', justifyContent: 'center', shadowOpacity: 0.6, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8 },
+  avatarLetter:{ fontSize: 26, fontWeight: '900', color: C.text },
+  onlineDot:   { position: 'absolute', bottom: 1, right: 1, width: 14, height: 14, borderRadius: 7, backgroundColor: '#4ade80', borderWidth: 2, borderColor: C.bg },
 
-  // Match bar
-  matchBarWrapper: {
-    marginBottom: 18,
-    gap: 6,
-  },
-  matchBarTrack: {
-    height: 6,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  matchBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  matchBarLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  matchPct: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  matchLabel: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
+  nameRow:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  name:       { fontSize: 22, fontWeight: '900', color: C.text },
+  age:        { fontSize: 18, fontWeight: '700', color: C.textDim },
+  verified:   { fontSize: 14, color: '#22d3ee', fontWeight: '800' },
+  genderLabel:{ fontSize: 12, fontWeight: '700', marginTop: 3, letterSpacing: 0.5 },
+  vibe:       { fontSize: 12, color: C.textDim, marginTop: 4, fontStyle: 'italic' },
 
-  // Stats row
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  statPill: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    gap: 2,
-  },
-  statValue: {
-    color: COLORS.text,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  statLabel: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-  },
+  closeBtn:     { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
+  closeBtnText: { fontSize: 13, color: C.textMuted },
 
-  // Sections
-  section: {
-    marginBottom: 18,
-    gap: 8,
-  },
-  sectionTitle: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  bio: {
-    color: COLORS.text,
-    fontSize: 15,
-    lineHeight: 22,
-  },
+  matchSection: { paddingHorizontal: 20, marginBottom: 16 },
+  matchRow:     { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  matchTitle:   { fontSize: 12, fontWeight: '700', color: C.textDim, letterSpacing: 0.5 },
+  matchPct:     { fontSize: 14, fontWeight: '900' },
+  matchTrack:   { height: 5, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 3 },
+  matchFill:    { height: 5, borderRadius: 3 },
 
-  // Vibe tags
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  vibePill: {
-    backgroundColor: 'rgba(127,255,212,0.12)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(127,255,212,0.25)',
-  },
-  vibeText: {
-    color: COLORS.accent,
-    fontSize: 13,
-    fontWeight: '600',
-  },
+  statsRow:  { flexDirection: 'row', gap: 24, paddingHorizontal: 20, marginBottom: 16 },
+  statItem:  { alignItems: 'center' },
+  statValue: { fontSize: 14, fontWeight: '800', color: C.text },
+  statLabel: { fontSize: 10, color: C.textMuted, marginTop: 2, letterSpacing: 0.5 },
 
-  // Action buttons
-  actions: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    gap: 10,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  btnSolid: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  btnOutline: {
-    flex: 1,
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(127,255,212,0.3)',
-  },
-  btnDanger: {
-    borderColor: 'rgba(239,68,68,0.3)',
-  },
-  btnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
+  bioSection: { paddingHorizontal: 20, marginBottom: 16 },
+  bioText:    { fontSize: 14, color: C.textDim, lineHeight: 22 },
+
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, marginBottom: 20 },
+  tag:     { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.04)' },
+  tagText: { fontSize: 11, fontWeight: '600' },
+
+  actions:          { paddingHorizontal: 20, paddingTop: 12, gap: 10, borderTopWidth: 1, borderTopColor: C.border },
+  actionPrimary:    { borderRadius: 16, paddingVertical: 15, alignItems: 'center' },
+  actionPrimaryText:{ fontSize: 15, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
+  actionSecondary:  { flexDirection: 'row', gap: 10 },
+  actionIcon:       { flex: 1, height: 52, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.04)' },
 });
 
 export default ProfileCard;

@@ -1,188 +1,177 @@
-// src/types/index.ts — Central type definitions
+// src/types/index.ts
 
-// === System Core ===
-export type TaskPriority = 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW';
-export type SystemStatus = 'initializing' | 'running' | 'degraded' | 'stopped';
+// ── System types ──────────────────────────────────────────────────────────────
+export type TaskPriority  = 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW';
+export type SystemStatus  = 'initializing' | 'running' | 'degraded' | 'stopped';
 export type PresenceStatus = 'online' | 'away' | 'offline';
-export type AppLifecycleState = 'active' | 'background' | 'inactive';
-export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 
 export interface SystemState {
-  status: SystemStatus;
+  status:    SystemStatus;
   startedAt: number;
   iteration: number;
-  errors: SystemError[];
-  recovery: RecoveryInfo;
+  errors:    SystemError[];
+  recovery:  RecoveryInfo;
 }
-
 export interface SystemError {
-  id: string;
-  message: string;
-  module: string;
-  timestamp: number;
+  id:          string;
+  message:     string;
+  module:      string;
+  timestamp:   number;
   recoverable: boolean;
 }
-
 export interface RecoveryInfo {
-  count: number;
-  lastRecoveredAt: number | null;
+  count:                number;
+  lastRecoveredAt:      number | null;
   restoredFromSnapshot: boolean;
 }
-
 export interface Task {
-  id: string;
-  name: string;
-  priority: TaskPriority;
-  execute: () => Promise<void>;
+  id:          string;
+  name:        string;
+  priority:    TaskPriority;
+  execute:     () => Promise<void>;
   scheduledAt: number;
-  lastRunAt: number | null;
-  intervalMs: number;
+  lastRunAt:   number | null;
+  intervalMs:  number;
 }
-
 export interface HealthMetrics {
-  uptimeMs: number;
-  errorCount: number;
-  errorLog: SystemError[];
+  uptimeMs:             number;
+  errorCount:           number;
+  errorLog:             SystemError[];
   memoryPressureEvents: number;
-  avgIterationMs: number;
-  p95IterationMs: number;
-  recoveryEvents: number;
+  avgIterationMs:       number;
+  p95IterationMs:       number;
+  recoveryEvents:       number;
 }
-
 export interface PersistedSnapshot {
-  version: number;
-  timestamp: number;
+  version:     number;
+  timestamp:   number;
   systemState: SystemState;
-  health: HealthMetrics;
+  health:      HealthMetrics;
 }
 
-export interface LogEntry {
-  level: LogLevel;
-  module: string;
-  message: string;
-  timestamp: number;
-  data?: unknown;
-}
-
-export interface BackgroundTaskConfig {
-  minimumFetchInterval: number;
-  stopOnTerminate: boolean;
-  startOnBoot: boolean;
-  enableHeadless: boolean;
-}
-
-// === User & Profile ===
-export type Gender = 'female' | 'male' | 'trans_woman' | 'trans_man' | 'non_binary';
+// ── User / Profile ────────────────────────────────────────────────────────────
+export type Gender   = 'f' | 'm' | 'tw' | 'tm' | 'nb';
+export type Position = 'top' | 'bottom' | 'vers' | 'side' | 'na';
 
 export interface UserProfile {
-  id: string;
-  phone: string;
-  displayName: string;
-  age: number;
-  gender: Gender;
-  bio: string;
-  avatarUrl: string | null;
-  vibeTags: string[];
-  isOutTonight: boolean;
-  isPremium: boolean;
-  location: { latitude: number; longitude: number } | null;
-  presence: PresenceStatus;
+  id:           string;
+  displayName:  string;
+  age:          number;
+  gender:       Gender;
+  photos:       string[];      // signed URLs
+  bio:          string;
+  vibe:         string;        // free-text status e.g. "Tonight only 🔥"
+  position:     Position;
+  bodyType?:    string;
+  height?:      number;        // cm
+  vibeTagIds:   string[];
+  isVerified:   boolean;
+  isPremium:    boolean;
+  presence:     PresenceStatus;
   lastActiveAt: number;
-  createdAt: number;
+  coords?:      LatLng;        // fuzzy — never exact
+  distanceM?:   number;        // computed server-side
+  match?:       number;        // 0-100 compatibility score
+  isNew?:       boolean;
+  isTop?:       boolean;
+  blockedIds:   string[];
 }
 
-// === Map ===
+// ── Map ───────────────────────────────────────────────────────────────────────
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
 export interface MapUser {
-  id: string;
-  displayName: string;
-  age: number;
-  gender: Gender;
-  latitude: number;
-  longitude: number;
-  presence: PresenceStatus;
-  matchScore: number;
-  avatarUrl: string | null;
-  vibeTags: string[];
-  isOutTonight: boolean;
-  distanceMi: number;
+  id:       string;
+  name:     string;
+  age:      number;
+  gender:   Gender;
+  coords:   LatLng;
+  online:   boolean;
+  vibe:     string;
+  match:    number;
+  isNew:    boolean;
+  isTop:    boolean;
+  photoUrl?: string;
 }
-
 export interface MapEvent {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  attendeeCount: number;
-  category: string;
-  startsAt: number;
+  id:     string;
+  name:   string;
+  coords: LatLng;
+  type:   'party' | 'bar' | 'venue' | 'popup';
+  count:  number;
 }
-
-export type MapMode = 'normal' | 'nightpulse';
-export type GenderFilter = 'all' | Gender;
-
 export interface CameraState {
-  latitude: number;
-  longitude: number;
-  zoom: number;
-  pitch: number;
-  heading: number;
+  center:  LatLng;
+  zoom:    number;
+  pitch:   number;   // 0-60 degrees for 3D
+  bearing: number;
 }
 
-// === Chat ===
+// ── Chat ──────────────────────────────────────────────────────────────────────
+export type ChannelType = 'dm' | 'event' | 'venue' | 'neighborhood';
 export interface Channel {
-  id: string;
-  name: string;
-  isGroup: boolean;
-  members: string[];
-  lastMessage: string | null;
-  lastMessageAt: number | null;
+  id:          string;
+  type:        ChannelType;
+  name:        string;
+  photoUrl?:   string;
+  lastMessage?: ChatMessage;
   unreadCount: number;
-  avatarUrl: string | null;
+  memberCount: number;
+  members:     string[];    // user IDs
+  createdAt:   number;
+  eventId?:    string;      // linked map event
 }
-
 export interface ChatMessage {
-  id: string;
-  channelId: string;
-  senderId: string;
+  id:         string;
+  channelId:  string;
+  senderId:   string;
   senderName: string;
-  content: string;
-  type: 'text' | 'vibe' | 'system';
-  createdAt: number;
-  readBy: string[];
+  content:    string;
+  type:       'text' | 'image' | 'vibe' | 'system';
+  imageUrl?:  string;
+  readBy:     string[];
+  createdAt:  number;
+  expiresAt?: number;       // ephemeral messages
 }
 
-// === Video ===
+// ── Video ─────────────────────────────────────────────────────────────────────
+export type VideoRoomType = 'dm' | 'group';
 export interface VideoRoom {
-  id: string;
-  token: string;
-  url: string;
+  id:          string;
+  type:        VideoRoomType;
+  token:       string;       // LiveKit JWT
+  url:         string;       // LiveKit server URL
   participants: VideoParticipant[];
-  isConnected: boolean;
+  createdAt:   number;
+  expiresAt:   number;
 }
-
 export interface VideoParticipant {
-  id: string;
-  name: string;
-  isCameraOn: boolean;
-  isMicOn: boolean;
-  isLocal: boolean;
-  avatarUrl: string | null;
+  id:          string;
+  name:        string;
+  photoUrl?:   string;
+  isMuted:     boolean;
+  isCamOff:    boolean;
+  isSpeaking:  boolean;
 }
 
-// === NightPulse ===
+// ── Night Pulse ───────────────────────────────────────────────────────────────
 export interface PulseZone {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  intensity: number; // 0-1
-  activeUsers: number;
-  category: string;
+  id:           string;
+  name:         string;        // "East Village", "SoHo"
+  center:       LatLng;
+  radiusM:      number;
+  intensity:    number;        // 0.0 – 1.0 live heat score
+  activeCount:  number;        // anonymous count
+  trend:        'rising' | 'peaking' | 'fading';
+  peakHour:     number;        // 0-23 historical peak hour
+  color:        string;        // hex derived from intensity
+  updatedAt:    number;
 }
-
 export interface NightPulseSnapshot {
-  zones: PulseZone[];
-  timestamp: number;
-  totalActive: number;
-  peakZoneId: string | null;
+  zones:       PulseZone[];
+  cityTotal:   number;
+  updatedAt:   number;
+  peakZoneId:  string;
 }

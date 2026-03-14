@@ -1,49 +1,52 @@
-// src/utils/format.ts — Text and time formatting utilities
+// src/utils/format.ts
+// Display formatting utilities
 
-export function timeAgo(timestamp: number): string {
-  const diff = Date.now() - timestamp;
-  const s = Math.floor(diff / 1000);
+/** "2 min ago", "just now", "3h ago", "yesterday" */
+export function timeAgo(ts: number): string {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 10)  return 'just now';
+  if (s < 60)  return `${s}s ago`;
   const m = Math.floor(s / 60);
+  if (m < 60)  return `${m}m ago`;
   const h = Math.floor(m / 60);
+  if (h < 24)  return `${h}h ago`;
   const d = Math.floor(h / 24);
-
-  if (d > 0) return `${d}d ago`;
-  if (h > 0) return `${h}h ago`;
-  if (m > 0) return `${m}m ago`;
-  return 'just now';
+  if (d === 1) return 'yesterday';
+  if (d < 7)   return `${d}d ago`;
+  return new Date(ts).toLocaleDateString();
 }
 
-export function formatTime(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  if (h > 0) return `${h}h ${m % 60}m`;
-  if (m > 0) return `${m}m ${s % 60}s`;
-  return `${s}s`;
+/** "11:45 PM" */
+export function formatTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export function truncate(str: string, maxLen: number): string {
-  if (str.length <= maxLen) return str;
-  return str.slice(0, maxLen - 1) + '…';
+/** Truncate with ellipsis */
+export function truncate(str: string, max: number): string {
+  return str.length <= max ? str : `${str.slice(0, max - 1)}…`;
 }
 
+/** First name only, title-cased */
 export function firstName(name: string): string {
-  return name.split(' ')[0];
+  const first = name.trim().split(/\s+/)[0] ?? name;
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
 
+/** "24M" / "24F" / "24TW" display */
 export function ageGender(age: number, gender: string): string {
-  const g = gender.charAt(0).toUpperCase();
+  const g = gender === 'f' ? 'F' : gender === 'm' ? 'M' : gender === 'tw' ? 'TW' : 'TM';
   return `${age}${g}`;
 }
 
+/** Format match score with color tier label */
 export function matchLabel(score: number): string {
-  if (score >= 90) return 'Perfect Match';
-  if (score >= 70) return 'Great Match';
-  if (score >= 50) return 'Good Match';
-  return 'New';
+  if (score >= 90) return '🔥 Hot match';
+  if (score >= 75) return '✨ Great match';
+  if (score >= 60) return '👍 Good match';
+  return 'New here';
 }
 
-export function capitalize(str: string): string {
-  if (!str) return '';
-  return str.charAt(0).toUpperCase() + str.slice(1);
+/** Capitalize first letter */
+export function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

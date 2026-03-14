@@ -1,661 +1,391 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-var-requires */
 // src/screens/ChatScreen.tsx
-// Two-mode screen: when no channel is active it shows the channel list with
-// unread badges; when a channel is selected it shows the message thread with
-// a text input at the bottom. Uses ChatService for all network calls and
-// useChatStore for local state.
-
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+// Handles: DM threads, event group chats, neighborhood rooms
+// Real-time via Supabase channel subscriptions (or mock in dev)
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+  View, Text, StyleSheet, FlatList, TextInput,
+  TouchableOpacity, KeyboardAvoidingView, Platform,
+  Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ChatService } from '@services/chat/ChatService';
+import type { ChatMessage, Channel } from '@types/index';
 
-import { useChatStore } from '@services/state/chatStore';
-import { useUserStore } from '@services/state/userStore';
-import { ChatService } from '@services/chat';
-import { COLORS, CHAT } from '@config/constants';
-import type { Channel, ChatMessage } from '@types/index';
+const C = {
+  bg:        '#04040a',
+  surface:   '#0d0d14',
+  surfaceUp: '#14141f',
+  border:    'rgba(168,85,247,0.18)',
+  purple:    '#a855f7',
+  pink:      '#ec4899',
+  amber:     '#fbbf24',
+  cyan:      '#22d3ee',
+  green:     '#4ade80',
+  text:      '#f0eee8',
+  textDim:   'rgba(240,238,232,0.5)',
+  textMuted: 'rgba(240,238,232,0.2)',
+  myBubble:  '#a855f7',
+  theirBubble: '#14141f',
+};
 
-// ---------------------------------------------------------------------------
-// Module-level service instance — created once so subscriptions survive
-// re-renders.
-// ---------------------------------------------------------------------------
-const chatService = new ChatService();
+const CURRENT_USER_ID = 'me'; // Replace with auth context
 
-// ---------------------------------------------------------------------------
-// Utility
-// ---------------------------------------------------------------------------
+// ── Message bubble ────────────────────────────────────────────────────────────
+const Bubble: React.FC<{ msg: ChatMessage; isMe: boolean; showName: boolean }> = ({
+  msg, isMe, showName,
+}) => {
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const slideX = useRef(new Animated.Value(isMe ? 20 : -20)).current;
 
-/** Returns a human-readable time string for a message timestamp. */
-function formatTime(ts: number): string {
-  const d = new Date(ts);
-  const h = d.getHours();
-  const m = d.getMinutes().toString().padStart(2, '0');
-  const period = h >= 12 ? 'PM' : 'AM';
-  return `${h % 12 || 12}:${m} ${period}`;
-}
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeIn, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.spring(slideX, { toValue: 0, tension: 120, friction: 14, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
-/** Returns "x min ago", "x hr ago", or a date string for channel previews. */
-function formatRelative(ts: number | null): string {
-  if (!ts) return '';
-  const diffMs = Date.now() - ts;
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  return new Date(ts).toLocaleDateString();
-}
+  if (msg.type === 'system') {
+    return (
+      <View style={styles.systemMsg}>
+        <Text style={styles.systemMsgText}>{msg.content}</Text>
+      </View>
+    );
+  }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-/** Single channel row in the channel list view. */
-function ChannelRow({
-  channel,
-  onPress,
-}: {
-  channel: Channel;
-  onPress: () => void;
-}) {
-  const initial = channel.name.charAt(0).toUpperCase();
-  const hasUnread = channel.unreadCount > 0;
+  if (msg.type === 'vibe') {
+    return (
+      <Animated.View style={[styles.vibeBubble, { opacity: fadeIn }]}>
+        <Text style={styles.vibeBubbleText}>✨ {msg.senderName} sent a vibe</Text>
+      </Animated.View>
+    );
+  }
 
   return (
-    <TouchableOpacity style={styles.channelRow} onPress={onPress} activeOpacity={0.8}>
-      {/* Avatar circle with initial */}
-      <View style={styles.channelAvatar}>
-        <Text style={styles.channelInitial}>{initial}</Text>
-        {!channel.isGroup && (
-          // Online presence dot — shown only for DMs
-          <View style={styles.presenceDot} />
-        )}
+    <Animated.View
+      style={[
+        styles.bubbleRow,
+        isMe ? styles.bubbleRowMe : styles.bubbleRowThem,
+        { opacity: fadeIn, transform: [{ translateX: slideX }] },
+      ]}
+    >
+      {!isMe && showName && (
+        <Text style={styles.bubbleName}>{msg.senderName}</Text>
+      )}
+      <View style={[
+        styles.bubble,
+        isMe ? [styles.bubbleMe, { backgroundColor: C.myBubble }]
+              : styles.bubbleThem,
+      ]}>
+        <Text style={[styles.bubbleText, isMe && { color: '#fff' }]}>{msg.content}</Text>
+        <Text style={[styles.bubbleTime, isMe && { color: 'rgba(255,255,255,0.5)' }]}>
+          {new Date(msg.createdAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
+        </Text>
       </View>
+    </Animated.View>
+  );
+};
 
-      {/* Name and last message preview */}
-      <View style={styles.channelBody}>
-        <View style={styles.channelTop}>
-          <Text
-            style={[styles.channelName, hasUnread && styles.channelNameBold]}
-            numberOfLines={1}
-          >
-            {channel.name}
-          </Text>
-          <Text style={styles.channelTime}>
-            {formatRelative(channel.lastMessageAt)}
-          </Text>
+// ── Typing indicator ──────────────────────────────────────────────────────────
+const TypingDots: React.FC = () => {
+  const [dots] = useState([
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+  ]);
+
+  useEffect(() => {
+    dots.forEach((d, i) => {
+      const loop = Animated.loop(Animated.sequence([
+        Animated.delay(i * 150),
+        Animated.timing(d, { toValue: -4, duration: 300, useNativeDriver: true }),
+        Animated.timing(d, { toValue: 0,  duration: 300, useNativeDriver: true }),
+        Animated.delay(600),
+      ]));
+      loop.start();
+    });
+  }, []);
+
+  return (
+    <View style={styles.typingWrap}>
+      <View style={styles.typingBubble}>
+        {dots.map((d, i) => (
+          <Animated.View key={i} style={[styles.typingDot, { transform: [{ translateY: d }] }]} />
+        ))}
+      </View>
+    </View>
+  );
+};
+
+// ── Channel list item ─────────────────────────────────────────────────────────
+const ChannelRow: React.FC<{ channel: Channel; onPress: () => void }> = ({ channel, onPress }) => {
+  const typeIcon = channel.type === 'dm' ? '💬' : channel.type === 'event' ? '🎉' : channel.type === 'venue' ? '🍸' : '📍';
+  return (
+    <TouchableOpacity style={styles.channelRow} onPress={onPress}>
+      <View style={styles.channelAvatar}>
+        <Text style={{ fontSize: 20 }}>{typeIcon}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={styles.channelRowTop}>
+          <Text style={styles.channelName} numberOfLines={1}>{channel.name}</Text>
+          {channel.lastMessage && (
+            <Text style={styles.channelTime}>
+              {new Date(channel.lastMessage.createdAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
+            </Text>
+          )}
         </View>
-
-        <View style={styles.channelBottom}>
+        <View style={styles.channelRowBottom}>
           <Text style={styles.channelPreview} numberOfLines={1}>
-            {channel.lastMessage ?? 'No messages yet'}
+            {channel.lastMessage?.content ?? `${channel.memberCount} members`}
           </Text>
-
-          {/* Unread badge */}
-          {hasUnread && (
+          {channel.unreadCount > 0 && (
             <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>
-                {channel.unreadCount > 99 ? '99+' : channel.unreadCount}
-              </Text>
+              <Text style={styles.unreadBadgeText}>{channel.unreadCount}</Text>
             </View>
           )}
         </View>
       </View>
     </TouchableOpacity>
   );
-}
+};
 
-/** Single message bubble in the conversation view. */
-function MessageBubble({
-  message,
-  isSelf,
-}: {
-  message: ChatMessage;
-  isSelf: boolean;
-}) {
-  return (
-    <View style={[styles.bubbleRow, isSelf && styles.bubbleRowSelf]}>
-      {/* Sender label — only for group chat messages from others */}
-      {!isSelf && (
-        <Text style={styles.senderName}>{message.senderName}</Text>
-      )}
-
-      <View
-        style={[
-          styles.bubble,
-          isSelf ? styles.bubbleSelf : styles.bubbleOther,
-        ]}
-      >
-        <Text style={[styles.bubbleText, isSelf && styles.bubbleTextSelf]}>
-          {message.content}
-        </Text>
-      </View>
-
-      <Text style={[styles.bubbleTime, isSelf && styles.bubbleTimeSelf]}>
-        {formatTime(message.createdAt)}
-      </Text>
-    </View>
-  );
-}
-
-/** Header bar shown at the top of the conversation view. */
-function ConversationHeader({
-  channel,
-  onBack,
-}: {
+// ── Chat thread view ──────────────────────────────────────────────────────────
+const ThreadView: React.FC<{
   channel: Channel;
-  onBack: () => void;
-}) {
-  return (
-    <View style={styles.convHeader}>
-      <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
-        <Text style={styles.backArrow}>‹</Text>
-      </TouchableOpacity>
+  service: ChatService;
+  onBack:  () => void;
+  onVideo: () => void;
+}> = ({ channel, service, onBack, onVideo }) => {
+  const [messages,  setMessages]  = useState<ChatMessage[]>([]);
+  const [input,     setInput]     = useState('');
+  const [isTyping,  _setIsTyping]  = useState(false);
+  const [sending,   setSending]   = useState(false);
+  const listRef = useRef<FlatList>(null);
 
-      <View style={styles.convHeaderCenter}>
-        <Text style={styles.convHeaderName} numberOfLines={1}>
-          {channel.name}
-        </Text>
-        {channel.isGroup && (
-          <Text style={styles.convHeaderSub}>
-            {channel.members.length} members
-          </Text>
-        )}
-      </View>
-
-      {/* Placeholder for future video-call button */}
-      <View style={styles.convHeaderRight} />
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
-
-const ChatScreen: React.FC = () => {
-  const {
-    channels,
-    messages,
-    activeChannelId,
-    setChannels,
-    setActiveChannel,
-    addMessage,
-    setMessages,
-    markChannelRead,
-  } = useChatStore();
-
-  const profile = useUserStore((s) => s.profile);
-
-  // Local text input state — not stored globally since it's transient UI state
-  const [inputText, setInputText] = useState('');
-  const [isSending, setIsSending] = useState(false);
-
-  const listRef = useRef<FlatList<ChatMessage>>(null);
-  // Keep an unsubscribe reference so we can clean up on channel change
-  const unsubRef = useRef<(() => void) | null>(null);
-
-  // ---------------------------------------------------------------------------
-  // Load channels on mount
-  // ---------------------------------------------------------------------------
   useEffect(() => {
-    async function loadChannels() {
-      try {
-        const fetched = await chatService.getChannels(profile?.id ?? 'anonymous');
-        setChannels(fetched);
-      } catch {
-        // ChatService returns mock data on error — store will still populate
-      }
-    }
-    loadChannels();
-  }, [profile?.id, setChannels]);
-
-  // ---------------------------------------------------------------------------
-  // When active channel changes: load messages + subscribe to realtime
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    // Tear down any previous subscription first
-    if (unsubRef.current) {
-      unsubRef.current();
-      unsubRef.current = null;
-    }
-
-    if (!activeChannelId) return;
-
-    // Mark as read immediately
-    markChannelRead(activeChannelId);
-
-    async function loadMessages() {
-      try {
-        const msgs = await chatService.getMessages(activeChannelId!);
-        setMessages(activeChannelId!, msgs);
-      } catch {
-        // Silently handled — mock data from ChatService fills the gap
-      }
-    }
-
-    loadMessages();
-
-    // Subscribe to incoming realtime messages
-    unsubRef.current = chatService.subscribe(activeChannelId, (msg) => {
-      addMessage(activeChannelId!, msg);
+    service.getMessages(channel.id).then(msgs => {
+      setMessages(msgs);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
     });
+    const unsub = service.subscribe(channel.id, (msg) => {
+      setMessages(prev => [...prev, msg]);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+    });
+    service.markRead(channel.id);
+    return unsub;
+  }, [channel.id]);
 
-    // Scroll to bottom when new messages arrive
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
-  }, [activeChannelId, addMessage, markChannelRead, setMessages]);
-
-  // Cleanup subscription on unmount
-  useEffect(() => {
-    return () => {
-      if (unsubRef.current) unsubRef.current();
-    };
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // Scroll to bottom whenever the message list for the active channel grows
-  // ---------------------------------------------------------------------------
-  const channelMessages = activeChannelId ? (messages[activeChannelId] ?? []) : [];
-  useEffect(() => {
-    if (channelMessages.length > 0) {
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 60);
-    }
-  }, [channelMessages.length]);
-
-  // ---------------------------------------------------------------------------
-  // Send a message
-  // ---------------------------------------------------------------------------
   const handleSend = useCallback(async () => {
-    const text = inputText.trim();
-    if (!text || !activeChannelId || isSending || !profile) return;
-
-    // Validate against max length before sending
-    if (text.length > CHAT.maxMessageLength) return;
-
-    setInputText('');
-    setIsSending(true);
-
+    const text = input.trim();
+    if (!text || sending) return;
+    setSending(true);
+    setInput('');
     try {
-      const msg = await chatService.send(
-        activeChannelId,
-        profile.id,
-        profile.displayName,
-        text,
-      );
-      // Optimistically add the message — realtime may also deliver it,
-      // but ChatService uses a local-prefixed ID so duplicates are rare.
-      addMessage(activeChannelId, msg);
-    } catch {
-      // TODO[NORMAL]: surface a toast/snack bar on send failure
-      setInputText(text); // Restore text so the user can retry
+      const msg = await service.send(channel.id, text);
+      setMessages(prev => [...prev, msg]);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
     } finally {
-      setIsSending(false);
+      setSending(false);
     }
-  }, [inputText, activeChannelId, isSending, profile, addMessage]);
+  }, [input, sending, channel.id]);
 
-  // ---------------------------------------------------------------------------
-  // Render — channel list (no active channel) or conversation
-  // ---------------------------------------------------------------------------
+  const isGroup = channel.type !== 'dm';
 
-  const activeChannel = channels.find((ch) => ch.id === activeChannelId) ?? null;
-
-  if (!activeChannel) {
-    // ---- Channel list view ----
-    return (
-      <View style={styles.root}>
-        <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Messages</Text>
-          <Text style={styles.listSub}>{channels.length} conversations</Text>
-        </View>
-
-        <FlatList
-          data={channels}
-          keyExtractor={(ch) => ch.id}
-          contentContainerStyle={styles.channelList}
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No conversations yet.</Text>
-          }
-          renderItem={({ item }) => (
-            <ChannelRow
-              channel={item}
-              onPress={() => setActiveChannel(item.id)}
-            />
-          )}
-        />
-      </View>
-    );
-  }
-
-  // ---- Conversation view ----
   return (
     <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
     >
-      <ConversationHeader
-        channel={activeChannel}
-        onBack={() => setActiveChannel(null)}
-      />
+      {/* Thread header */}
+      <View style={styles.threadHeader}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Text style={styles.backBtnText}>‹</Text>
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.threadTitle} numberOfLines={1}>{channel.name}</Text>
+          <Text style={styles.threadSub}>
+            {channel.type === 'dm' ? 'Direct message' : `${channel.memberCount} people here now`}
+          </Text>
+        </View>
+        {channel.type === 'dm' && (
+          <TouchableOpacity style={styles.videoCallBtn} onPress={onVideo}>
+            <Text style={{ fontSize: 18 }}>📹</Text>
+          </TouchableOpacity>
+        )}
+        {isGroup && (
+          <View style={styles.liveIndicator}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>LIVE</Text>
+          </View>
+        )}
+      </View>
 
-      {/* Message list */}
+      {/* Messages */}
       <FlatList
         ref={listRef}
-        data={channelMessages}
-        keyExtractor={(msg) => msg.id}
+        data={messages}
+        keyExtractor={m => m.id}
         contentContainerStyle={styles.messageList}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>Be the first to say something.</Text>
-        }
-        renderItem={({ item }) => (
-          <MessageBubble
-            message={item}
-            isSelf={item.senderId === profile?.id}
+        renderItem={({ item, index }) => (
+          <Bubble
+            msg={item}
+            isMe={item.senderId === CURRENT_USER_ID}
+            showName={isGroup && (index === 0 || messages[index-1]?.senderId !== item.senderId)}
           />
         )}
+        ListFooterComponent={isTyping ? <TypingDots /> : null}
       />
 
-      {/* Input row */}
+      {/* Input */}
       <View style={styles.inputRow}>
+        <TouchableOpacity style={styles.vibeBtn} onPress={async () => {
+          await service.send(channel.id, '', 'vibe');
+        }}>
+          <Text style={{ fontSize: 18 }}>✨</Text>
+        </TouchableOpacity>
         <TextInput
           style={styles.input}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="Say something..."
-          placeholderTextColor={COLORS.textMuted}
-          maxLength={CHAT.maxMessageLength}
+          value={input}
+          onChangeText={setInput}
+          placeholder="say something..."
+          placeholderTextColor={C.textMuted}
           multiline
-          returnKeyType="send"
-          blurOnSubmit={false}
+          maxLength={500}
           onSubmitEditing={handleSend}
+          returnKeyType="send"
+          blurOnSubmit
         />
-        <Pressable
-          style={[
-            styles.sendBtn,
-            (!inputText.trim() || isSending) && styles.sendBtnDisabled,
-          ]}
+        <TouchableOpacity
+          style={[styles.sendBtn, (!input.trim() || sending) && styles.sendBtnDisabled]}
           onPress={handleSend}
-          disabled={!inputText.trim() || isSending}
+          disabled={!input.trim() || sending}
         >
           <Text style={styles.sendBtnText}>↑</Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 };
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
+// ── Main ChatScreen ───────────────────────────────────────────────────────────
+const ChatScreen: React.FC<{ navigation?: any; route?: any }> = ({ navigation, route }) => {
+  const [channels,       setChannels]      = useState<Channel[]>([]);
+  const [activeChannel,  setActiveChannel] = useState<Channel | null>(null);
+  const [service]                          = useState(() => new ChatService(CURRENT_USER_ID));
 
+  // Deep-link: open DM directly from map
+  useEffect(() => {
+    service.getChannels().then(setChannels);
+    if (route?.params?.userId) {
+      service.getOrCreateDM(route.params.userId).then(ch => {
+        setActiveChannel(ch);
+      });
+    }
+  }, [route?.params?.userId]);
+
+  if (activeChannel) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ThreadView
+          channel={activeChannel}
+          service={service}
+          onBack={() => setActiveChannel(null)}
+          onVideo={() => navigation?.navigate('Video', {
+            userId:   activeChannel.members.find(id => id !== CURRENT_USER_ID),
+            userName: activeChannel.name,
+          })}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Header */}
+      <View style={styles.listHeader}>
+        <Text style={styles.listTitle}>CHATS</Text>
+        <View style={styles.listTitleSub}>
+          <View style={styles.liveDot} />
+          <Text style={styles.liveText}>REAL-TIME</Text>
+        </View>
+      </View>
+
+      {/* Channel list */}
+      <FlatList
+        data={channels.length ? channels : require('@services/chat/ChatService').MOCK_CHANNELS ?? []}
+        keyExtractor={ch => ch.id}
+        renderItem={({ item }) => (
+          <ChannelRow channel={item} onPress={() => setActiveChannel(item)} />
+        )}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
+  );
+};
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.bg },
+  safe: { flex: 1, backgroundColor: C.bg },
 
-  // --- Channel list ---
-  listHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
-  },
-  listTitle: {
-    color: COLORS.text,
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-  },
-  listSub: {
-    color: COLORS.textMuted,
-    fontSize: 13,
-    marginTop: 2,
-  },
-  channelList: {
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginLeft: 76,
-  },
+  // Channel list
+  listHeader:   { flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingHorizontal:20, paddingVertical:16 },
+  listTitle:    { fontSize:24, fontWeight:'900', color:C.text, letterSpacing:2 },
+  listTitleSub: { flexDirection:'row', alignItems:'center', gap:6 },
+  channelRow:   { flexDirection:'row', alignItems:'center', paddingHorizontal:20, paddingVertical:14, gap:14 },
+  channelAvatar:{ width:48, height:48, borderRadius:24, backgroundColor:C.surfaceUp, alignItems:'center', justifyContent:'center', borderWidth:1, borderColor:C.border },
+  channelRowTop:    { flexDirection:'row', justifyContent:'space-between', marginBottom:4 },
+  channelRowBottom: { flexDirection:'row', justifyContent:'space-between', alignItems:'center' },
+  channelName:  { fontSize:14, fontWeight:'700', color:C.text, flex:1 },
+  channelTime:  { fontSize:11, color:C.textMuted },
+  channelPreview: { fontSize:12, color:C.textDim, flex:1 },
+  unreadBadge:  { backgroundColor:C.purple, borderRadius:10, minWidth:20, height:20, alignItems:'center', justifyContent:'center', paddingHorizontal:5 },
+  unreadBadgeText: { fontSize:10, fontWeight:'800', color:'#fff' },
+  separator:    { height:1, backgroundColor:'rgba(255,255,255,0.04)', marginLeft:82 },
 
-  // --- Channel row ---
-  channelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-  },
-  channelAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  channelInitial: {
-    color: COLORS.accent,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  presenceDot: {
-    position: 'absolute',
-    bottom: 1,
-    right: 1,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.success,
-    borderWidth: 2,
-    borderColor: COLORS.bg,
-  },
-  channelBody: { flex: 1, gap: 4 },
-  channelTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  channelName: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '500',
-    flex: 1,
-  },
-  channelNameBold: {
-    fontWeight: '700',
-  },
-  channelTime: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    marginLeft: 8,
-  },
-  channelBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  channelPreview: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    flex: 1,
-  },
-  unreadBadge: {
-    backgroundColor: COLORS.accent,
-    borderRadius: 12,
-    minWidth: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  unreadCount: {
-    color: COLORS.bg,
-    fontSize: 11,
-    fontWeight: '800',
-  },
+  // Thread
+  threadHeader: { flexDirection:'row', alignItems:'center', paddingHorizontal:16, paddingVertical:12, borderBottomWidth:1, borderBottomColor:C.border, gap:12 },
+  backBtn:      { width:36, height:36, alignItems:'center', justifyContent:'center' },
+  backBtnText:  { fontSize:28, color:C.text, lineHeight:32 },
+  threadTitle:  { fontSize:16, fontWeight:'800', color:C.text },
+  threadSub:    { fontSize:11, color:C.textMuted, marginTop:1 },
+  videoCallBtn: { width:40, height:40, borderRadius:12, backgroundColor:C.surfaceUp, alignItems:'center', justifyContent:'center', borderWidth:1, borderColor:C.border },
+  liveIndicator:{ flexDirection:'row', alignItems:'center', gap:5, backgroundColor:'rgba(74,222,128,0.1)', borderWidth:1, borderColor:'rgba(74,222,128,0.3)', borderRadius:10, paddingHorizontal:8, paddingVertical:4 },
+  liveDot:      { width:6, height:6, borderRadius:3, backgroundColor:C.green },
+  liveText:     { fontSize:9, fontWeight:'800', color:C.green, letterSpacing:1.5 },
 
-  // --- Conversation header ---
-  convHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 52,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backArrow: {
-    color: COLORS.accent,
-    fontSize: 30,
-    fontWeight: '300',
-    lineHeight: 34,
-  },
-  convHeaderCenter: { flex: 1 },
-  convHeaderName: {
-    color: COLORS.text,
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  convHeaderSub: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    marginTop: 1,
-  },
-  convHeaderRight: { width: 36 },
+  messageList:  { paddingHorizontal:16, paddingVertical:12, gap:4 },
 
-  // --- Message list ---
-  messageList: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 12,
-    flexGrow: 1,
-  },
+  // Bubbles
+  bubbleRow:    { marginVertical:2 },
+  bubbleRowMe:  { alignItems:'flex-end' },
+  bubbleRowThem:{ alignItems:'flex-start' },
+  bubbleName:   { fontSize:10, color:C.textMuted, marginBottom:3, marginLeft:4, fontWeight:'600', letterSpacing:0.3 },
+  bubble:       { maxWidth:'78%', borderRadius:18, paddingHorizontal:14, paddingVertical:10 },
+  bubbleMe:     { borderBottomRightRadius:4 },
+  bubbleThem:   { backgroundColor:C.theirBubble, borderBottomLeftRadius:4, borderWidth:1, borderColor:C.border },
+  bubbleText:   { fontSize:14, color:C.text, lineHeight:20 },
+  bubbleTime:   { fontSize:10, color:C.textMuted, marginTop:4, textAlign:'right' },
 
-  // --- Message bubble ---
-  bubbleRow: {
-    maxWidth: '80%',
-    alignSelf: 'flex-start',
-    gap: 3,
-  },
-  bubbleRowSelf: {
-    alignSelf: 'flex-end',
-    alignItems: 'flex-end',
-  },
-  senderName: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 2,
-    marginLeft: 4,
-  },
-  bubble: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 18,
-  },
-  bubbleOther: {
-    backgroundColor: '#1a1a24',
-    borderBottomLeftRadius: 4,
-  },
-  bubbleSelf: {
-    backgroundColor: COLORS.accent,
-    borderBottomRightRadius: 4,
-  },
-  bubbleText: {
-    color: COLORS.text,
-    fontSize: 15,
-    lineHeight: 21,
-  },
-  bubbleTextSelf: {
-    color: COLORS.bg,
-  },
-  bubbleTime: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    marginLeft: 4,
-  },
-  bubbleTimeSelf: {
-    marginLeft: 0,
-    marginRight: 4,
-  },
+  systemMsg:    { alignItems:'center', marginVertical:8 },
+  systemMsgText:{ fontSize:11, color:C.textMuted, backgroundColor:C.surfaceUp, paddingHorizontal:12, paddingVertical:4, borderRadius:10 },
+  vibeBubble:   { alignItems:'center', marginVertical:8 },
+  vibeBubbleText:{ fontSize:12, color:C.purple, fontWeight:'600', backgroundColor:'rgba(168,85,247,0.1)', paddingHorizontal:14, paddingVertical:6, borderRadius:12, borderWidth:1, borderColor:'rgba(168,85,247,0.3)' },
 
-  // --- Input row ---
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-    backgroundColor: COLORS.card,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: '#1a1a24',
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    color: COLORS.text,
-    fontSize: 15,
-    maxHeight: 120,
-    lineHeight: 21,
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // Glow effect for the send button
-    shadowColor: COLORS.accent,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  sendBtnDisabled: {
-    backgroundColor: COLORS.card,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  sendBtnText: {
-    color: COLORS.bg,
-    fontSize: 18,
-    fontWeight: '800',
-  },
+  typingWrap:   { paddingLeft:16, paddingBottom:8 },
+  typingBubble: { flexDirection:'row', gap:4, backgroundColor:C.surfaceUp, paddingHorizontal:12, paddingVertical:10, borderRadius:18, borderBottomLeftRadius:4, alignSelf:'flex-start', borderWidth:1, borderColor:C.border },
+  typingDot:    { width:6, height:6, borderRadius:3, backgroundColor:C.textMuted },
 
-  emptyText: {
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    marginTop: 60,
-    fontSize: 15,
-  },
+  // Input
+  inputRow:  { flexDirection:'row', alignItems:'flex-end', paddingHorizontal:16, paddingVertical:12, gap:10, borderTopWidth:1, borderTopColor:C.border },
+  vibeBtn:   { width:42, height:42, borderRadius:14, backgroundColor:C.surfaceUp, alignItems:'center', justifyContent:'center', borderWidth:1, borderColor:C.border },
+  input:     { flex:1, backgroundColor:C.surfaceUp, borderRadius:18, paddingHorizontal:16, paddingVertical:10, color:C.text, fontSize:14, borderWidth:1, borderColor:C.border, maxHeight:100 },
+  sendBtn:   { width:42, height:42, borderRadius:14, backgroundColor:C.purple, alignItems:'center', justifyContent:'center' },
+  sendBtnDisabled: { opacity:0.35 },
+  sendBtnText:{ fontSize:18, color:'#fff', fontWeight:'900' },
 });
 
 export default ChatScreen;

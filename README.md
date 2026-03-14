@@ -1,114 +1,76 @@
-# ANL — All Night Long
+# ANL — AllNightLong
 
-A React Native social and dating app built for nightlife. Real-time map discovery, gender-inclusive design, continuous background operation, and live vibe-based matching — all in one.
+> Dark. Late-night. Location-based. Real connections, no noise.
 
----
+## What This Is
 
-## What It Is
+ANL is a React Native / Expo app with two layers:
 
-All Night Long puts your night in your hands. See who is out nearby, send vibes, start chats, and join the pulse of your city — all live, all night.
-
-The app is built to stay running. An adaptive event loop persists state across OS kills, heals from errors automatically, and keeps location and chat alive whether or not you are looking at the screen.
-
----
-
-## Key Features
-
-- **Live map with gender-inclusive pins** — Female, male, trans, and non-binary users each get a distinct pin shape and color system. No one is reduced to a generic dot.
-- **NightPulse heatmap** — Zone-level activity intensity shown as a live overlay on the map. See where the night is actually happening.
-- **Vibe signaling** — Send and receive lightweight signals (waves, reactions) without the friction of a full message. Mutual vibes create a match.
-- **Real-time chat** — Direct messages and group channels powered by Supabase Realtime. Read receipts, optimistic updates, and instant delivery.
-- **Video and audio rooms** — In-app calls via LiveKit. No third-party app required.
-- **Continuous background operation** — The adaptive event loop runs regardless of whether the app is foregrounded, backgrounded, or the screen is off.
-- **Self-healing system** — When error thresholds are crossed, the system clears non-critical tasks, restores from the last valid state snapshot, and continues without user intervention.
-- **State persistence** — AsyncStorage snapshots survive OS-level app kills. Next boot restores exactly where you left off.
+1. **Continuous Operation Engine** — autonomous background system (EventLoop, TaskQueue, HealthMonitor, PersistenceLayer, BackgroundService)
+2. **Late-Night Dating App** — proximity-based map UI with gender-specific SVG pin system, real-time chat, and matching
 
 ---
 
-## Quick Start
+## Stack
+
+| Layer       | Choice                          |
+|-------------|---------------------------------|
+| Framework   | React Native 0.73 + Expo ~50    |
+| Language    | TypeScript 5.3 (strict)         |
+| State       | Zustand                         |
+| Navigation  | React Navigation 6 (bottom tabs)|
+| Persistence | AsyncStorage                    |
+| Background  | react-native-background-fetch   |
+| CI          | GitHub Actions                  |
+
+---
+
+## Structure
+
+```
+src/
+├── App.tsx                    ← Root + bottom tab navigator
+├── core/                      ← Engine (EventLoop, TaskQueue, Persistence)
+├── services/
+│   ├── background/            ← iOS+Android background fetch abstraction
+│   ├── health/                ← HealthMonitor
+│   └── state/                 ← Zustand systemStore
+├── screens/
+│   ├── HomeScreen.tsx         ← System dashboard (dark neon UI)
+│   └── MapScreen.tsx          ← Proximity map + pin system
+└── types/                     ← Central type definitions
+
+ANL/
+├── screens/MapView.jsx        ← Web preview of full map UI
+└── components/pins/           ← SVG pin showcases (F, M, TM, TW variants)
+```
+
+---
+
+## Setup
 
 ```bash
-git clone https://github.com/your-org/all-night-long.git
-cd all-night-long
 npm install
-cp .env.example .env        # fill in Mapbox, Supabase, LiveKit credentials
-cp config.example.js config.js
+npx expo start
 ```
 
-Initialize the database by running `supabase/schema.sql` in your Supabase SQL editor, then:
+Path aliases (`@core/*`, `@services/*`, etc.) work via `babel-plugin-module-resolver`.
 
-```bash
-expo start
-```
+---
 
-Full setup including credential acquisition, database initialization, and build configuration is in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
+## Pin System
+
+Gender-specific map pins with smart routing logic:
+
+| Gender      | Default     | Selected      | 90%+ Match   | New       | Offline     |
+|-------------|-------------|---------------|--------------|-----------|-------------|
+| Women       | Classic Butt| Heart Drop    | Match Color  | Cartoon   | Minimal     |
+| Men         | Eggplant    | Eggplant Drop | Chest        | Skull     | Shield      |
+| Trans Women | Star        | Flag Drop     | Butterfly    | Lotus     | Crescent    |
+| Trans Men   | Mars        | Flag Drop     | Dragon       | Lightning | Warrior Shield |
 
 ---
 
 ## Architecture
 
-The system is organized in strict layers:
-
-```
-screens  →  services  →  core  →  utils / types
-```
-
-Each layer imports only from layers below it. The core engine (event loop, task queue, persistence) runs independently of the UI and starts before the first screen renders.
-
-Full architecture documentation covering every module, data flow diagrams, background behavior, and the pin system is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-
----
-
-## Tech Stack
-
-| Layer | Library | Notes |
-|---|---|---|
-| Framework | React Native 0.72+ | Cross-platform iOS + Android |
-| Language | TypeScript 5.0+ | Strict mode on. No implicit `any`. |
-| State | Zustand | Single store per domain. No Redux. |
-| Persistence | AsyncStorage | State snapshots on a 30-second interval. |
-| Database | Supabase (PostgreSQL) | RLS policies on all user tables. |
-| Realtime | Supabase Realtime | WebSocket subscriptions for chat, vibes, pulse zones. |
-| Auth | Supabase Auth | Phone OTP flow. |
-| Maps | Mapbox | Custom pin rendering via React Native Maps + SVG. |
-| Video | LiveKit | In-app video and audio rooms. |
-| Background (Android) | react-native-background-fetch + Headless JS | Keeps the event loop alive in background. |
-| Background (iOS) | react-native-background-fetch + BGTaskScheduler | iOS background modes via native module. |
-| Testing | Jest + React Native Testing Library | Co-located test files. Every module has one. |
-| Linting | ESLint + Prettier | Enforced in CI. |
-| CI/CD | GitHub Actions | Defined in `.github/workflows/ci.yml`. |
-| Builds | Expo EAS Build | Cloud compilation for iOS and Android. |
-
----
-
-## Screenshots
-
-_Coming soon. The app is in active development._
-
----
-
-## Development
-
-```bash
-npm test          # Run the full test suite (must pass before any commit)
-npm run lint      # Check for lint errors
-expo start        # Start the Expo development server
-expo start --android
-expo start --ios
-```
-
-For production builds:
-
-```bash
-eas build --platform all --profile production
-```
-
-For environment setup (Mapbox token, Supabase project, LiveKit server, EAS configuration):
-
-See [`docs/ENV_SETUP.md`](docs/ENV_SETUP.md).
-
----
-
-## License
-
-MIT
+See `CLAUDE.md` for full autonomous agent instructions and system design.

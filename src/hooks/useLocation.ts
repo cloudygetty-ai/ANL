@@ -1,66 +1,62 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/useLocation.ts
-import { useEffect, useRef, useState } from 'react';
-import * as Location from 'expo-location';
-import { fuzzyCoords } from '@utils/geo';
+// Returns fuzzy location (PROXIMITY.FUZZ_M jitter) — never exposes exact coords
+import { useState, useEffect, useRef } from 'react';
+import { PROXIMITY, PRESENCE } from '@config/constants';
+import type { LatLng } from '@types/index';
 
-// Poll every 60 seconds — balances freshness vs battery drain
-const POLL_MS = 60_000;
-// Fuzz by 50 m so the server never sees exact position
-const FUZZ_M = 50;
-// Safe fallback when permission denied or device has no fix
-const NYC = { latitude: 40.7128, longitude: -74.006 };
+export interface LocationState {
+  coords:    LatLng | null;
+  accuracy:  number | null;
+  isReady:   boolean;
+  error:     string | null;
+}
 
-export function useLocation() {
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const watchRef = useRef<ReturnType<typeof setInterval> | null>(null);
+function fuzz(coords: LatLng): LatLng {
+  const r     = PROXIMITY.FUZZ_M / 111320;
+  const angle = Math.random() * Math.PI * 2;
+  return {
+    lat: coords.lat + Math.cos(angle) * r * Math.random(),
+    lng: coords.lng + Math.sin(angle) * r * Math.random(),
+  };
+}
+
+export function useLocation(fuzzy = true): LocationState {
+  const [state, setState] = useState<LocationState>({
+    coords: null, accuracy: null, isReady: false, error: null,
+  });
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    // Guard flag prevents state updates after unmount
-    let cancelled = false;
+    let Loc: any = null;
+    try { Loc = require('expo-location'); } catch { /* not linked */ }
 
-    async function init() {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-
-        if (status !== 'granted') {
-          setError('Location permission denied');
-          // Fall back to fuzzy NYC so the map still renders something sensible
-          setCoords(fuzzyCoords(NYC.latitude, NYC.longitude, FUZZ_M));
-          return;
-        }
-
-        const loc = await Location.getCurrentPositionAsync({});
-        if (!cancelled) {
-          setCoords(fuzzyCoords(loc.coords.latitude, loc.coords.longitude, FUZZ_M));
-        }
-
-        // Poll on interval rather than continuous watch to conserve battery
-        watchRef.current = setInterval(async () => {
-          try {
-            const l = await Location.getCurrentPositionAsync({});
-            if (!cancelled) {
-              setCoords(fuzzyCoords(l.coords.latitude, l.coords.longitude, FUZZ_M));
-            }
-          } catch {
-            // Keep last known coords on transient failures
-          }
-        }, POLL_MS);
-      } catch {
-        if (!cancelled) {
-          setCoords(fuzzyCoords(NYC.latitude, NYC.longitude, FUZZ_M));
-          setError('Location unavailable — using default');
-        }
-      }
+    if (!Loc) {
+      // Dev fallback — NYC coords
+      const mock = { lat: 40.7128, lng: -74.006 };
+      setState({ coords: fuzzy ? fuzz(mock) : mock, accuracy: 10, isReady: true, error: null });
+      return;
     }
 
-    init();
+    (async () => {
+      const { status } = await Loc.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setState(s => ({ ...s, isReady: true, error: 'Location permission denied' }));
+        return;
+      }
 
-    return () => {
-      cancelled = true;
-      if (watchRef.current) clearInterval(watchRef.current);
-    };
-  }, []);
+      const update = async () => {
+        const loc = await Loc.getCurrentPositionAsync({ accuracy: Loc.Accuracy.Balanced });
+        const raw = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+        setState({ coords: fuzzy ? fuzz(raw) : raw, accuracy: loc.coords.accuracy, isReady: true, error: null });
+      };
 
-  return { coords, error };
+      await update();
+      intervalRef.current = setInterval(update, PRESENCE.UPDATE_INTERVAL);
+    })();
+
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [fuzzy]);
+
+  return state;
 }

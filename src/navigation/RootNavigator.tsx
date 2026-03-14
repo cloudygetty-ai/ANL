@@ -1,173 +1,164 @@
 // src/navigation/RootNavigator.tsx
-// Auth gate: onboarding → main app
-// Checks Supabase session on mount, routes accordingly
-import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useUserStore } from '@services/state/userStore';
-import { authService } from '@services/auth';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet } from 'react-native';
 
-import OnboardingScreen from '@screens/OnboardingScreen';
-import MapScreen        from '@screens/MapScreen';
-import ChatScreen       from '@screens/ChatScreen';
-import VideoScreen      from '@screens/VideoScreen';
-import HomeScreen       from '@screens/HomeScreen';
-import ProfileScreen    from '@screens/ProfileScreen';
+import { useAuthStore } from '../stores/authStore';
+import { useSocketStore } from '../stores/socketStore';
+import { useVideoCall } from '../hooks/useVideoCall';
 
-// NightPulse tab (inline)
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, ScrollView } from 'react-native';
-import { nightPulse, pulseColor } from '@services/pulse';
-import type { NightPulseSnapshot } from '@types/index';
+// ─── Auth ─────────────────────────────────────────────────────
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 
-const PulseScreen: React.FC = () => {
-  const [snap, setSnap] = React.useState<NightPulseSnapshot | null>(null);
-  React.useEffect(() => {
-    nightPulse.getSnapshot().then(setSnap);
-    return nightPulse.subscribe(setSnap);
-  }, []);
-  const peak = snap?.zones.reduce((a, b) => a.intensity > b.intensity ? a : b);
+// ─── Main ─────────────────────────────────────────────────────
+import DiscoveryScreen from '../screens/DiscoveryScreen';
+import MatchesScreen from '../screens/MatchesScreen';
+import MapScreen from '../screens/MapScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+
+// ─── Modals ───────────────────────────────────────────────────
+import ChatScreen from '../screens/ChatScreen';
+import VideoCallScreen from '../screens/VideoCallScreen';
+import AIAssistantScreen from '../screens/AIAssistantScreen';
+import PaywallScreen from '../screens/PaywallScreen';
+import IncomingCallModal from '../screens/IncomingCallModal';
+
+export type RootStackParamList = {
+  Auth: undefined;
+  Main: undefined;
+  Chat: { matchId: string; userId: string; displayName: string };
+  VideoCall: { callId: string; targetUserId: string; callType: 'video' | 'audio'; isIncoming: boolean };
+  AIAssistant: { matchId?: string };
+  Paywall: { featureGate?: string };
+  IncomingCall: { callId: string; callerId: string; callerName: string; callType: string };
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator();
+
+// ─── BADGE ────────────────────────────────────────────────────
+function TabBadge({ count }: { count: number }) {
+  if (!count) return null;
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#04040a' }} edges={['top']}>
-      <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
-        <Text style={{ fontSize: 26, fontWeight: '900', color: '#f0eee8', letterSpacing: 2 }}>
-          ⚡ <Text style={{ color: '#a855f7' }}>NIGHT</Text>PULSE
-        </Text>
-        <Text style={{ fontSize: 11, color: 'rgba(240,238,232,0.35)', marginTop: 2, letterSpacing: 1 }}>
-          {snap ? `${snap.cityTotal} people out right now` : 'Loading...'}
-        </Text>
-      </View>
-      {snap?.zones.map(z => (
-        <View key={z.id} style={{ marginHorizontal: 20, marginBottom: 14 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: '#f0eee8' }}>{z.name}</Text>
-            <Text style={{ fontSize: 12, color: z.color, fontWeight: '800' }}>
-              {z.activeCount} out {z.trend === 'peaking' ? '🔥' : z.trend === 'rising' ? '📈' : '📉'}
-            </Text>
-          </View>
-          <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 3 }}>
-            <View style={{ height: 6, width: `${z.intensity * 100}%` as any, backgroundColor: z.color, borderRadius: 3 }} />
-          </View>
-        </View>
-      ))}
-      {peak && (
-        <View style={{ margin: 20, backgroundColor: `${peak.color}15`, borderWidth: 1, borderColor: `${peak.color}44`, borderRadius: 16, padding: 16 }}>
-          <Text style={{ fontSize: 11, color: 'rgba(240,238,232,0.4)', letterSpacing: 2, fontWeight: '700', marginBottom: 4 }}>HOTTEST SPOT RIGHT NOW</Text>
-          <Text style={{ fontSize: 22, fontWeight: '900', color: peak.color }}>{peak.name} 🔥</Text>
-          <Text style={{ fontSize: 13, color: 'rgba(240,238,232,0.5)', marginTop: 4 }}>
-            {peak.activeCount} people active · Peaks at {peak.peakHour}:00
-          </Text>
-        </View>
-      )}
-    </SafeAreaView>
+    <View style={styles.badge}>
+      <Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text>
+    </View>
   );
-};
+}
 
-// ── Navigators ────────────────────────────────────────────────────────────────
-const Tab    = createBottomTabNavigator();
-const Stack  = createNativeStackNavigator();
+// ─── MAIN TABS ────────────────────────────────────────────────
+function MainTabs() {
+  const unreadMatches = useSocketStore((s) => s.unreadMatches ?? 0);
+  const unreadMessages = useSocketStore((s) => s.unreadMessages ?? 0);
 
-const NAV_THEME = {
-  dark: true,
-  colors: {
-    primary:      '#a855f7',
-    background:   '#04040a',
-    card:         '#0d0d14',
-    text:         '#f0eee8',
-    border:       'rgba(168,85,247,0.15)',
-    notification: '#a855f7',
-  },
-  fonts: {
-    regular: { fontFamily: 'System', fontWeight: '400' as const },
-    medium:  { fontFamily: 'System', fontWeight: '500' as const },
-    bold:    { fontFamily: 'System', fontWeight: '700' as const },
-    heavy:   { fontFamily: 'System', fontWeight: '900' as const },
-  },
-};
-
-const TAB_STYLE = {
-  backgroundColor:    '#0d0d14',
-  borderTopColor:     'rgba(168,85,247,0.18)',
-  borderTopWidth:     1,
-  height:             64,
-  paddingBottom:      10,
-  paddingTop:         8,
-};
-
-// Main tab navigator
-const MainTabs: React.FC = () => (
-  <Tab.Navigator
-    screenOptions={{
-      headerShown:             false,
-      tabBarStyle:             TAB_STYLE,
-      tabBarActiveTintColor:   '#a855f7',
-      tabBarInactiveTintColor: 'rgba(255,255,255,0.25)',
-      tabBarLabelStyle:        { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
-    }}
-  >
-    <Tab.Screen name="Nearby"  component={MapScreen}    options={{ tabBarLabel: '🌐 Nearby'  }} />
-    <Tab.Screen name="Chat"    component={ChatScreen}   options={{ tabBarLabel: '💬 Chat'    }} />
-    <Tab.Screen name="Pulse"   component={PulseScreen}  options={{ tabBarLabel: '⚡ Pulse'   }} />
-    <Tab.Screen name="Video"   component={VideoScreen}  options={{ tabBarLabel: '📹 Video'   }} />
-    <Tab.Screen name="System"  component={HomeScreen}   options={{ tabBarLabel: '⚙️ System'  }} />
-  </Tab.Navigator>
-);
-
-// Root stack — swaps between onboarding and main
-const RootStack: React.FC = () => {
-  const { isOnboarded } = useUserStore();
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
-      {isOnboarded ? (
-        <>
-          <Stack.Screen name="Main"    component={MainTabs}      />
-          <Stack.Screen name="Profile" component={ProfileScreen} options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="Video"   component={VideoScreen}   options={{ animation: 'slide_from_bottom', presentation: 'fullScreenModal' }} />
-        </>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: styles.tabBar,
+        tabBarActiveTintColor: '#a855f7',
+        tabBarInactiveTintColor: '#4b5563',
+        tabBarShowLabel: false,
+        tabBarIcon: ({ color, size, focused }) => {
+          const icons: Record<string, [string, string]> = {
+            Discovery: ['flame', 'flame-outline'],
+            Matches:   ['heart', 'heart-outline'],
+            Map:       ['map', 'map-outline'],
+            Profile:   ['person', 'person-outline'],
+          };
+          const [active, inactive] = icons[route.name] ?? ['ellipse', 'ellipse-outline'];
+          return (
+            <View>
+              <Ionicons name={(focused ? active : inactive) as any} size={size} color={color} />
+              {route.name === 'Matches' && <TabBadge count={unreadMatches + unreadMessages} />}
+            </View>
+          );
+        },
+      })}
+    >
+      <Tab.Screen name="Discovery" component={DiscoveryScreen} />
+      <Tab.Screen name="Matches"   component={MatchesScreen} />
+      <Tab.Screen name="Map"       component={MapScreen} />
+      <Tab.Screen name="Profile"   component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+}
+
+// ─── AUTH STACK ───────────────────────────────────────────────
+function AuthStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Login"      component={LoginScreen} />
+      <Stack.Screen name="Register"   component={RegisterScreen} />
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// ─── ROOT ─────────────────────────────────────────────────────
+export default function RootNavigator() {
+  const { user } = useAuthStore();
+  const { callStatus, acceptCall, rejectCall } = useVideoCall();
+
+  // Listen for incoming calls via socket
+  const socket = useSocketStore((s) => s.socket);
+
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {!user ? (
+        <Stack.Screen name="Auth" component={AuthStack} />
       ) : (
-        <Stack.Screen name="Onboarding" component={OnboardingScreen as any} />
+        <>
+          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen
+            name="Chat"
+            component={ChatScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="VideoCall"
+            component={VideoCallScreen}
+            options={{ animation: 'slide_from_bottom', gestureEnabled: false }}
+          />
+          <Stack.Screen
+            name="AIAssistant"
+            component={AIAssistantScreen}
+            options={{ animation: 'slide_from_bottom' }}
+          />
+          <Stack.Screen
+            name="Paywall"
+            component={PaywallScreen}
+            options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+          />
+          <Stack.Screen
+            name="IncomingCall"
+            component={IncomingCallModal}
+            options={{ animation: 'fade', presentation: 'transparentModal', gestureEnabled: false }}
+          />
+        </>
       )}
     </Stack.Navigator>
   );
-};
-
-// ── Root Navigator export ─────────────────────────────────────────────────────
-const RootNavigator: React.FC = () => {
-  const { setProfile, setOnboarded } = useUserStore();
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    authService.getSession().then(async (session) => {
-      if (session) {
-        const profile = await authService.getOrCreateProfile(session.userId, session.phone);
-        if (profile) {
-          setProfile(profile);
-          if (profile.displayName) setOnboarded(true);
-        }
-      }
-      setChecking(false);
-    });
-  }, []);
-
-  if (checking) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#a855f7" />
-      </View>
-    );
-  }
-
-  return (
-    <NavigationContainer theme={NAV_THEME}>
-      <RootStack />
-    </NavigationContainer>
-  );
-};
+}
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, backgroundColor: '#04040a', alignItems: 'center', justifyContent: 'center' },
+  tabBar: {
+    backgroundColor: '#04040a',
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopWidth: 1,
+    height: 80,
+    paddingBottom: 20,
+  },
+  badge: {
+    position: 'absolute', top: -4, right: -8,
+    backgroundColor: '#a855f7', borderRadius: 8,
+    minWidth: 16, height: 16,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  badgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
 });
-
-export default RootNavigator;

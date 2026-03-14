@@ -117,5 +117,13 @@ export async function shutdownSystem(): Promise<void> {
     const state = useSystemStore.getState().systemState;
     await _persistence.save(state, _health.getMetrics());
   }
+  // WHY: Null all refs so accessors return null after shutdown,
+  // matching the pre-initialization state. Critical for clean test teardown
+  // and for safe re-initialization in the same process.
+  _eventLoop = null;
+  _taskQueue = null;
+  _persistence = null;
+  _health = null;
+  _background = null;
   _initialized = false;
 }

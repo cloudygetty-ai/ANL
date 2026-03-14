@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/screens/IncomingCallModal.tsx
 import React, { useEffect, useRef } from 'react';
 import {

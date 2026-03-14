@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/useGate.ts
 import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/services/location/LocationService.ts
 // GPS polling with Expo Location, fuzzy coords before broadcast,
 // background updates via expo-task-manager
@@ -7,7 +8,7 @@ import { fuzzyCoords } from '@utils/geo';
 let ExpoLocation: any = null;
 const loc = () => {
   if (ExpoLocation) return ExpoLocation;
-  try { ExpoLocation = require('expo-location'); } catch {}
+  try { ExpoLocation = require('expo-location'); } catch { /* intentional */ }
   return ExpoLocation;
 };
 

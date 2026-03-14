@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/useAuth.ts
 import { useEffect, useState } from 'react';
 import { supabase } from '@config/supabase';

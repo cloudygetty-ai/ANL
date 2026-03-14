@@ -1,6 +1,6 @@
 // src/components/ui/GlowButton.tsx
 import React, { useRef } from 'react';
-import { TouchableOpacity, Text, View, StyleSheet, Animated } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, Animated } from 'react-native';
 
 interface Props {
   label:     string;

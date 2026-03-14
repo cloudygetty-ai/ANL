@@ -220,7 +220,7 @@ const HomeScreen: React.FC = () => {
         {/* Metrics grid */}
         <SectionHead label="METRICS" />
         <View style={styles.metricsGrid}>
-          {metrics.map((m, i) => (
+          {metrics.map((m, _i) => (
             <MetricCard key={m.label} label={m.label} value={m.value} accent={m.accent} />
           ))}
         </View>

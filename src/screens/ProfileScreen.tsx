@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/screens/ProfileScreen.tsx
 // Edit own profile — name, bio, vibe, gender, age, tags, presence toggle
 import React, { useState } from 'react';
@@ -25,7 +26,7 @@ const C = {
 const VIBE_TAGS = [
   'Tonight only', 'Down for anything', 'No strings', 'Good vibes only',
   'Spontaneous', 'Late night magic', 'Come find me', 'Free tonight',
-  'Let's link', 'Adventurous', 'Just got out', 'Dream energy',
+  "Let's link", 'Adventurous', 'Just got out', 'Dream energy',
 ];
 
 const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-var-requires */
 // src/services/notifications/PushService.ts
 // Expo push notifications — token registration, local + remote handlers
 let Notifications: any = null;
@@ -5,12 +6,12 @@ let Device: any = null;
 
 const notif = () => {
   if (Notifications) return Notifications;
-  try { Notifications = require('expo-notifications'); } catch {}
+  try { Notifications = require('expo-notifications'); } catch { /* intentional */ }
   return Notifications;
 };
 const device = () => {
   if (Device) return Device;
-  try { Device = require('expo-device'); } catch {}
+  try { Device = require('expo-device'); } catch { /* intentional */ }
   return Device;
 };
 

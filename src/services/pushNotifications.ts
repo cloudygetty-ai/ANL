@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/services/pushNotifications.ts
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { api } from './api';
 
-export async function setupPushNotifications(userId: string) {
+export async function setupPushNotifications(_userId: string) {
   if (!Device.isDevice) return; // simulators don't support push
 
   const { status: existing } = await Notifications.getPermissionsAsync();

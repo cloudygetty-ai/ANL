@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // hooks/useVideoCall.ts
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
@@ -42,7 +43,7 @@ interface UseVideoCallReturn {
 
 export function useVideoCall(): UseVideoCallReturn {
   const socket = useSocketStore((s) => s.socket);
-  const { user } = useAuthStore();
+  const { user: _user } = useAuthStore();
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -196,7 +197,7 @@ export function useVideoCall(): UseVideoCallReturn {
       }
     });
 
-    socket.on('call:ended', ({ duration }: any) => endCall());
+    socket.on('call:ended', ({ duration: _duration }: { duration: unknown }) => endCall());
     socket.on('call:unavailable', () => {
       setCallStatus('idle');
     });

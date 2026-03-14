@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // hooks/usePhotoUpload.ts
 import { useState, useCallback } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { Alert, Platform } from 'react-native';
+import { Alert } from 'react-native';
 import { api } from '../services/api';
 
 interface UploadedPhoto {

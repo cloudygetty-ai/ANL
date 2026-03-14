@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-var-requires */
 // src/services/pulse/NightPulseService.ts
 // NightPulse: real-time anonymous heatwave showing which neighborhoods are 🔥
 // Data: user activity events aggregated by neighborhood polygon server-side

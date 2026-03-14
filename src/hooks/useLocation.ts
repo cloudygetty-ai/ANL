@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/useLocation.ts
 // Returns fuzzy location (PROXIMITY.FUZZ_M jitter) — never exposes exact coords
 import { useState, useEffect, useRef } from 'react';

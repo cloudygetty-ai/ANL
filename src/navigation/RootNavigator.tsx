@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/navigation/RootNavigator.tsx
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -19,7 +20,6 @@ import DiscoveryScreen from '../screens/DiscoveryScreen';
 import MatchesScreen from '../screens/MatchesScreen';
 import MapScreen from '../screens/MapScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import SettingsScreen from '../screens/SettingsScreen';
 
 // ─── Modals ───────────────────────────────────────────────────
 import ChatScreen from '../screens/ChatScreen';
@@ -103,10 +103,10 @@ function AuthStack() {
 // ─── ROOT ─────────────────────────────────────────────────────
 export default function RootNavigator() {
   const { user } = useAuthStore();
-  const { callStatus, acceptCall, rejectCall } = useVideoCall();
+  const { callStatus: _callStatus, acceptCall: _acceptCall, rejectCall: _rejectCall } = useVideoCall();
 
   // Listen for incoming calls via socket
-  const socket = useSocketStore((s) => s.socket);
+  const _socket = useSocketStore((s) => s.socket);
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

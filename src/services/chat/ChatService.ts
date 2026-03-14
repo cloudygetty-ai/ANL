@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-var-requires */
 // src/services/chat/ChatService.ts
 // Stack: Supabase Realtime — Postgres + WebSocket subscriptions
 // Supports: DM threads, event group chats, venue rooms, neighborhood channels
-import type { Channel, ChatMessage, ChannelType } from '@types/index';
+import type { Channel, ChatMessage } from '@types/index';
 
 // Lazy Supabase import — won't break TS compile without native deps
 let supabase: any = null;

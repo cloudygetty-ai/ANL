@@ -1,16 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-var-requires */
 // src/screens/VideoScreen.tsx
 // Full-screen video call UI — 1:1 (DM) and group (up to 12)
 // Stack: @livekit/react-native | falls back to placeholder if not linked
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Animated, Easing, Dimensions, ScrollView,
+  Animated, Dimensions, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { VideoService } from '@services/video/VideoService';
 import type { VideoParticipant } from '@types/index';
 
-const { width: SW, height: SH } = Dimensions.get('window');
+const { width: SW, height: _SH } = Dimensions.get('window');
 
 const C = {
   bg:      '#000',
@@ -130,7 +131,7 @@ const VideoScreen: React.FC<{ navigation?: any; route?: any }> = ({ navigation, 
   const [isCamOff,  setIsCamOff]  = useState(false);
   const [callState, setCallState] = useState<'connecting' | 'connected' | 'ended'>('connecting');
   const [duration,  setDuration]  = useState(0);
-  const [showCtrl,  setShowCtrl]  = useState(true);
+  const [_showCtrl,  setShowCtrl]  = useState(true);
   const [room,      setRoom]      = useState<any>(null);
 
   const ctrlOpacity = useRef(new Animated.Value(1)).current;

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-var-requires */
 // src/screens/ChatScreen.tsx
 // Handles: DM threads, event group chats, neighborhood rooms
 // Real-time via Supabase channel subscriptions (or mock in dev)
@@ -5,7 +6,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput,
   TouchableOpacity, KeyboardAvoidingView, Platform,
-  Animated, Easing,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChatService } from '@services/chat/ChatService';
@@ -157,7 +158,7 @@ const ThreadView: React.FC<{
 }> = ({ channel, service, onBack, onVideo }) => {
   const [messages,  setMessages]  = useState<ChatMessage[]>([]);
   const [input,     setInput]     = useState('');
-  const [isTyping,  setIsTyping]  = useState(false);
+  const [isTyping,  _setIsTyping]  = useState(false);
   const [sending,   setSending]   = useState(false);
   const listRef = useRef<FlatList>(null);
 

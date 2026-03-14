@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "expo-dev",
+      "runtimeExecutable": "C:/Program Files/nodejs/node.exe",
+      "runtimeArgs": ["-e", "const h=require('http'),f=require('fs'),p=require('path');h.createServer((q,r)=>{const fp=p.join('public','index.html');r.writeHead(200,{'Content-Type':'text/html'});f.createReadStream(fp).pipe(r)}).listen(8081,()=>console.log('ready'))"],
+      "port": 8081
+    }
+  ]
+}

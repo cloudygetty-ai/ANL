@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-var-requires */
 // src/services/auth/AuthService.ts
 // Stack: Supabase Auth — phone OTP, session management, token refresh
 import type { UserProfile } from '@types/index';

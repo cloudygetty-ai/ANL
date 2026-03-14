@@ -5,7 +5,10 @@ import { PersistenceLayer }   from '@core/persistence/PersistenceLayer';
 import { HealthMonitor }      from '@services/health/HealthMonitor';
 import { BackgroundService }  from '@services/background/BackgroundService';
 import { useSystemStore }     from '@services/state/systemStore';
+import { logger }             from '@utils/Logger';
 import type { Task }          from '@types/index';
+
+const MODULE = 'SystemInitializer';
 
 let _initialized    = false;
 let _eventLoop:     EventLoopManager  | null = null;
@@ -20,6 +23,7 @@ export async function initializeSystem(): Promise<void> {
   const store = useSystemStore.getState();
   store.setStatus('initializing');
 
+  // WHY: Boot order matters — HealthMonitor first so other components can record errors
   _health      = new HealthMonitor();
   _taskQueue   = new TaskQueue();
   _persistence = new PersistenceLayer(30000);
@@ -30,12 +34,12 @@ export async function initializeSystem(): Promise<void> {
   if (snapshot) {
     _health.recordRecovery();
     store.restoreFromSnapshot(snapshot.systemState, snapshot.health);
-    console.info('[SystemInitializer] Restored from snapshot at', new Date(snapshot.timestamp).toISOString());
+    logger.info(MODULE, 'Restored from snapshot', { at: new Date(snapshot.timestamp).toISOString() });
   } else {
-    console.info('[SystemInitializer] No snapshot — fresh start');
+    logger.info(MODULE, 'No snapshot — fresh start');
   }
 
-  // ── Built-in tasks ──────────────────────────────────────────────────────────
+  // Built-in tasks
   const healthCheckTask: Task = {
     id:          'system:health-check',
     name:        'HealthCheck',
@@ -90,7 +94,7 @@ export async function initializeSystem(): Promise<void> {
 
   store.setStatus('running');
   _initialized = true;
-  console.info('[SystemInitializer] System running');
+  logger.info(MODULE, 'System running');
 }
 
 export function getEventLoop():    EventLoopManager  | null { return _eventLoop;   }
@@ -105,5 +109,13 @@ export async function shutdownSystem(): Promise<void> {
     const state = useSystemStore.getState().systemState;
     await _persistence.save(state, _health.getMetrics());
   }
+  // WHY: Null all refs so accessors return null after shutdown,
+  // matching the pre-initialization state. Critical for clean test teardown
+  // and for safe re-initialization in the same process.
+  _eventLoop   = null;
+  _taskQueue   = null;
+  _persistence = null;
+  _health      = null;
+  _background  = null;
   _initialized = false;
 }

@@ -1,614 +1,1929 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>AllNightLong — Drop In. Link Up. Tonight.</title>
-<meta name="description" content="The late-night proximity app. See who's out right now, within walking distance. Early access dropping soon."/>
-<meta property="og:title" content="AllNightLong"/>
-<meta property="og:description" content="Drop in. Link up. Tonight."/>
-<meta property="og:type" content="website"/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,300&display=swap" rel="stylesheet"/>
-<style>
-/* ── Reset & tokens ── */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#06060a;
-  --surface:#0e0e16;
-  --surfaceUp:#14141f;
-  --border:rgba(168,85,247,.18);
-  --purple:#a855f7;
-  --pink:#ec4899;
-  --amber:#fbbf24;
-  --cyan:#22d3ee;
-  --green:#4ade80;
-  --red:#f87171;
-  --text:#f0eee8;
-  --textDim:rgba(240,238,232,.5);
-  --textMuted:rgba(240,238,232,.22);
-  --ff-display:'Bebas Neue',sans-serif;
-  --ff-body:'DM Sans',sans-serif;
-}
-html{scroll-behavior:smooth}
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:var(--ff-body);
-  min-height:100svh;
-  overflow-x:hidden;
-}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>All Night Long — Nightlife, Redefined</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
+  <meta name="description" content="ANL connects you to the people, places, and pulse of your city's nightlife. Live, real-time, and radically inclusive." />
+  <style>
+    /* ============================================================
+       Reset and base
+    ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-/* ── Noise grain overlay ── */
-body::before{
-  content:'';position:fixed;inset:0;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
-  pointer-events:none;z-index:0;opacity:.6;
-}
+    :root {
+      --bg:         #0a0a0f;
+      --bg-card:    #12121a;
+      --bg-input:   #1a1a26;
+      --aqua:       #7fffd4;
+      --orange:     #ffa032;
+      --blue:       #4488ff;
+      --pink:       #f7a8c4;
+      --sky:        #55cdfc;
+      --purple:     #a855f7;
+      --gold:       #ffd700;
+      --text:       #e8e8f0;
+      --text-muted: #7878a0;
+      --border:     #2a2a3e;
+      --radius:     12px;
+      --radius-sm:  6px;
+    }
 
-/* ── Map grid bg ── */
-.map-grid{
-  position:fixed;inset:0;pointer-events:none;z-index:0;
-  background-image:
-    linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
-  background-size:48px 48px;
-}
+    html {
+      scroll-behavior: smooth;
+    }
 
-/* ── Glow blobs ── */
-.blob{
-  position:fixed;border-radius:50%;
-  filter:blur(80px);pointer-events:none;z-index:0;
-  animation:blobDrift 12s ease-in-out infinite alternate;
-}
-.blob-1{width:500px;height:500px;background:rgba(168,85,247,.12);top:-100px;right:-100px;}
-.blob-2{width:400px;height:400px;background:rgba(236,72,153,.09);bottom:0;left:-80px;animation-delay:-4s;}
-.blob-3{width:300px;height:300px;background:rgba(34,211,238,.07);top:40%;left:30%;animation-delay:-8s;}
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
 
-@keyframes blobDrift{
-  0%{transform:translate(0,0) scale(1);}
-  100%{transform:translate(30px,20px) scale(1.05);}
-}
+    h1, h2, h3 {
+      line-height: 1.2;
+      font-weight: 700;
+    }
 
-/* ── Layout ── */
-main{
-  position:relative;z-index:1;
-  min-height:100svh;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  padding:48px 24px 80px;
-  gap:0;
-}
+    /* ============================================================
+       Layout
+    ============================================================ */
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
 
-/* ── Nav ── */
-nav{
-  position:fixed;top:0;left:0;right:0;z-index:100;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:20px 32px;
-  background:linear-gradient(to bottom,rgba(6,6,10,.9),transparent);
-  backdrop-filter:blur(12px);
-}
-.nav-logo{
-  font-family:var(--ff-display);
-  font-size:22px;letter-spacing:3px;
-  color:var(--text);
-}
-.nav-logo span{color:var(--amber);}
-.nav-badge{
-  font-size:10px;font-weight:700;letter-spacing:2px;
-  color:var(--purple);
-  border:1px solid rgba(168,85,247,.3);
-  border-radius:20px;padding:4px 12px;
-  background:rgba(168,85,247,.08);
-}
+    /* ============================================================
+       Navigation
+    ============================================================ */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 18px 0;
+      background: linear-gradient(to bottom, rgba(10,10,15,0.96) 0%, transparent 100%);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
 
-/* ── Floating pins map ── */
-.pin-field{
-  position:relative;
-  width:min(560px,100%);
-  height:360px;
-  margin-bottom:48px;
-}
-/* distance rings */
-.ring{
-  position:absolute;top:50%;left:50%;
-  border-radius:50%;border:1px solid rgba(255,255,255,.05);
-  transform:translate(-50%,-50%);
-  pointer-events:none;
-}
-/* you dot */
-.you{
-  position:absolute;top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  width:16px;height:16px;
-  border-radius:50%;
-  background:var(--amber);
-  border:3px solid #fff;
-  box-shadow:0 0 0 6px rgba(251,191,36,.2),0 0 24px rgba(251,191,36,.5);
-  z-index:20;
-}
-/* floating pin */
-.fpin{
-  position:absolute;
-  transform:translate(-50%,-50%);
-  cursor:pointer;
-  z-index:10;
-  transition:filter .2s;
-  animation:pinFloat 3s ease-in-out infinite;
-}
-.fpin:hover{filter:brightness(1.3) drop-shadow(0 0 12px currentColor);}
-.fpin svg{display:block;}
-/* pulse ring per pin */
-.pulse-ring{
-  position:absolute;top:50%;left:50%;
-  border-radius:50%;border:1.5px solid currentColor;
-  transform:translate(-50%,-50%);
-  pointer-events:none;
-  animation:ringPulse 2.4s ease-out infinite;
-}
-@keyframes ringPulse{
-  0%  {width:38px;height:38px;opacity:.7;}
-  100%{width:76px;height:76px;opacity:0;}
-}
-@keyframes pinFloat{
-  0%,100%{transform:translate(-50%,-50%) translateY(0);}
-  50%    {transform:translate(-50%,-50%) translateY(-6px);}
-}
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-/* ── Hero copy ── */
-.hero{text-align:center;margin-bottom:48px;}
-.eyebrow{
-  display:inline-flex;align-items:center;gap:8px;
-  font-size:11px;font-weight:700;letter-spacing:3px;
-  color:var(--textMuted);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:20px;padding:5px 14px;
-  margin-bottom:24px;
-  background:rgba(255,255,255,.03);
-}
-.eyebrow .dot{
-  width:6px;height:6px;border-radius:50%;
-  background:var(--green);
-  box-shadow:0 0 6px var(--green);
-  animation:blink 1.8s ease-in-out infinite;
-}
-@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+    .nav-logo {
+      font-family: 'Permanent Marker', cursive;
+      font-size: 17px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      color: var(--aqua);
+      text-decoration: none;
+    }
 
-h1{
-  font-family:var(--ff-display);
-  font-size:clamp(64px,12vw,110px);
-  line-height:.92;
-  letter-spacing:3px;
-  color:var(--text);
-  margin-bottom:24px;
-}
-h1 .accent{color:var(--amber);}
-h1 .dim{color:var(--textDim);font-size:.55em;letter-spacing:8px;display:block;margin-top:4px;}
+    .nav-logo span {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 8px;
+    }
 
-.hook{
-  font-size:clamp(16px,2.2vw,20px);
-  font-weight:300;
-  color:var(--textDim);
-  max-width:480px;
-  margin:0 auto 12px;
-  line-height:1.55;
-  letter-spacing:.2px;
-}
-.hook strong{color:var(--text);font-weight:600;}
+    /* ============================================================
+       Hero section
+    ============================================================ */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 130px 24px 90px;
+      position: relative;
+      overflow: hidden;
+    }
 
-/* ── Stats strip ── */
-.stats{
-  display:flex;gap:32px;justify-content:center;
-  margin-bottom:52px;
-  flex-wrap:wrap;
-}
-.stat{text-align:center;}
-.stat-num{
-  font-family:var(--ff-display);
-  font-size:36px;letter-spacing:2px;
-  color:var(--text);
-  line-height:1;
-}
-.stat-num span{color:var(--purple);}
-.stat-label{font-size:11px;color:var(--textMuted);letter-spacing:1.5px;font-weight:600;margin-top:4px;}
+    /* Ambient glow blobs behind the hero */
+    .hero-glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(110px);
+      pointer-events: none;
+    }
 
-/* ── Email form ── */
-.form-wrap{
-  width:min(480px,100%);
-  margin-bottom:20px;
-}
-.form-label{
-  font-size:11px;font-weight:700;letter-spacing:2px;
-  color:var(--textMuted);text-align:center;
-  margin-bottom:14px;display:block;
-}
-.form{
-  display:flex;gap:8px;
-  background:var(--surfaceUp);
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:6px 6px 6px 18px;
-  transition:border-color .2s;
-}
-.form:focus-within{border-color:rgba(168,85,247,.5);}
-.form input{
-  flex:1;background:none;border:none;outline:none;
-  font-family:var(--ff-body);font-size:14px;
-  color:var(--text);
-  caret-color:var(--purple);
-}
-.form input::placeholder{color:var(--textMuted);}
-.form button{
-  font-family:var(--ff-display);
-  font-size:15px;letter-spacing:2px;
-  background:var(--purple);
-  color:#fff;border:none;
-  border-radius:11px;
-  padding:12px 24px;
-  cursor:pointer;
-  transition:background .2s,transform .1s;
-  white-space:nowrap;
-}
-.form button:hover{background:#9333ea;}
-.form button:active{transform:scale(.97);}
-.form-note{
-  text-align:center;margin-top:10px;
-  font-size:11px;color:var(--textMuted);letter-spacing:.3px;
-}
-.form-note a{color:var(--purple);text-decoration:none;}
+    .hero-glow-1 {
+      width: 560px;
+      height: 560px;
+      background: var(--blue);
+      opacity: 0.10;
+      top: -100px;
+      left: -180px;
+    }
 
-/* ── Success state ── */
-.success{
-  display:none;
-  flex-direction:column;align-items:center;gap:12px;
-  padding:28px;
-  background:rgba(74,222,128,.06);
-  border:1px solid rgba(74,222,128,.2);
-  border-radius:16px;
-  text-align:center;
-}
-.success.show{display:flex;}
-.success-icon{font-size:32px;}
-.success-title{font-family:var(--ff-display);font-size:22px;letter-spacing:2px;color:var(--green);}
-.success-sub{font-size:13px;color:var(--textDim);}
+    .hero-glow-2 {
+      width: 480px;
+      height: 480px;
+      background: var(--pink);
+      opacity: 0.09;
+      bottom: -60px;
+      right: -120px;
+    }
 
-/* ── Pin legend / features ── */
-.features{
-  display:flex;gap:12px;
-  justify-content:center;
-  flex-wrap:wrap;
-  margin-bottom:56px;
-  max-width:600px;
-}
-.feature-pill{
-  display:flex;align-items:center;gap:8px;
-  background:var(--surface);
-  border:1px solid rgba(255,255,255,.07);
-  border-radius:20px;
-  padding:8px 16px;
-  font-size:12px;color:var(--textDim);font-weight:500;
-  transition:border-color .2s;
-}
-.feature-pill:hover{border-color:rgba(168,85,247,.3);}
-.feature-pill .icon{font-size:14px;}
+    .hero-glow-3 {
+      width: 300px;
+      height: 300px;
+      background: var(--aqua);
+      opacity: 0.06;
+      top: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+    }
 
-/* ── Pin showcase row ── */
-.pin-row{
-  display:flex;gap:20px;align-items:center;justify-content:center;
-  margin-bottom:60px;flex-wrap:wrap;
-}
-.pin-item{
-  display:flex;flex-direction:column;align-items:center;gap:8px;
-  opacity:.7;
-  transition:opacity .2s,transform .2s;
-  cursor:default;
-}
-.pin-item:hover{opacity:1;transform:translateY(-4px);}
-.pin-item .plabel{
-  font-size:9px;font-weight:700;letter-spacing:1.5px;
-  color:var(--textMuted);text-transform:uppercase;
-}
+    /* Floating pin field — filled by JS */
+    .pin-field {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
 
-/* ── Footer ── */
-footer{
-  position:relative;z-index:1;
-  text-align:center;
-  padding:24px;
-  border-top:1px solid rgba(255,255,255,.05);
-  font-size:11px;color:var(--textMuted);letter-spacing:1px;
-}
-footer a{color:var(--purple);text-decoration:none;}
+    .pin-float {
+      position: absolute;
+      opacity: 0;
+      animation: float-pin linear infinite;
+    }
 
-/* ── Entrance animations ── */
-.reveal{opacity:0;transform:translateY(20px);animation:reveal .6s ease forwards;}
-@keyframes reveal{to{opacity:1;transform:none;}}
-.d1{animation-delay:.1s;}
-.d2{animation-delay:.25s;}
-.d3{animation-delay:.4s;}
-.d4{animation-delay:.55s;}
-.d5{animation-delay:.7s;}
-.d6{animation-delay:.85s;}
-.d7{animation-delay:1s;}
+    @keyframes float-pin {
+      0%   { transform: translateY(0)      scale(1);    opacity: 0; }
+      8%   { opacity: 0.65; }
+      88%  { opacity: 0.45; }
+      100% { transform: translateY(-115vh) scale(0.55); opacity: 0; }
+    }
 
-/* ── Responsive ── */
-@media(max-width:480px){
-  nav{padding:16px 20px;}
-  .pin-field{height:260px;}
-  .stats{gap:20px;}
-  .form{flex-direction:column;padding:12px;}
-  .form button{border-radius:10px;padding:14px;}
-}
-</style>
+    /* Hero text */
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(127, 255, 212, 0.07);
+      border: 1px solid rgba(127, 255, 212, 0.22);
+      border-radius: 999px;
+      padding: 6px 18px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--aqua);
+      margin-bottom: 36px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--aqua);
+      animation: pulse-dot 2.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1;   transform: scale(1); }
+      50%       { opacity: 0.3; transform: scale(0.6); }
+    }
+
+    .hero h1 {
+      font-family: 'Permanent Marker', cursive;
+      font-size: clamp(52px, 10vw, 96px);
+      font-weight: 400;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 2;
+      text-shadow:
+        3px 3px 0 rgba(0,0,0,0.5),
+        -1px -1px 0 rgba(168,85,247,0.15);
+      filter: drop-shadow(0 0 24px rgba(168,85,247,0.35));
+    }
+
+    .word-all   { color: #c084fc; }
+    .word-night { color: #f472b6; }
+    .word-long  { color: #67e8f9; }
+
+    .word-first {
+      color: #ffffff;
+      font-size: 1.05em;
+    }
+
+    .hero-tagline {
+      font-size: clamp(17px, 2.8vw, 22px);
+      color: var(--text-muted);
+      max-width: 500px;
+      margin: 0 auto 52px;
+      font-weight: 400;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-tagline strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ============================================================
+       Waitlist form
+    ============================================================ */
+    .waitlist-wrap {
+      position: relative;
+      z-index: 2;
+    }
+
+    .waitlist-form {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .waitlist-input {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 15px;
+      padding: 14px 20px;
+      outline: none;
+      width: 288px;
+      transition: border-color 0.2s;
+    }
+
+    .waitlist-input::placeholder { color: var(--text-muted); }
+
+    .waitlist-input:focus { border-color: var(--aqua); }
+
+    .waitlist-input.error { border-color: #ff4455; }
+
+    .waitlist-btn {
+      background: var(--aqua);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #0a0a0f;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px 28px;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+
+    .waitlist-btn:hover  { opacity: 0.88; transform: translateY(-1px); }
+    .waitlist-btn:active { transform: translateY(0); }
+
+    .form-success {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(127, 255, 212, 0.07);
+      border: 1px solid rgba(127, 255, 212, 0.22);
+      border-radius: var(--radius-sm);
+      color: var(--aqua);
+      font-size: 15px;
+      font-weight: 600;
+      padding: 14px 24px;
+    }
+
+    .form-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 14px;
+    }
+
+    /* ============================================================
+       Divider
+    ============================================================ */
+    .divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ============================================================
+       Pin showcase strip
+    ============================================================ */
+    .pin-showcase {
+      padding: 80px 0 96px;
+    }
+
+    .pin-showcase-label {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 56px;
+    }
+
+    .pin-strip {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: clamp(32px, 7vw, 80px);
+      flex-wrap: wrap;
+    }
+
+    .pin-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .pin-item-label {
+      font-size: 14px;
+      color: #e8e8f0;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .pin-item-shape {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-top: -10px;
+    }
+
+    .pin-svg-wrap {
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), filter 0.3s;
+      cursor: default;
+      filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4));
+    }
+
+    .pin-svg-wrap:hover {
+      transform: scale(1.2) translateY(-10px);
+      filter: drop-shadow(0 12px 28px rgba(0,0,0,0.5));
+    }
+
+    /* ============================================================
+       Features section
+    ============================================================ */
+    .features {
+      padding: 88px 0;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .section-header h2 {
+      font-size: clamp(26px, 4.5vw, 38px);
+      margin-bottom: 12px;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 16px;
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      transition: border-color 0.22s, transform 0.22s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(127, 255, 212, 0.28);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon {
+      font-size: 26px;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .feature-card p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    /* ============================================================
+       Stats bar
+    ============================================================ */
+    .stats {
+      padding: 56px 0;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .stat-cell {
+      background: var(--bg-card);
+      padding: 40px 24px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: clamp(30px, 5vw, 46px);
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 6px;
+    }
+
+    .stat-label {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* ============================================================
+       Footer CTA
+    ============================================================ */
+    .footer-cta {
+      padding: 88px 0 72px;
+      text-align: center;
+    }
+
+    .footer-cta h2 {
+      font-size: clamp(26px, 4vw, 40px);
+      margin-bottom: 14px;
+    }
+
+    .footer-cta p {
+      color: var(--text-muted);
+      font-size: 16px;
+      margin-bottom: 36px;
+    }
+
+    /* ============================================================
+       Footer
+    ============================================================ */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 0;
+      text-align: center;
+    }
+
+    footer p {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    footer a:hover { color: var(--aqua); }
+
+    /* ============================================================
+       Pin gallery — full 38-variant grid
+    ============================================================ */
+    .pin-gallery {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .pin-cat-section {
+      border-top: 1px solid var(--border);
+      padding-top: 28px;
+    }
+
+    .pin-cat-section:first-child {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .pin-cat-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .pin-cat-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .pin-cat-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .pin-cat-count {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-left: 2px;
+    }
+
+    .pin-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px 20px;
+      align-items: flex-end;
+    }
+
+    .pin-sm {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), filter 0.25s;
+      cursor: default;
+      filter: drop-shadow(0 3px 10px rgba(0,0,0,0.4));
+    }
+
+    .pin-sm:hover {
+      transform: scale(1.25) translateY(-8px);
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+    }
+
+    .pin-sm-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-align: center;
+      max-width: 62px;
+      line-height: 1.3;
+    }
+
+    /* ============================================================
+       Responsive
+    ============================================================ */
+    @media (max-width: 600px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .waitlist-input {
+        width: 100%;
+        max-width: 320px;
+      }
+
+      .waitlist-form {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .waitlist-btn {
+        width: 100%;
+        max-width: 320px;
+      }
+    }
+  </style>
 </head>
 <body>
 
-<div class="map-grid"></div>
-<div class="blob blob-1"></div>
-<div class="blob blob-2"></div>
-<div class="blob blob-3"></div>
+  <!-- Navigation -->
+  <nav>
+    <div class="container">
+      <a href="#" class="nav-logo" style="color:#c0c0c0;">ANL <span><span style="color:#c0c0c0;">A</span><span style="color:#6a1a99;">ll</span> <span style="color:#c0c0c0;">N</span><span style="color:#6a1a99;">ight</span> <span style="color:#c0c0c0;">L</span><span style="color:#6a1a99;">ong</span></span></a>
+    </div>
+  </nav>
 
-<!-- Nav -->
-<nav>
-  <div class="nav-logo">ALL<span>NIGHT</span>LONG</div>
-  <div class="nav-badge">EARLY ACCESS</div>
-</nav>
+  <!-- ============================================================
+       Hero
+  ============================================================ -->
+  <section class="hero">
 
-<!-- Main -->
-<main>
+    <!-- Ambient glow blobs -->
+    <div class="hero-glow hero-glow-1" aria-hidden="true"></div>
+    <div class="hero-glow hero-glow-2" aria-hidden="true"></div>
+    <div class="hero-glow hero-glow-3" aria-hidden="true"></div>
 
-  <!-- Floating pin map -->
-  <div class="pin-field reveal d1">
-    <!-- Distance rings -->
-    <div class="ring" style="width:160px;height:160px;"></div>
-    <div class="ring" style="width:280px;height:280px;"></div>
-    <div class="ring" style="width:400px;height:400px;"></div>
-    <!-- You -->
-    <div class="you"></div>
+    <!-- Floating pins — populated by JS -->
+    <div class="pin-field" id="pinField" aria-hidden="true"></div>
 
-    <!-- Female pin — heart drop -->
-    <div class="fpin" style="left:38%;top:30%;color:#ff3c64;animation-delay:0s;">
-      <div class="pulse-ring" style="color:#ff3c64;"></div>
-      <svg width="44" height="54" viewBox="0 0 56 68" style="filter:drop-shadow(0 4px 12px rgba(255,60,100,.7))">
-        <path d="M28,46 C28,46 6,32 6,18 C6,9 13,4 20,4 C24,4 28,7 28,7 C28,7 32,4 36,4 C43,4 50,9 50,18 C50,32 28,46 28,46Z" fill="#ff3c64" stroke="#ff6080" stroke-width="1.5"/>
-        <text x="28" y="24" text-anchor="middle" dominant-baseline="middle" font-size="13" font-family="'Bebas Neue',sans-serif" fill="#fff">M</text>
-        <path d="M24,46 L28,62 L32,46Z" fill="#ff3c64" stroke="#ff6080" stroke-width="1"/>
-        <rect x="15" y="30" width="26" height="12" rx="6" fill="rgba(0,0,0,.5)"/>
-        <text x="28" y="36" text-anchor="middle" dominant-baseline="middle" font-size="8" font-family="'DM Sans',sans-serif" font-weight="800" fill="#fff">94%</text>
-      </svg>
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Early access — waitlist open
     </div>
 
-    <!-- Male pin — eggplant -->
-    <div class="fpin" style="left:62%;top:42%;color:#8844ff;animation-delay:-1.1s;">
-      <div class="pulse-ring" style="color:#8844ff;"></div>
-      <svg width="40" height="52" viewBox="0 0 56 60" style="filter:drop-shadow(0 4px 12px rgba(136,68,255,.7))">
-        <path d="M28,2 C28,2 22,-4 16,-2 C18,3 24,3 28,2Z M28,2 C28,2 34,-4 40,-2 C38,3 32,3 28,2Z" fill="#44aa44"/>
-        <path d="M28,54 C16,54 8,44 8,32 C8,18 14,6 22,3 C24,2 26,2 28,2 C30,2 32,2 34,3 C42,6 48,18 48,32 C48,44 40,54 28,54Z" fill="#8844ff" stroke="#aa66ff" stroke-width="1.8"/>
-        <text x="28" y="30" text-anchor="middle" dominant-baseline="middle" font-size="14" font-family="'Bebas Neue',sans-serif" fill="#fff">D</text>
-      </svg>
-    </div>
-
-    <!-- Trans women pin — butterfly -->
-    <div class="fpin" style="left:25%;top:58%;color:#f7a8c4;animation-delay:-0.6s;">
-      <div class="pulse-ring" style="color:#f7a8c4;"></div>
-      <svg width="48" height="48" viewBox="0 0 56 56" style="filter:drop-shadow(0 4px 14px rgba(247,168,196,.8))">
-        <defs>
-          <linearGradient id="bwg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#f7a8c4" stop-opacity=".95"/>
-            <stop offset="50%" stop-color="#fff" stop-opacity=".5"/>
-            <stop offset="100%" stop-color="#55cdfc" stop-opacity=".95"/>
-          </linearGradient>
-        </defs>
-        <path d="M28,28 C28,28 10,18 6,8 C4,2 10,0 14,4 C18,8 22,18 28,28Z" fill="url(#bwg)" stroke="#f7a8c4" stroke-width="1.5"/>
-        <path d="M28,28 C28,28 46,18 50,8 C52,2 46,0 42,4 C38,8 34,18 28,28Z" fill="url(#bwg)" stroke="#55cdfc" stroke-width="1.5"/>
-        <path d="M28,28 C28,28 8,32 4,42 C2,50 8,52 14,48 C20,44 24,36 28,28Z" fill="url(#bwg)" stroke="#f7a8c4" stroke-width="1.5" opacity=".8"/>
-        <path d="M28,28 C28,28 48,32 52,42 C54,50 48,52 42,48 C36,44 32,36 28,28Z" fill="url(#bwg)" stroke="#55cdfc" stroke-width="1.5" opacity=".8"/>
-        <path d="M28,10 C26,10 24,14 24,20 L24,36 C24,42 26,46 28,46 C30,46 32,42 32,36 L32,20 C32,14 30,10 28,10Z" fill="#1a1a1a"/>
-        <text x="28" y="28" text-anchor="middle" dominant-baseline="middle" font-size="11" font-family="'Bebas Neue',sans-serif" fill="#fff">L</text>
-      </svg>
-    </div>
-
-    <!-- Female pin 2 — classic butt -->
-    <div class="fpin" style="left:70%;top:28%;color:#ffa032;animation-delay:-1.8s;">
-      <div class="pulse-ring" style="color:#ffa032;"></div>
-      <svg width="40" height="40" viewBox="0 0 56 56" style="filter:drop-shadow(0 4px 10px rgba(255,160,50,.6))">
-        <path d="M4,20 C4,8 20,0 28,0 C36,0 52,8 52,20 C52,32 44,44 28,52 C12,44 4,32 4,20Z" fill="#1e1e1e" stroke="rgba(255,160,50,.7)" stroke-width="2"/>
-        <text x="28" y="24" text-anchor="middle" dominant-baseline="middle" font-size="13" font-family="'Bebas Neue',sans-serif" fill="#fff">J</text>
-        <line x1="28" y1="3" x2="28" y2="28" stroke="rgba(255,255,255,.1)" stroke-width="1.6" stroke-linecap="round"/>
-        <circle cx="44" cy="44" r="5" fill="#44ff88" stroke="#080808" stroke-width="2"/>
-      </svg>
-    </div>
-
-    <!-- Trans men pin — lightning bolt -->
-    <div class="fpin" style="left:48%;top:68%;color:#55cdfc;animation-delay:-2.4s;">
-      <div class="pulse-ring" style="color:#55cdfc;"></div>
-      <svg width="36" height="44" viewBox="0 0 56 56" style="filter:drop-shadow(0 4px 12px rgba(85,205,252,.7))">
-        <defs>
-          <linearGradient id="blg" x1=".5" y1="0" x2=".5" y2="1">
-            <stop offset="0%" stop-color="#55cdfc" stop-opacity=".9"/>
-            <stop offset="100%" stop-color="#ffdd44" stop-opacity=".8"/>
-          </linearGradient>
-        </defs>
-        <path d="M32,2 L16,28 L28,28 L20,54 L40,24 L28,24 Z" fill="url(#blg)" stroke="#55cdfc" stroke-width="1.5" stroke-linejoin="round"/>
-        <text x="28" y="30" text-anchor="middle" dominant-baseline="middle" font-size="10" font-family="'Bebas Neue',sans-serif" fill="#000">Z</text>
-      </svg>
-    </div>
-
-    <!-- Male pin 2 — shield (offline) -->
-    <div class="fpin" style="left:18%;top:38%;color:rgba(68,136,255,.4);animation-delay:-3s;">
-      <svg width="38" height="42" viewBox="0 0 56 60" style="filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));opacity:.55">
-        <path d="M28,2 L50,12 L50,32 C50,44 40,52 28,56 C16,52 6,44 6,32 L6,12 Z" fill="#141414" stroke="rgba(255,255,255,.1)" stroke-width="1.8"/>
-        <text x="28" y="30" text-anchor="middle" dominant-baseline="middle" font-size="12" font-family="'Bebas Neue',sans-serif" fill="rgba(255,255,255,.3)">K</text>
-      </svg>
-    </div>
-  </div>
-
-  <!-- Hero copy -->
-  <div class="hero">
-    <div class="eyebrow reveal d2">
-      <span class="dot"></span>
-      LAUNCHING SOON
-    </div>
-    <h1 class="reveal d2">
-      ALL<span class="accent">NIGHT</span>LONG
-      <span class="dim">DROP IN. LINK UP.</span>
+    <h1>
+      <span class="word-all"><span class="word-first">A</span>ll</span>&nbsp;<span class="word-night"><span class="word-first">N</span>ight</span>&nbsp;<span class="word-long"><span class="word-first">L</span>ong</span>
     </h1>
-    <p class="hook reveal d3">
-      See <strong>who's out right now</strong>, within walking distance.
-      Real people, real proximity — no swiping, no waiting.
+
+    <p class="hero-tagline">
+      See who is out. Feel the pulse of your city.<br>
+      <strong>Connect without the noise.</strong>
     </p>
-  </div>
 
-  <!-- Stats -->
-  <div class="stats reveal d3">
-    <div class="stat">
-      <div class="stat-num"><span>0.3</span> mi</div>
-      <div class="stat-label">Average distance</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num"><span>11</span>pm</div>
-      <div class="stat-label">Peak activity</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num"><span>&lt;5</span>s</div>
-      <div class="stat-label">To link up</div>
-    </div>
-  </div>
-
-  <!-- Feature pills -->
-  <div class="features reveal d4">
-    <div class="feature-pill"><span class="icon">📍</span> Live proximity map</div>
-    <div class="feature-pill"><span class="icon">🍑</span> Female pins</div>
-    <div class="feature-pill"><span class="icon">🍆</span> Male pins</div>
-    <div class="feature-pill"><span class="icon">🦋</span> Trans Women</div>
-    <div class="feature-pill"><span class="icon">⚡</span> Trans Men</div>
-    <div class="feature-pill"><span class="icon">💬</span> Real-time chat</div>
-    <div class="feature-pill"><span class="icon">🌙</span> Late-night only mode</div>
-  </div>
-
-  <!-- Email form -->
-  <div class="form-wrap reveal d5">
-    <span class="form-label">DROP YOUR EMAIL — GET IN FIRST</span>
-    <div id="formContainer">
-      <div class="form">
-        <input type="email" id="emailInput" placeholder="your@email.com" autocomplete="email"/>
-        <button type="button" onclick="handleSubmit()">GET ACCESS</button>
+    <!-- Waitlist form — hero -->
+    <div class="waitlist-wrap">
+      <form class="waitlist-form" id="waitlistFormA" novalidate>
+        <input
+          type="email"
+          class="waitlist-input"
+          id="emailA"
+          placeholder="your@email.com"
+          autocomplete="email"
+          required
+          aria-label="Email address"
+        />
+        <button type="submit" class="waitlist-btn">Join the waitlist</button>
+      </form>
+      <div class="form-success" id="successA">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="8" cy="8" r="7" stroke="#7fffd4" stroke-width="1.5"/>
+          <path d="M5 8l2 2 4-4" stroke="#7fffd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        You are on the list. We will be in touch.
       </div>
-      <p class="form-note">
-        No spam. Ever. Just a heads-up when the app drops.
-        <br/>Your email list is the only traffic you own.
+      <p class="form-note">No spam. No third parties. Just the app when it is ready.</p>
+    </div>
+
+  </section>
+
+  <!-- ============================================================
+       Pin showcase — all 38 variants, 5 gender categories
+  ============================================================ -->
+  <div class="divider"></div>
+  <section class="pin-showcase">
+    <div class="container">
+      <p class="pin-showcase-label">Gender-inclusive pin system — 38 variants, every identity first-class</p>
+
+      <div class="pin-gallery">
+
+        <!-- ── Female — 11 variants ── -->
+        <div class="pin-cat-section">
+          <div class="pin-cat-header">
+            <span class="pin-cat-swatch" style="background:#f7a8c4;box-shadow:0 0 8px #f7a8c480;"></span>
+            <span class="pin-cat-title">Female</span>
+            <span class="pin-cat-count">11 variants</span>
+          </div>
+          <div class="pin-row">
+
+            <!-- Classic: gradient teardrop with shine -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Classic">
+                <defs>
+                  <radialGradient id="gf1" cx="38%" cy="30%" r="65%">
+                    <stop offset="0%"   stop-color="#ffdde8"/>
+                    <stop offset="60%"  stop-color="#f7a8c4"/>
+                    <stop offset="100%" stop-color="#c4607a"/>
+                  </radialGradient>
+                </defs>
+                <path d="M12 1C7 1 3 5 3 11 3 18 12 29 12 29S21 18 21 11C21 5 17 1 12 1z" fill="url(#gf1)" stroke="#b05070" stroke-width="0.5"/>
+                <circle cx="9"  cy="8"  r="2.5" fill="white" fill-opacity="0.28"/>
+                <circle cx="8"  cy="7"  r="1"   fill="white" fill-opacity="0.5"/>
+              </svg>
+              <span class="pin-sm-label">Classic</span>
+            </div>
+
+            <!-- Peach: two-bubble silhouette with green leaf -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Peach">
+                <ellipse cx="8.5"  cy="17" rx="7.5" ry="8.5" fill="#f7a8c4"/>
+                <ellipse cx="15.5" cy="17" rx="7.5" ry="8.5" fill="#ffcde0"/>
+                <line x1="12" y1="9" x2="12" y2="26" stroke="#c46080" stroke-width="0.9" stroke-opacity="0.35"/>
+                <line x1="12" y1="1"   x2="12" y2="4"   stroke="#4a7a1a" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M10 2C10.5 0 13.5 0 14 2.5"   fill="none" stroke="#4a7a1a" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="12" y1="26"  x2="12" y2="30"  stroke="#f7a8c4" stroke-width="2"   stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Peach 🍑</span>
+            </div>
+
+            <!-- Heart Drop: gradient heart pointing down -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Heart Drop">
+                <defs>
+                  <linearGradient id="gf3" x1="0" y1="0" x2="0" y2="30" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%"   stop-color="#ff8fab"/>
+                    <stop offset="100%" stop-color="#c4607a"/>
+                  </linearGradient>
+                </defs>
+                <path d="M12 27L4 15C2 12 2 7 5.5 5.5A5.5 5.5 0 0 1 12 9.5A5.5 5.5 0 0 1 18.5 5.5C22 7 22 12 20 15Z" fill="url(#gf3)"/>
+                <ellipse cx="9" cy="11" rx="3" ry="2.5" fill="white" fill-opacity="0.2"/>
+              </svg>
+              <span class="pin-sm-label">Heart Drop</span>
+            </div>
+
+            <!-- Silhouette: feminine figure with hips flare -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Silhouette">
+                <circle cx="12" cy="5" r="4" fill="#f7a8c4"/>
+                <path d="M7 10.5C7 9.5 9.5 8.5 12 8.5S17 9.5 17 10.5V19H7Z" fill="#f7a8c4"/>
+                <path d="M6 19C5 19 4 22 5.5 25C7 28 10 29 12 29S17 28 18.5 25C20 22 19 19 18 19Z" fill="#f7a8c4"/>
+                <line x1="12" y1="29" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Silhouette</span>
+            </div>
+
+            <!-- Cartoon: face with lashes + rosy cheeks -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Cartoon">
+                <circle cx="12" cy="13" r="11" fill="#f7a8c4"/>
+                <ellipse cx="8.5"  cy="12" rx="2.5" ry="2"   fill="white"/>
+                <circle  cx="8.5"  cy="12" r="1"             fill="#6a2040"/>
+                <line x1="7"    y1="10"   x2="6.5"  y2="9"   stroke="#6a2040" stroke-width="0.9" stroke-linecap="round"/>
+                <line x1="8.5"  y1="9.5"  x2="8.5"  y2="8.5" stroke="#6a2040" stroke-width="0.9" stroke-linecap="round"/>
+                <line x1="10"   y1="10"   x2="10.5" y2="9"   stroke="#6a2040" stroke-width="0.9" stroke-linecap="round"/>
+                <ellipse cx="15.5" cy="12" rx="2.5" ry="2"   fill="white"/>
+                <circle  cx="15.5" cy="12" r="1"             fill="#6a2040"/>
+                <line x1="14"   y1="10"   x2="13.5" y2="9"   stroke="#6a2040" stroke-width="0.9" stroke-linecap="round"/>
+                <line x1="15.5" y1="9.5"  x2="15.5" y2="8.5" stroke="#6a2040" stroke-width="0.9" stroke-linecap="round"/>
+                <line x1="17"   y1="10"   x2="17.5" y2="9"   stroke="#6a2040" stroke-width="0.9" stroke-linecap="round"/>
+                <path d="M9 16.5q3 2 6 0" fill="none" stroke="#6a2040" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="6.5"  cy="15" r="1.8" fill="#ff8fab" fill-opacity="0.45"/>
+                <circle cx="17.5" cy="15" r="1.8" fill="#ff8fab" fill-opacity="0.45"/>
+                <line x1="12" y1="24" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Cartoon</span>
+            </div>
+
+            <!-- Minimal: small clean circle + sparkle -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Minimal">
+                <circle cx="12" cy="8" r="6"   fill="#f7a8c4"/>
+                <circle cx="10.5" cy="6.5" r="2" fill="white" fill-opacity="0.32"/>
+                <line x1="12" y1="14" x2="12" y2="30" stroke="#f7a8c4" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="19" y1="3"  x2="21" y2="1"  stroke="#ffdde8" stroke-width="1"   stroke-linecap="round"/>
+                <line x1="20" y1="4"  x2="22" y2="4"  stroke="#ffdde8" stroke-width="1"   stroke-linecap="round"/>
+                <line x1="19" y1="5"  x2="21" y2="7"  stroke="#ffdde8" stroke-width="1"   stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Minimal</span>
+            </div>
+
+            <!-- Match Color: bullseye rings -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Match Color">
+                <circle cx="12" cy="12" r="10.5" fill="none" stroke="#f7a8c4" stroke-width="1.5" stroke-opacity="0.35"/>
+                <circle cx="12" cy="12" r="7"    fill="none" stroke="#f7a8c4" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3"    fill="#f7a8c4"/>
+                <line x1="12" y1="22" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Match Color</span>
+            </div>
+
+            <!-- Activity Size: radiating pulse rings -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Activity Size">
+                <circle cx="12" cy="12" r="11"  fill="none" stroke="#f7a8c4" stroke-width="0.9" stroke-opacity="0.22"/>
+                <circle cx="12" cy="12" r="8"   fill="none" stroke="#f7a8c4" stroke-width="1.2" stroke-opacity="0.5"/>
+                <circle cx="12" cy="12" r="5"   fill="none" stroke="#f7a8c4" stroke-width="1.8"/>
+                <circle cx="12" cy="12" r="2"   fill="#f7a8c4"/>
+                <line x1="12" y1="23" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Activity Size</span>
+            </div>
+
+            <!-- Cluster Stack: three teardrops arranged -->
+            <div class="pin-sm">
+              <svg width="52" height="56" viewBox="0 0 26 30" fill="none" aria-label="Cluster Stack">
+                <path d="M7 16C5 16 2 13 2 9 2 5 7 0 7 0S12 5 12 9C12 13 9 16 7 16z"  fill="#f7a8c4" fill-opacity="0.6"/>
+                <path d="M19 16C17 16 14 13 14 9 14 5 19 0 19 0S24 5 24 9C24 13 21 16 19 16z" fill="#f7a8c4" fill-opacity="0.6"/>
+                <path d="M13 22C11 22 8 18 8 14 8 10 13 4 13 4S18 10 18 14C18 18 15 22 13 22z" fill="#f7a8c4"/>
+                <line x1="13" y1="22" x2="13" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Cluster Stack</span>
+            </div>
+
+            <!-- Jiggle: organic asymmetric blob -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Jiggle">
+                <path d="M12 2C16 2 21 5 21 10 21 15 18 21 14 24 12 25 10 25 8 24 4 21 3 15 3 10 3 5 8 2 12 2z" fill="#f7a8c4"/>
+                <circle cx="9.5" cy="10" r="2.5" fill="white" fill-opacity="0.24"/>
+                <line x1="12" y1="25" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Jiggle</span>
+            </div>
+
+            <!-- Sitting: figure seated with dangling legs + shadow -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Sitting">
+                <ellipse cx="12" cy="29.5" rx="7" ry="1.5" fill="#f7a8c4" fill-opacity="0.15"/>
+                <circle cx="12" cy="6"  r="4.5" fill="#f7a8c4"/>
+                <rect   x="7"  y="12"  width="10" height="9"  rx="2.5" fill="#f7a8c4"/>
+                <path d="M8 21C8 21 6 22 6 25Q6 28 9 28Q11 28 11 25L11 21"  fill="#f7a8c4" fill-opacity="0.75"/>
+                <path d="M16 21C16 21 18 22 18 25Q18 28 15 28Q13 28 13 25L13 21" fill="#f7a8c4" fill-opacity="0.75"/>
+              </svg>
+              <span class="pin-sm-label">Sitting</span>
+            </div>
+
+          </div>
+        </div><!-- /.female -->
+
+        <!-- ── Male — 9 variants ── -->
+        <div class="pin-cat-section">
+          <div class="pin-cat-header">
+            <span class="pin-cat-swatch" style="background:#4488ff;box-shadow:0 0 8px #4488ff80;"></span>
+            <span class="pin-cat-title">Male</span>
+            <span class="pin-cat-count">9 variants</span>
+          </div>
+          <div class="pin-row">
+
+            <!-- 1. Eggplant 🍆 — pear body with radial gradient + green cap -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Eggplant">
+                <defs>
+                  <radialGradient id="gm1" cx="38%" cy="28%" r="65%">
+                    <stop offset="0%"   stop-color="#c8e0ff"/>
+                    <stop offset="52%"  stop-color="#6699ff"/>
+                    <stop offset="100%" stop-color="#1a33bb"/>
+                  </radialGradient>
+                </defs>
+                <path d="M12 4C8.5 4 5 7 5 12 5 18 7.5 23 12 25 16.5 23 19 18 19 12 19 7 15.5 4 12 4z" fill="url(#gm1)" stroke="#1a33aa" stroke-width="0.5"/>
+                <rect x="10" y="1.5" width="4" height="3.5" rx="1.5" fill="#4a8a2a"/>
+                <path d="M10 2.5C9 0.5 7 1 8 3" fill="none" stroke="#4a8a2a" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M14 2.5C15 0.5 17 1 16 3" fill="none" stroke="#4a8a2a" stroke-width="1.2" stroke-linecap="round"/>
+                <circle cx="8.5" cy="9"  r="2.5" fill="white" fill-opacity="0.22"/>
+                <circle cx="7.5" cy="8"  r="1"   fill="white" fill-opacity="0.45"/>
+                <line x1="12" y1="25" x2="12" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Eggplant 🍆</span>
+            </div>
+
+            <!-- 2. Drop — gradient teardrop with diagonal shine -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Drop">
+                <defs>
+                  <radialGradient id="gm2" cx="38%" cy="30%" r="65%">
+                    <stop offset="0%"   stop-color="#b8d8ff"/>
+                    <stop offset="58%"  stop-color="#4488ff"/>
+                    <stop offset="100%" stop-color="#0f22cc"/>
+                  </radialGradient>
+                </defs>
+                <path d="M12 1C7 1 3 5 3 10c0 6 9 19 9 19s9-13 9-19c0-5-4-9-9-9z" fill="url(#gm2)" stroke="#1833bb" stroke-width="0.5"/>
+                <line x1="6" y1="7" x2="11" y2="15" stroke="white" stroke-width="1.4" stroke-opacity="0.28" stroke-linecap="round"/>
+                <circle cx="8"   cy="7" r="2"   fill="white" fill-opacity="0.3"/>
+                <circle cx="7.5" cy="6" r="0.8" fill="white" fill-opacity="0.55"/>
+              </svg>
+              <span class="pin-sm-label">Drop</span>
+            </div>
+
+            <!-- 3. Chest/Pec — two gradient muscular ellipses with definition -->
+            <div class="pin-sm">
+              <svg width="52" height="56" viewBox="0 0 26 30" fill="none" aria-label="Chest Pec">
+                <defs>
+                  <radialGradient id="gm3" cx="40%" cy="30%" r="65%">
+                    <stop offset="0%"   stop-color="#a8ccff"/>
+                    <stop offset="55%"  stop-color="#5599ff"/>
+                    <stop offset="100%" stop-color="#1a33cc"/>
+                  </radialGradient>
+                </defs>
+                <ellipse cx="8.5"  cy="12" rx="7"   ry="9"   fill="url(#gm3)" stroke="#1a33bb" stroke-width="0.5"/>
+                <ellipse cx="17.5" cy="12" rx="7"   ry="9"   fill="url(#gm3)" stroke="#1a33bb" stroke-width="0.5"/>
+                <line x1="13" y1="4" x2="13" y2="21" stroke="#0a1a66" stroke-width="0.8" stroke-opacity="0.28"/>
+                <path d="M2 16Q8.5 21 13 19"  fill="none" stroke="white" stroke-width="0.9" stroke-opacity="0.22" stroke-linecap="round"/>
+                <path d="M24 16Q17.5 21 13 19" fill="none" stroke="white" stroke-width="0.9" stroke-opacity="0.22" stroke-linecap="round"/>
+                <circle cx="7.5"  cy="14" r="1"   fill="#1122aa" fill-opacity="0.45"/>
+                <circle cx="18.5" cy="14" r="1"   fill="#1122aa" fill-opacity="0.45"/>
+                <circle cx="6"    cy="8"  r="2.2" fill="white" fill-opacity="0.18"/>
+                <circle cx="20"   cy="8"  r="2.2" fill="white" fill-opacity="0.18"/>
+                <line x1="13" y1="21" x2="13" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Chest/Pec</span>
+            </div>
+
+            <!-- 4. Shield — heraldic with gradient bevel + chevron -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Shield">
+                <defs>
+                  <linearGradient id="gm4" x1="2" y1="1" x2="22" y2="27" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%"   stop-color="#88aaff"/>
+                    <stop offset="100%" stop-color="#1a33cc"/>
+                  </linearGradient>
+                </defs>
+                <path d="M12 1L22 5v12l-10 12L2 17V5z" fill="url(#gm4)" stroke="#1a33aa" stroke-width="0.7"/>
+                <path d="M12 4L19 7v10l-7 8-7-8V7z" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="0.8"/>
+                <line x1="6" y1="9" x2="18" y2="9" stroke="white" stroke-width="1" stroke-opacity="0.35"/>
+                <polyline points="6,13 12,18 18,13" fill="none" stroke="white" stroke-width="1.8" stroke-linejoin="round" stroke-opacity="0.6"/>
+                <circle cx="9" cy="7" r="2.5" fill="white" fill-opacity="0.14"/>
+              </svg>
+              <span class="pin-sm-label">Shield</span>
+            </div>
+
+            <!-- 5. Spade ♠ — gradient card spade with shine -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Spade">
+                <defs>
+                  <radialGradient id="gm5" cx="45%" cy="35%" r="65%">
+                    <stop offset="0%"   stop-color="#99bbff"/>
+                    <stop offset="68%"  stop-color="#3366ff"/>
+                    <stop offset="100%" stop-color="#0a22bb"/>
+                  </radialGradient>
+                </defs>
+                <path d="M12 2C9 6 3 9 5 15c1 3 4 4 5.5 2.5l-.5 4.5h4l-.5-4.5C15 18 18 17 19 14c2-6-4-8-7-12z" fill="url(#gm5)" stroke="#0a22aa" stroke-width="0.5"/>
+                <circle cx="9"   cy="8" r="2"   fill="white" fill-opacity="0.25"/>
+                <circle cx="8.5" cy="7" r="0.8" fill="white" fill-opacity="0.5"/>
+                <line x1="12" y1="24" x2="12" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Spade ♠</span>
+            </div>
+
+            <!-- 6. Flex 💪 — gradient bicep with muscle crease + peak shine -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Flex Arm">
+                <defs>
+                  <radialGradient id="gm6" cx="62%" cy="28%" r="60%">
+                    <stop offset="0%"   stop-color="#b0d0ff"/>
+                    <stop offset="55%"  stop-color="#4488ff"/>
+                    <stop offset="100%" stop-color="#1133bb"/>
+                  </radialGradient>
+                </defs>
+                <path d="M3 20C3 20 2 14 5 10 7 7 9 8 11 6 13 4 15 1 18 3 21 5 21 10 18 12 16 13 14 12 12 14 10 16 10 20z" fill="url(#gm6)" stroke="#1a33aa" stroke-width="0.5"/>
+                <path d="M10 14Q14 11 18 12" fill="none" stroke="rgba(0,0,20,0.22)" stroke-width="0.9" stroke-linecap="round"/>
+                <circle cx="16" cy="5"  r="2.5" fill="white" fill-opacity="0.22"/>
+                <circle cx="15" cy="4"  r="1"   fill="white" fill-opacity="0.45"/>
+                <line x1="11" y1="24" x2="11" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Flex 💪</span>
+            </div>
+
+            <!-- 7. Diamond — faceted gem with gradient + facet lines -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Diamond">
+                <defs>
+                  <linearGradient id="gm7" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%"   stop-color="#c4d8ff"/>
+                    <stop offset="50%"  stop-color="#4488ff"/>
+                    <stop offset="100%" stop-color="#0a22cc"/>
+                  </linearGradient>
+                </defs>
+                <polygon points="12,2 22,11 12,22 2,11" fill="url(#gm7)" stroke="#1a33aa" stroke-width="0.7"/>
+                <line x1="2"  y1="11" x2="22" y2="11" stroke="rgba(255,255,255,0.25)" stroke-width="0.8"/>
+                <line x1="12" y1="2"  x2="7"  y2="11" stroke="rgba(255,255,255,0.2)"  stroke-width="0.7"/>
+                <line x1="12" y1="2"  x2="17" y2="11" stroke="rgba(255,255,255,0.2)"  stroke-width="0.7"/>
+                <line x1="7"  y1="11" x2="12" y2="22" stroke="rgba(0,0,0,0.14)"       stroke-width="0.7"/>
+                <line x1="17" y1="11" x2="12" y2="22" stroke="rgba(0,0,0,0.14)"       stroke-width="0.7"/>
+                <circle cx="12" cy="2.5" r="0.7" fill="white" fill-opacity="0.9"/>
+                <line x1="12" y1="22" x2="12" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Diamond</span>
+            </div>
+
+            <!-- 8. Skull — dome path + jaw + eye sockets + teeth -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Skull">
+                <defs>
+                  <radialGradient id="gm8" cx="40%" cy="28%" r="62%">
+                    <stop offset="0%"   stop-color="#c0d8ff"/>
+                    <stop offset="58%"  stop-color="#5588ee"/>
+                    <stop offset="100%" stop-color="#1422aa"/>
+                  </radialGradient>
+                </defs>
+                <path d="M12 1C6.5 1 3 5.5 3 11c0 4 2 7 5 8v2h8v-2c3-1 5-4 5-8 0-5.5-3.5-10-9-10z" fill="url(#gm8)" stroke="#1422aa" stroke-width="0.6"/>
+                <rect x="7" y="19" width="10" height="5" rx="2" fill="#5588ee" fill-opacity="0.75" stroke="#1422aa" stroke-width="0.5"/>
+                <line x1="10" y1="19" x2="10" y2="24" stroke="#1422aa" stroke-width="0.7" stroke-opacity="0.5"/>
+                <line x1="12" y1="19" x2="12" y2="24" stroke="#1422aa" stroke-width="0.7" stroke-opacity="0.5"/>
+                <line x1="14" y1="19" x2="14" y2="24" stroke="#1422aa" stroke-width="0.7" stroke-opacity="0.5"/>
+                <ellipse cx="8.5"  cy="11" rx="2.5" ry="3" fill="#090a28"/>
+                <ellipse cx="15.5" cy="11" rx="2.5" ry="3" fill="#090a28"/>
+                <path d="M10.5 15.5q1.5 1.2 3 0" fill="none" stroke="#090a28" stroke-width="1" stroke-linecap="round"/>
+                <circle cx="7.5" cy="6.5" r="2.5" fill="white" fill-opacity="0.18"/>
+                <line x1="12" y1="24" x2="12" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Skull</span>
+            </div>
+
+            <!-- 9. Briefs — gradient brief with waistband + panels -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Briefs">
+                <defs>
+                  <linearGradient id="gm9" x1="2" y1="8" x2="22" y2="26" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%"   stop-color="#88aaff"/>
+                    <stop offset="100%" stop-color="#1a33cc"/>
+                  </linearGradient>
+                </defs>
+                <path d="M2 11V20Q12 27 22 20V11l-4-2-6 8-6-8z" fill="url(#gm9)" stroke="#1a33aa" stroke-width="0.6"/>
+                <rect x="2" y="9" width="20" height="4" rx="2" fill="#5577ff" fill-opacity="0.95" stroke="#1a22bb" stroke-width="0.5"/>
+                <rect x="3" y="10" width="18" height="1.5" rx="0.75" fill="white" fill-opacity="0.2"/>
+                <line x1="12" y1="13" x2="12" y2="23" stroke="rgba(255,255,255,0.28)" stroke-width="0.9"/>
+                <path d="M2 19Q7 25 12 22Q17 25 22 19" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="0.8"/>
+                <line x1="12" y1="27" x2="12" y2="30" stroke="#4488ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Briefs</span>
+            </div>
+
+          </div>
+        </div><!-- /.male -->
+
+        <!-- ── Trans Women — 9 variants · feminine/celestial shapes ── -->
+        <div class="pin-cat-section">
+          <div class="pin-cat-header">
+            <span class="pin-cat-swatch" style="background:linear-gradient(135deg,#55cdfc,#f7a8c4);box-shadow:0 0 8px #f7a8c480;"></span>
+            <span class="pin-cat-title">Trans Women</span>
+            <span class="pin-cat-count">9 variants · pink &amp; sky</span>
+          </div>
+          <div class="pin-row">
+
+            <!-- 1. Butterfly — WINGS: most visually distinct from TM -->
+            <div class="pin-sm">
+              <svg width="52" height="56" viewBox="0 0 26 30" fill="none" aria-label="Butterfly">
+                <path d="M13 17C10 14 3 12 3 6c0-3 3-5 6-2C11 7 13 14 13 17z" fill="#f7a8c4" fill-opacity="0.85"/>
+                <path d="M13 17c3-3 10-5 10-11 0-3-3-5-6-2C15 7 13 14 13 17z" fill="#55cdfc" fill-opacity="0.85"/>
+                <path d="M13 17C11 19 10 23 12 26" fill="none" stroke="#f7a8c4" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M13 17C15 19 14 23 12 26" fill="none" stroke="#55cdfc" stroke-width="1.2" stroke-linecap="round"/>
+                <line x1="13" y1="3" x2="13" y2="28" stroke="#c4a0b8" stroke-width="1" stroke-dasharray="2 2"/>
+                <path d="M11 3C12 1 13 1 13 3" fill="none" stroke="#55cdfc" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M15 3C14 1 13 1 13 3" fill="none" stroke="#f7a8c4" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Butterfly 🦋</span>
+            </div>
+
+            <!-- 2. Star ✨ — 5-point -->
+            <div class="pin-sm">
+              <svg width="48" height="56" viewBox="0 0 24 30" fill="none" aria-label="Star">
+                <defs>
+                  <linearGradient id="gstar" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#55cdfc"/>
+                    <stop offset="100%" stop-color="#f7a8c4"/>
+                  </linearGradient>
+                </defs>
+                <polygon points="12,2 14.4,9.8 22.5,9.8 15.9,14.9 18.3,22.7 12,18 5.7,22.7 8.1,14.9 1.5,9.8 9.6,9.8" fill="url(#gstar)"/>
+                <line x1="12" y1="23" x2="12" y2="30" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Star ✨</span>
+            </div>
+
+            <!-- 3. Phoenix — tall flame -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Phoenix">
+                <path d="M12 1C10 5 4 8 5 15c1 7 6 11 7 11s6-4 7-11C20 8 14 5 12 1z" fill="#f7a8c4"/>
+                <path d="M12 7C11 10 8 13 9 18c0 2 1 4 3 4s3-2 3-4c1-5-2-8-3-11z" fill="#55cdfc" fill-opacity="0.6"/>
+              </svg>
+              <span class="pin-sm-label">Phoenix 🔥</span>
+            </div>
+
+            <!-- 4. Trans Symbol ⚧ — circle + down cross + up-right arrow -->
+            <div class="pin-sm">
+              <svg width="48" height="56" viewBox="0 0 26 30" fill="none" aria-label="Trans Symbol">
+                <circle cx="12" cy="11" r="7" fill="none" stroke="#f7a8c4" stroke-width="2"/>
+                <circle cx="12" cy="11" r="3" fill="#f7a8c4"/>
+                <line x1="12" y1="18" x2="12" y2="27" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+                <line x1="8"  y1="23" x2="16" y2="23" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+                <line x1="17" y1="6"  x2="23" y2="1"  stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+                <polyline points="23,1 23,5 19,1" fill="none" stroke="#f7a8c4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="pin-sm-label">Trans Symbol ⚧</span>
+            </div>
+
+            <!-- 5. Hourglass — two triangles -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Hourglass">
+                <defs>
+                  <linearGradient id="ghg" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#55cdfc"/>
+                    <stop offset="100%" stop-color="#f7a8c4"/>
+                  </linearGradient>
+                </defs>
+                <polygon points="2,1 22,1 12,13" fill="url(#ghg)" fill-opacity="0.85"/>
+                <polygon points="2,25 22,25 12,13" fill="url(#ghg)" fill-opacity="0.6"/>
+                <line x1="2"  y1="1"  x2="22" y2="1"  stroke="url(#ghg)" stroke-width="1.5"/>
+                <line x1="2"  y1="25" x2="22" y2="25" stroke="url(#ghg)" stroke-width="1.5"/>
+                <line x1="12" y1="25" x2="12" y2="30" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Hourglass</span>
+            </div>
+
+            <!-- 6. Crescent Moon 🌙 -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Crescent Moon">
+                <path d="M18 4A9 9 0 1 0 18 22A7 7 0 1 1 18 4Z" fill="#f7a8c4"/>
+                <line x1="11" y1="22" x2="11" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Crescent 🌙</span>
+            </div>
+
+            <!-- 7. Venus ♀ — circle + cross below -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Venus">
+                <circle cx="12" cy="10" r="8" fill="none" stroke="#f7a8c4" stroke-width="2.2"/>
+                <circle cx="12" cy="10" r="3.5" fill="#f7a8c4"/>
+                <line x1="12" y1="18" x2="12" y2="27" stroke="#55cdfc" stroke-width="2.2" stroke-linecap="round"/>
+                <line x1="8"  y1="23" x2="16" y2="23" stroke="#55cdfc" stroke-width="2.2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Venus ♀</span>
+            </div>
+
+            <!-- 8. Lotus 🪷 — petal flower -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Lotus">
+                <path d="M12 20C8 20 4 16 6 10 8 6 12 10 12 14" fill="#f7a8c4" fill-opacity="0.9"/>
+                <path d="M12 20C16 20 20 16 18 10 16 6 12 10 12 14" fill="#55cdfc" fill-opacity="0.9"/>
+                <path d="M12 14C10 8 9 4 12 2 15 4 14 8 12 14z" fill="#f7a8c4"/>
+                <circle cx="12" cy="14" r="2.5" fill="white" fill-opacity="0.4"/>
+                <line x1="12" y1="21" x2="12" y2="30" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Lotus 🪷</span>
+            </div>
+
+            <!-- 9. Trans Flag Drop — teardrop with 5 stripes -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Trans Flag Drop">
+                <defs>
+                  <clipPath id="cptw">
+                    <path d="M12 1C7 1 3 5 3 10c0 6 9 19 9 19s9-13 9-19c0-5-4-9-9-9z"/>
+                  </clipPath>
+                </defs>
+                <rect x="0" y="0"  width="24" height="6"  fill="#55cdfc" clip-path="url(#cptw)"/>
+                <rect x="0" y="6"  width="24" height="6"  fill="#f7a8c4" clip-path="url(#cptw)"/>
+                <rect x="0" y="12" width="24" height="6"  fill="white"   clip-path="url(#cptw)"/>
+                <rect x="0" y="18" width="24" height="6"  fill="#f7a8c4" clip-path="url(#cptw)"/>
+                <rect x="0" y="24" width="24" height="6"  fill="#55cdfc" clip-path="url(#cptw)"/>
+                <path d="M12 1C7 1 3 5 3 10c0 6 9 19 9 19s9-13 9-19c0-5-4-9-9-9z" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+              </svg>
+              <span class="pin-sm-label">Trans Flag</span>
+            </div>
+
+          </div>
+        </div><!-- /.trans-women -->
+
+        <!-- ── Trans Men — 9 variants · masculine/angular shapes ── -->
+        <div class="pin-cat-section">
+          <div class="pin-cat-header">
+            <span class="pin-cat-swatch" style="background:linear-gradient(135deg,#55cdfc,#f7a8c4);box-shadow:0 0 8px #55cdfc80;"></span>
+            <span class="pin-cat-title">Trans Men</span>
+            <span class="pin-cat-count">9 variants · sky &amp; pink</span>
+          </div>
+          <div class="pin-row">
+
+            <!-- 1. Mars ♂ — circle + diagonal arrow -->
+            <div class="pin-sm">
+              <svg width="52" height="56" viewBox="0 0 28 30" fill="none" aria-label="Mars">
+                <circle cx="11" cy="18" r="9" fill="none" stroke="#55cdfc" stroke-width="2.2"/>
+                <circle cx="11" cy="18" r="4"  fill="#55cdfc"/>
+                <line x1="17" y1="12" x2="25" y2="4"  stroke="#55cdfc" stroke-width="2.2" stroke-linecap="round"/>
+                <polyline points="21,4 25,4 25,8" fill="none" stroke="#55cdfc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="11" y1="27" x2="11" y2="30" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Mars ♂</span>
+            </div>
+
+            <!-- 2. Lightning ⚡ — angular bolt (very distinct from TW) -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Lightning">
+                <polygon points="15,1 7,14 13,14 8,29 20,12 14,12" fill="#55cdfc"/>
+                <polygon points="15,1 7,14 13,14 8,29 20,12 14,12" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="0.8"/>
+              </svg>
+              <span class="pin-sm-label">Lightning ⚡</span>
+            </div>
+
+            <!-- 3. Fist ✊ — blocky rectangular -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Fist">
+                <rect x="4" y="10" width="16" height="13" rx="3" fill="#55cdfc"/>
+                <rect x="4" y="7"  width="4"  height="6"  rx="2" fill="#55cdfc"/>
+                <line x1="8"  y1="10" x2="8"  y2="7.5" stroke="rgba(0,0,0,0.2)" stroke-width="0.8"/>
+                <line x1="12" y1="10" x2="12" y2="6"   stroke="rgba(0,0,0,0.2)" stroke-width="0.8"/>
+                <line x1="16" y1="10" x2="16" y2="7.5" stroke="rgba(0,0,0,0.2)" stroke-width="0.8"/>
+                <rect x="8"  y="6" width="4" height="5" rx="2" fill="#55cdfc"/>
+                <rect x="12" y="5" width="4" height="6" rx="2" fill="#55cdfc"/>
+                <rect x="16" y="6" width="4" height="5" rx="2" fill="#55cdfc"/>
+                <line x1="10" y1="23" x2="10" y2="30" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Fist ✊</span>
+            </div>
+
+            <!-- 4. Warrior Shield — shield with cross -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Warrior Shield">
+                <path d="M12 1L22 5v13l-10 11L2 18V5z" fill="#55cdfc" fill-opacity="0.2" stroke="#55cdfc" stroke-width="2"/>
+                <line x1="12" y1="4"  x2="12" y2="27" stroke="#55cdfc" stroke-width="1.5"/>
+                <line x1="5"  y1="13" x2="19" y2="13" stroke="#55cdfc" stroke-width="1.5"/>
+              </svg>
+              <span class="pin-sm-label">Warrior Shield</span>
+            </div>
+
+            <!-- 5. Dragon 🐉 — angular head with horns -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Dragon">
+                <polygon points="12,3 22,7 22,18 16,22 8,22 2,18 2,7" fill="#55cdfc" fill-opacity="0.2" stroke="#55cdfc" stroke-width="2"/>
+                <polygon points="5,7  3,2  7,6"  fill="#55cdfc"/>
+                <polygon points="19,7 21,2 17,6" fill="#55cdfc"/>
+                <circle cx="8.5"  cy="13" r="2" fill="#55cdfc"/>
+                <circle cx="15.5" cy="13" r="2" fill="#55cdfc"/>
+                <path d="M9 18q3-2 6 0" fill="none" stroke="#55cdfc" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="12" y1="22" x2="12" y2="30" stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Dragon 🐉</span>
+            </div>
+
+            <!-- 6. Flame 🔥 — sky-coded flame -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Flame">
+                <path d="M12 1C10 5 4 8 5 15c1 7 6 11 7 11s6-4 7-11C20 8 14 5 12 1z" fill="#55cdfc"/>
+                <path d="M12 7C11 10 8 13 9 18c0 2 1 4 3 4s3-2 3-4c1-5-2-8-3-11z" fill="#f7a8c4" fill-opacity="0.5"/>
+              </svg>
+              <span class="pin-sm-label">Flame 🔥</span>
+            </div>
+
+            <!-- 7. Trans Symbol ⚧ — sky primary -->
+            <div class="pin-sm">
+              <svg width="48" height="56" viewBox="0 0 26 30" fill="none" aria-label="Trans Symbol TM">
+                <circle cx="12" cy="11" r="7" fill="none" stroke="#55cdfc" stroke-width="2"/>
+                <circle cx="12" cy="11" r="3" fill="#55cdfc"/>
+                <line x1="12" y1="18" x2="12" y2="27" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+                <line x1="8"  y1="23" x2="16" y2="23" stroke="#f7a8c4" stroke-width="2" stroke-linecap="round"/>
+                <line x1="17" y1="6"  x2="23" y2="1"  stroke="#55cdfc" stroke-width="2" stroke-linecap="round"/>
+                <polyline points="23,1 23,5 19,1" fill="none" stroke="#55cdfc" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="pin-sm-label">Trans Symbol ⚧</span>
+            </div>
+
+            <!-- 8. Axe 🪓 — angular blade -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Axe">
+                <line x1="13" y1="5" x2="13" y2="29" stroke="#55cdfc" stroke-width="3" stroke-linecap="round"/>
+                <path d="M13 5C13 5 5 3 4 9c-1 6 9 7 9 7z" fill="#55cdfc"/>
+                <path d="M13 5C13 5 5 3 4 9c-1 6 9 7 9 7z" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="0.8"/>
+              </svg>
+              <span class="pin-sm-label">Axe 🪓</span>
+            </div>
+
+            <!-- 9. Trans Flag Drop — sky primary -->
+            <div class="pin-sm">
+              <svg width="44" height="56" viewBox="0 0 24 30" fill="none" aria-label="Trans Flag Drop TM">
+                <defs>
+                  <clipPath id="cptm">
+                    <path d="M12 1C7 1 3 5 3 10c0 6 9 19 9 19s9-13 9-19c0-5-4-9-9-9z"/>
+                  </clipPath>
+                </defs>
+                <rect x="0" y="0"  width="24" height="6"  fill="#f7a8c4" clip-path="url(#cptm)"/>
+                <rect x="0" y="6"  width="24" height="6"  fill="#55cdfc" clip-path="url(#cptm)"/>
+                <rect x="0" y="12" width="24" height="6"  fill="white"   clip-path="url(#cptm)"/>
+                <rect x="0" y="18" width="24" height="6"  fill="#55cdfc" clip-path="url(#cptm)"/>
+                <rect x="0" y="24" width="24" height="6"  fill="#f7a8c4" clip-path="url(#cptm)"/>
+                <path d="M12 1C7 1 3 5 3 10c0 6 9 19 9 19s9-13 9-19c0-5-4-9-9-9z" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+              </svg>
+              <span class="pin-sm-label">Trans Flag</span>
+            </div>
+
+          </div>
+        </div><!-- /.trans-men -->
+
+        <!-- ── Non-binary ── -->
+        <div class="pin-cat-section">
+          <div class="pin-cat-header">
+            <span class="pin-cat-swatch" style="background:linear-gradient(135deg,#ffd700,#a855f7);box-shadow:0 0 8px #a855f780;"></span>
+            <span class="pin-cat-title">Non-binary</span>
+            <span class="pin-cat-count">Hexagon · gold &amp; purple</span>
+          </div>
+          <div class="pin-row">
+            <div class="pin-sm">
+              <svg width="52" height="64" viewBox="0 0 26 32" fill="none" aria-label="Non-binary">
+                <defs>
+                  <linearGradient id="gnb2" x1="0" y1="0" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%"   stop-color="#ffd700"/>
+                    <stop offset="100%" stop-color="#a855f7"/>
+                  </linearGradient>
+                </defs>
+                <polygon points="13,1 23,6.5 23,19.5 13,25 3,19.5 3,6.5" fill="url(#gnb2)" fill-opacity="0.18" stroke="url(#gnb2)" stroke-width="2.2"/>
+                <polygon points="13,8 19,11.5 19,18 13,21.5 7,18 7,11.5" fill="url(#gnb2)"/>
+                <line x1="13" y1="25" x2="13" y2="32" stroke="#ffd700" stroke-width="2.2" stroke-linecap="round"/>
+              </svg>
+              <span class="pin-sm-label">Non-binary</span>
+            </div>
+          </div>
+        </div><!-- /.nonbinary -->
+
+      </div><!-- /.pin-gallery -->
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ============================================================
+       Pin photo placement — interactive style picker
+  ============================================================ -->
+  <section class="pin-showcase" style="padding: 80px 0 96px;">
+    <div class="container">
+      <p class="pin-showcase-label">Choose how your photo sits on the pin</p>
+
+      <!-- Toggle buttons -->
+      <div id="pinStyleToggle" style="display:flex;justify-content:center;gap:0;margin:0 auto 48px;max-width:400px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <button onclick="setPinStyle('frame')"  id="pst-frame"  style="flex:1;padding:11px 0;font-size:12px;font-weight:700;letter-spacing:0.06em;border:none;cursor:pointer;transition:background 0.2s,color 0.2s;background:#1e1e2e;color:var(--text-muted);">Frame</button>
+        <button onclick="setPinStyle('hybrid')" id="pst-hybrid" style="flex:1;padding:11px 0;font-size:12px;font-weight:700;letter-spacing:0.06em;border:none;cursor:pointer;transition:background 0.2s,color 0.2s;background:var(--purple);color:#fff;border-left:1px solid var(--border);border-right:1px solid var(--border);">Hybrid ✦</button>
+        <button onclick="setPinStyle('fill')"   id="pst-fill"   style="flex:1;padding:11px 0;font-size:12px;font-weight:700;letter-spacing:0.06em;border:none;cursor:pointer;transition:background 0.2s,color 0.2s;background:#1e1e2e;color:var(--text-muted);">Full Fill</button>
+      </div>
+
+      <!-- Pin stage — three panels, one visible at a time -->
+      <div style="position:relative;min-height:160px;">
+
+        <!-- FRAME panel -->
+        <div id="pins-frame" style="display:none;justify-content:center;align-items:flex-end;gap:32px;">
+          <!-- Frame: Classic (female) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs>
+                <radialGradient id="pfr1" cx="38%" cy="30%" r="65%"><stop offset="0%" stop-color="#ffdde8"/><stop offset="60%" stop-color="#f7a8c4"/><stop offset="100%" stop-color="#c4607a"/></radialGradient>
+                <clipPath id="cpfr1"><circle cx="22" cy="17" r="12"/></clipPath>
+              </defs>
+              <path d="M22 2C14 2 6 8 6 17c0 13 16 39 16 39s16-26 16-39C38 8 30 2 22 2z" fill="url(#pfr1)" stroke="#c46080" stroke-width="0.8"/>
+              <circle cx="22" cy="17" r="13" fill="white"/>
+              <circle cx="22" cy="17" r="12" fill="#1c1830" clip-path="url(#cpfr1)"/>
+              <path d="M4 34Q10 26 22 26Q34 26 40 34L44 44 0 44Z" fill="#3a5a7a" clip-path="url(#cpfr1)"/>
+              <rect x="20" y="25" width="4" height="6" rx="2" fill="#c9956c" clip-path="url(#cpfr1)"/>
+              <circle cx="22" cy="20" r="7" fill="#c9956c" clip-path="url(#cpfr1)"/>
+              <ellipse cx="22" cy="14" rx="7.5" ry="5.5" fill="#2a1505" clip-path="url(#cpfr1)"/>
+              <circle cx="19.5" cy="20" r="1.3" fill="#120800" clip-path="url(#cpfr1)"/>
+              <circle cx="24.5" cy="20" r="1.3" fill="#120800" clip-path="url(#cpfr1)"/>
+              <circle cx="20.1" cy="19.4" r="0.45" fill="white" clip-path="url(#cpfr1)"/>
+              <circle cx="25.1" cy="19.4" r="0.45" fill="white" clip-path="url(#cpfr1)"/>
+              <path d="M19.5 23.5q2.5 1.8 5 0" fill="none" stroke="#7a3a1a" stroke-width="0.85" stroke-linecap="round" clip-path="url(#cpfr1)"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Classic</span>
+          </div>
+          <!-- Frame: Skull (male) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs>
+                <radialGradient id="pfr2" cx="40%" cy="28%" r="62%"><stop offset="0%" stop-color="#c0d8ff"/><stop offset="58%" stop-color="#5588ee"/><stop offset="100%" stop-color="#1422aa"/></radialGradient>
+                <clipPath id="cpfr2"><circle cx="22" cy="14" r="11"/></clipPath>
+              </defs>
+              <path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z" fill="url(#pfr2)" stroke="#1422aa" stroke-width="0.7"/>
+              <rect x="12" y="25" width="20" height="9" rx="3" fill="#5588ee" fill-opacity="0.85" stroke="#1422aa" stroke-width="0.6"/>
+              <line x1="16" y1="25" x2="16" y2="34" stroke="#1422aa" stroke-width="0.7" stroke-opacity="0.5"/>
+              <line x1="22" y1="25" x2="22" y2="34" stroke="#1422aa" stroke-width="0.7" stroke-opacity="0.5"/>
+              <line x1="28" y1="25" x2="28" y2="34" stroke="#1422aa" stroke-width="0.7" stroke-opacity="0.5"/>
+              <line x1="22" y1="34" x2="22" y2="57" stroke="#4488ff" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="22" cy="14" r="12" fill="white"/>
+              <circle cx="22" cy="14" r="11" fill="#1c1830" clip-path="url(#cpfr2)"/>
+              <ellipse cx="22" cy="28" rx="13" ry="8" fill="#3a5a7a" clip-path="url(#cpfr2)"/>
+              <rect x="20" y="23" width="4" height="5" rx="2" fill="#c9956c" clip-path="url(#cpfr2)"/>
+              <circle cx="22" cy="17" r="7" fill="#c9956c" clip-path="url(#cpfr2)"/>
+              <ellipse cx="22" cy="11" rx="7.5" ry="5" fill="#2a1505" clip-path="url(#cpfr2)"/>
+              <circle cx="19.5" cy="17" r="1.3" fill="#120800" clip-path="url(#cpfr2)"/>
+              <circle cx="24.5" cy="17" r="1.3" fill="#120800" clip-path="url(#cpfr2)"/>
+              <circle cx="20.1" cy="16.4" r="0.45" fill="white" clip-path="url(#cpfr2)"/>
+              <circle cx="25.1" cy="16.4" r="0.45" fill="white" clip-path="url(#cpfr2)"/>
+              <path d="M19.5 20.5q2.5 1.8 5 0" fill="none" stroke="#7a3a1a" stroke-width="0.85" stroke-linecap="round" clip-path="url(#cpfr2)"/>
+              <ellipse cx="17.5" cy="13" rx="4" ry="4.5" fill="#080a24" fill-opacity="0.72"/>
+              <ellipse cx="26.5" cy="13" rx="4" ry="4.5" fill="#080a24" fill-opacity="0.72"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Skull</span>
+          </div>
+          <!-- Frame: Butterfly (TW) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="80" height="104" viewBox="0 0 48 58" fill="none">
+              <defs><clipPath id="cpfr3"><circle cx="24" cy="22" r="10"/></clipPath></defs>
+              <path d="M24 26C20 22 9 19 9 10c0-5 5-8 11-3C22 9 24 22 24 26z" fill="#f7a8c4" fill-opacity="0.88"/>
+              <path d="M24 26c4-4 15-7 15-16 0-5-5-8-11-3C26 9 24 22 24 26z" fill="#55cdfc" fill-opacity="0.88"/>
+              <path d="M24 26C22 29 18 32 21 36" fill="none" stroke="#f7a8c4" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M24 26C26 29 28 32 27 36" fill="none" stroke="#55cdfc" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="24" y1="4" x2="24" y2="36" stroke="#c4a0b8" stroke-width="0.9" stroke-dasharray="2 2"/>
+              <path d="M22 5C23 2 24 2 24 4" fill="none" stroke="#55cdfc" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M26 5C25 2 24 2 24 4" fill="none" stroke="#f7a8c4" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="24" y1="36" x2="24" y2="56" stroke="#f7a8c4" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="24" cy="22" r="11" fill="white"/>
+              <circle cx="24" cy="22" r="10" fill="#1c1830" clip-path="url(#cpfr3)"/>
+              <ellipse cx="24" cy="34" rx="12" ry="8" fill="#3a5a7a" clip-path="url(#cpfr3)"/>
+              <rect x="22" y="29" width="4" height="5" rx="2" fill="#c9956c" clip-path="url(#cpfr3)"/>
+              <circle cx="24" cy="24" r="6.5" fill="#c9956c" clip-path="url(#cpfr3)"/>
+              <ellipse cx="24" cy="18.5" rx="7" ry="5" fill="#2a1505" clip-path="url(#cpfr3)"/>
+              <circle cx="21.5" cy="24" r="1.2" fill="#120800" clip-path="url(#cpfr3)"/>
+              <circle cx="26.5" cy="24" r="1.2" fill="#120800" clip-path="url(#cpfr3)"/>
+              <circle cx="22.1" cy="23.4" r="0.4" fill="white" clip-path="url(#cpfr3)"/>
+              <circle cx="27.1" cy="23.4" r="0.4" fill="white" clip-path="url(#cpfr3)"/>
+              <path d="M21.5 27q2.5 1.8 5 0" fill="none" stroke="#7a3a1a" stroke-width="0.8" stroke-linecap="round" clip-path="url(#cpfr3)"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Butterfly</span>
+          </div>
+        </div>
+
+        <!-- HYBRID panel (default visible) -->
+        <div id="pins-hybrid" style="display:flex;justify-content:center;align-items:flex-end;gap:32px;">
+          <!-- Hybrid: Classic (female) — big photo circle, colored pointed tip below -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs>
+                <radialGradient id="phb1" cx="38%" cy="30%" r="65%"><stop offset="0%" stop-color="#ffdde8"/><stop offset="60%" stop-color="#f7a8c4"/><stop offset="100%" stop-color="#c4607a"/></radialGradient>
+                <clipPath id="cphb1"><circle cx="22" cy="15" r="15"/></clipPath>
+              </defs>
+              <!-- Identity color fills entire teardrop (tip always visible) -->
+              <path d="M22 2C14 2 6 8 6 17c0 13 16 39 16 39s16-26 16-39C38 8 30 2 22 2z" fill="url(#phb1)" stroke="#c46080" stroke-width="0.8"/>
+              <!-- Large photo punches through the head -->
+              <circle cx="22" cy="15" r="15.5" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+              <circle cx="22" cy="15" r="15" fill="#1c1830" clip-path="url(#cphb1)"/>
+              <path d="M2 38Q8 28 22 28Q36 28 42 38L44 56 0 56Z" fill="#3a5a7a" clip-path="url(#cphb1)"/>
+              <rect x="20" y="27" width="4" height="7" rx="2" fill="#c9956c" clip-path="url(#cphb1)"/>
+              <circle cx="22" cy="20" r="9" fill="#c9956c" clip-path="url(#cphb1)"/>
+              <ellipse cx="22" cy="12" rx="9.5" ry="7" fill="#2a1505" clip-path="url(#cphb1)"/>
+              <circle cx="19" cy="20" r="1.6" fill="#120800" clip-path="url(#cphb1)"/>
+              <circle cx="25" cy="20" r="1.6" fill="#120800" clip-path="url(#cphb1)"/>
+              <circle cx="19.7" cy="19.3" r="0.55" fill="white" clip-path="url(#cphb1)"/>
+              <circle cx="25.7" cy="19.3" r="0.55" fill="white" clip-path="url(#cphb1)"/>
+              <path d="M19 24q3 2.2 6 0" fill="none" stroke="#7a3a1a" stroke-width="0.9" stroke-linecap="round" clip-path="url(#cphb1)"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Classic</span>
+          </div>
+          <!-- Hybrid: Skull (male) — photo fills dome, jaw+eye sockets stay identity blue -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs>
+                <radialGradient id="phb2" cx="40%" cy="28%" r="62%"><stop offset="0%" stop-color="#c0d8ff"/><stop offset="58%" stop-color="#5588ee"/><stop offset="100%" stop-color="#1422aa"/></radialGradient>
+                <clipPath id="cphb2"><path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z"/></clipPath>
+              </defs>
+              <!-- Identity: jaw + needle (always blue) -->
+              <rect x="12" y="25" width="20" height="9" rx="3" fill="url(#phb2)" stroke="#1422aa" stroke-width="0.7"/>
+              <line x1="16" y1="25" x2="16" y2="34" stroke="#1422aa" stroke-width="0.8" stroke-opacity="0.55"/>
+              <line x1="22" y1="25" x2="22" y2="34" stroke="#1422aa" stroke-width="0.8" stroke-opacity="0.55"/>
+              <line x1="28" y1="25" x2="28" y2="34" stroke="#1422aa" stroke-width="0.8" stroke-opacity="0.55"/>
+              <line x1="22" y1="34" x2="22" y2="57" stroke="#4488ff" stroke-width="2.5" stroke-linecap="round"/>
+              <!-- Photo fills skull dome -->
+              <path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z" fill="#1c1830"/>
+              <ellipse cx="22" cy="36" rx="17" ry="12" fill="#3a5a7a" clip-path="url(#cphb2)"/>
+              <rect x="20" y="25" width="4" height="8" rx="2" fill="#c9956c" clip-path="url(#cphb2)"/>
+              <circle cx="22" cy="14" r="10" fill="#c9956c" clip-path="url(#cphb2)"/>
+              <ellipse cx="22" cy="5.5" rx="10.5" ry="7.5" fill="#2a1505" clip-path="url(#cphb2)"/>
+              <circle cx="18.5" cy="14" r="1.5" fill="#120800" clip-path="url(#cphb2)"/>
+              <circle cx="25.5" cy="14" r="1.5" fill="#120800" clip-path="url(#cphb2)"/>
+              <circle cx="19.1" cy="13.4" r="0.5" fill="white" clip-path="url(#cphb2)"/>
+              <circle cx="26.1" cy="13.4" r="0.5" fill="white" clip-path="url(#cphb2)"/>
+              <path d="M18.5 18q3.5 2 7 0" fill="none" stroke="#7a3a1a" stroke-width="0.9" stroke-linecap="round" clip-path="url(#cphb2)"/>
+              <!-- Identity dome border -->
+              <path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z" fill="none" stroke="#4488ff" stroke-width="1.5"/>
+              <!-- Eye socket overlays (identity bleeds through) -->
+              <ellipse cx="17.5" cy="12" rx="4.5" ry="5.5" fill="#080a24" fill-opacity="0.68"/>
+              <ellipse cx="26.5" cy="12" rx="4.5" ry="5.5" fill="#080a24" fill-opacity="0.68"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Skull</span>
+          </div>
+          <!-- Hybrid: Butterfly (TW) — photo circle at body center, full wings as identity color -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="80" height="104" viewBox="0 0 48 58" fill="none">
+              <defs><clipPath id="cphb3"><circle cx="24" cy="18" r="13"/></clipPath></defs>
+              <!-- Full wings: identity color always visible -->
+              <path d="M24 26C20 22 9 19 9 10c0-5 5-8 11-3C22 9 24 22 24 26z" fill="#f7a8c4" fill-opacity="0.88"/>
+              <path d="M24 26c4-4 15-7 15-16 0-5-5-8-11-3C26 9 24 22 24 26z" fill="#55cdfc" fill-opacity="0.88"/>
+              <path d="M24 26C22 29 18 32 21 36" fill="none" stroke="#f7a8c4" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M24 26C26 29 28 32 27 36" fill="none" stroke="#55cdfc" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="24" y1="4" x2="24" y2="36" stroke="#c4a0b8" stroke-width="0.9" stroke-dasharray="2 2"/>
+              <path d="M22 5C23 2 24 2 24 4" fill="none" stroke="#55cdfc" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M26 5C25 2 24 2 24 4" fill="none" stroke="#f7a8c4" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="24" y1="36" x2="24" y2="56" stroke="#f7a8c4" stroke-width="2.5" stroke-linecap="round"/>
+              <!-- Large photo circle punches over wing center -->
+              <circle cx="24" cy="18" r="13.5" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
+              <circle cx="24" cy="18" r="13" fill="#1c1830" clip-path="url(#cphb3)"/>
+              <ellipse cx="24" cy="34" rx="14" ry="9" fill="#3a5a7a" clip-path="url(#cphb3)"/>
+              <rect x="22" y="29" width="4" height="6" rx="2" fill="#c9956c" clip-path="url(#cphb3)"/>
+              <circle cx="24" cy="21" r="8.5" fill="#c9956c" clip-path="url(#cphb3)"/>
+              <ellipse cx="24" cy="13.5" rx="9" ry="7" fill="#2a1505" clip-path="url(#cphb3)"/>
+              <circle cx="21" cy="21" r="1.5" fill="#120800" clip-path="url(#cphb3)"/>
+              <circle cx="27" cy="21" r="1.5" fill="#120800" clip-path="url(#cphb3)"/>
+              <circle cx="21.6" cy="20.4" r="0.5" fill="white" clip-path="url(#cphb3)"/>
+              <circle cx="27.6" cy="20.4" r="0.5" fill="white" clip-path="url(#cphb3)"/>
+              <path d="M21 25q3 2 6 0" fill="none" stroke="#7a3a1a" stroke-width="0.85" stroke-linecap="round" clip-path="url(#cphb3)"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Butterfly</span>
+          </div>
+        </div>
+
+        <!-- FILL panel -->
+        <div id="pins-fill" style="display:none;justify-content:center;align-items:flex-end;gap:32px;">
+          <!-- Fill: Classic (female) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs><clipPath id="cpfl1"><path d="M22 2C14 2 6 8 6 17c0 13 16 39 16 39s16-26 16-39C38 8 30 2 22 2z"/></clipPath></defs>
+              <path d="M22 2C14 2 6 8 6 17c0 13 16 39 16 39s16-26 16-39C38 8 30 2 22 2z" fill="#1c1830"/>
+              <path d="M2 42Q8 32 22 32Q36 32 42 42 44 52 44 58 0 58 0 58z" fill="#3a5a7a" clip-path="url(#cpfl1)"/>
+              <rect x="20" y="31" width="4" height="8" rx="2" fill="#c9956c" clip-path="url(#cpfl1)"/>
+              <circle cx="22" cy="24" r="11" fill="#c9956c" clip-path="url(#cpfl1)"/>
+              <ellipse cx="22" cy="14.5" rx="11.5" ry="9" fill="#2a1505" clip-path="url(#cpfl1)"/>
+              <circle cx="18.5" cy="24" r="1.7" fill="#120800" clip-path="url(#cpfl1)"/>
+              <circle cx="25.5" cy="24" r="1.7" fill="#120800" clip-path="url(#cpfl1)"/>
+              <circle cx="19.2" cy="23.3" r="0.6" fill="white" clip-path="url(#cpfl1)"/>
+              <circle cx="26.2" cy="23.3" r="0.6" fill="white" clip-path="url(#cpfl1)"/>
+              <path d="M18.5 28q3.5 2.2 7 0" fill="none" stroke="#7a3a1a" stroke-width="1" stroke-linecap="round" clip-path="url(#cpfl1)"/>
+              <path d="M22 2C14 2 6 8 6 17c0 13 16 39 16 39s16-26 16-39C38 8 30 2 22 2z" fill="none" stroke="#f7a8c4" stroke-width="2.5"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Classic</span>
+          </div>
+          <!-- Fill: Skull (male) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs><clipPath id="cpfl2"><path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z"/></clipPath></defs>
+              <path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z" fill="#1c1830"/>
+              <ellipse cx="22" cy="38" rx="17" ry="12" fill="#3a5a7a" clip-path="url(#cpfl2)"/>
+              <rect x="20" y="26" width="4" height="8" rx="2" fill="#c9956c" clip-path="url(#cpfl2)"/>
+              <circle cx="22" cy="14" r="10" fill="#c9956c" clip-path="url(#cpfl2)"/>
+              <ellipse cx="22" cy="5.5" rx="10.5" ry="7.5" fill="#2a1505" clip-path="url(#cpfl2)"/>
+              <circle cx="18.5" cy="14" r="1.5" fill="#120800" clip-path="url(#cpfl2)"/>
+              <circle cx="25.5" cy="14" r="1.5" fill="#120800" clip-path="url(#cpfl2)"/>
+              <circle cx="19.1" cy="13.4" r="0.5" fill="white" clip-path="url(#cpfl2)"/>
+              <circle cx="26.1" cy="13.4" r="0.5" fill="white" clip-path="url(#cpfl2)"/>
+              <path d="M18.5 18q3.5 2 7 0" fill="none" stroke="#7a3a1a" stroke-width="0.9" stroke-linecap="round" clip-path="url(#cpfl2)"/>
+              <path d="M22 1C15 1 7 6 7 14c0 5 2.5 9 7 11v3h16v-3c4.5-2 7-6 7-11C37 6 29 1 22 1z" fill="none" stroke="#4488ff" stroke-width="2.5"/>
+              <rect x="12" y="28" width="20" height="9" rx="3" fill="#1c1830" stroke="#4488ff" stroke-width="1.5"/>
+              <line x1="16" y1="28" x2="16" y2="37" stroke="#4488ff" stroke-width="0.8" stroke-opacity="0.55"/>
+              <line x1="22" y1="28" x2="22" y2="37" stroke="#4488ff" stroke-width="0.8" stroke-opacity="0.55"/>
+              <line x1="28" y1="28" x2="28" y2="37" stroke="#4488ff" stroke-width="0.8" stroke-opacity="0.55"/>
+              <ellipse cx="17.5" cy="12" rx="4.5" ry="5.5" fill="#080a24" fill-opacity="0.68"/>
+              <ellipse cx="26.5" cy="12" rx="4.5" ry="5.5" fill="#080a24" fill-opacity="0.68"/>
+              <line x1="22" y1="37" x2="22" y2="57" stroke="#4488ff" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Skull</span>
+          </div>
+          <!-- Fill: Shield (male) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:9px;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.55));">
+            <svg width="72" height="104" viewBox="0 0 44 58" fill="none">
+              <defs><clipPath id="cpfl3"><path d="M22 2L40 8V26L22 46L4 26V8Z"/></clipPath></defs>
+              <path d="M22 2L40 8V26L22 46L4 26V8Z" fill="#1c1830"/>
+              <path d="M2 36Q8 28 22 28Q36 28 42 36L44 50 0 50Z" fill="#3a5a7a" clip-path="url(#cpfl3)"/>
+              <rect x="20" y="27" width="4" height="7" rx="2" fill="#c9956c" clip-path="url(#cpfl3)"/>
+              <circle cx="22" cy="20" r="10" fill="#c9956c" clip-path="url(#cpfl3)"/>
+              <ellipse cx="22" cy="11.5" rx="10.5" ry="7.5" fill="#2a1505" clip-path="url(#cpfl3)"/>
+              <circle cx="18.5" cy="20" r="1.6" fill="#120800" clip-path="url(#cpfl3)"/>
+              <circle cx="25.5" cy="20" r="1.6" fill="#120800" clip-path="url(#cpfl3)"/>
+              <circle cx="19.1" cy="19.3" r="0.55" fill="white" clip-path="url(#cpfl3)"/>
+              <circle cx="26.1" cy="19.3" r="0.55" fill="white" clip-path="url(#cpfl3)"/>
+              <path d="M18.5 24q3.5 2.2 7 0" fill="none" stroke="#7a3a1a" stroke-width="0.9" stroke-linecap="round" clip-path="url(#cpfl3)"/>
+              <path d="M22 2L40 8V26L22 46L4 26V8Z" fill="none" stroke="#4488ff" stroke-width="2.5"/>
+              <line x1="22" y1="46" x2="22" y2="57" stroke="#4488ff" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+            <span style="font-size:10px;color:var(--text-muted);">Shield</span>
+          </div>
+        </div>
+
+      </div><!-- /pin stage -->
+
+      <!-- Description (updates with selection) -->
+      <p id="pinStyleDesc" style="text-align:center;font-size:13px;color:var(--text-muted);max-width:440px;margin:32px auto 0;line-height:1.8;">
+        Identity color fills the pointed tip — always readable on the map.<br>Photo fills the head — face-forward when you zoom in.
+      </p>
+
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <script>
+    function setPinStyle(style) {
+      ['frame','hybrid','fill'].forEach(function(s) {
+        document.getElementById('pins-' + s).style.display = s === style ? 'flex' : 'none';
+        var btn = document.getElementById('pst-' + s);
+        btn.style.background = s === style ? 'var(--purple)' : '#1e1e2e';
+        btn.style.color      = s === style ? '#fff' : 'var(--text-muted)';
+      });
+      var descs = {
+        frame:  'Identity color fills the entire pin — vivid at any zoom.<br>Your photo sits in a circle in the center.',
+        hybrid: 'Identity color fills the pointed tip — always readable on the map.<br>Photo fills the head — face-forward when you zoom in.',
+        fill:   'Your photo fills the whole pin shape.<br>The identity silhouette and border color tell the story.'
+      };
+      document.getElementById('pinStyleDesc').innerHTML = descs[style];
+    }
+    setPinStyle('hybrid');
+  </script>
+
+  <!-- ============================================================
+       Features
+  ============================================================ -->
+  <section class="features">
+    <div class="container">
+      <div class="section-header">
+        <h2>Built for the night</h2>
+        <p>Every feature is designed around how nightlife actually works.</p>
+      </div>
+
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <span class="feature-icon">📍</span>
+          <h3>Live map</h3>
+          <p>Nearby people appear as distinctive pins — shape and color reflect gender identity. No one is a generic dot.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">🌊</span>
+          <h3>NightPulse</h3>
+          <p>A real-time heatmap of activity intensity across your city's zones. Find where the night is actually happening before you go.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">✨</span>
+          <h3>Vibe signals</h3>
+          <p>Send a lightweight wave or spark — no pressure of a full message. Mutual vibes create a match automatically.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">💬</span>
+          <h3>Real-time chat</h3>
+          <p>Instant delivery, read receipts, and group channels. Messages arrive as fast as the network allows — no polling.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">🎥</span>
+          <h3>Video rooms</h3>
+          <p>Start a video or audio call directly in the app via LiveKit. No third-party apps, no links to copy.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">🔄</span>
+          <h3>Always on</h3>
+          <p>An adaptive background loop persists state across OS kills and heals from errors automatically — without user input.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Stats
+  ============================================================ -->
+  <div class="divider"></div>
+  <section class="stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-cell">
+          <div class="stat-number" style="color: var(--aqua);">38+</div>
+          <div class="stat-label">Pin variants across 5 gender identities</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-number" style="color: var(--orange);">&lt;1s</div>
+          <div class="stat-label">Real-time message delivery</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-number" style="color: var(--pink);">24/7</div>
+          <div class="stat-label">Continuous background operation</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ============================================================
+       Footer CTA
+  ============================================================ -->
+  <section class="footer-cta">
+    <div class="container">
+      <h2>Ready for a better night out?</h2>
+      <p>Join the waitlist and be among the first to access ANL.</p>
+
+      <!-- Waitlist form — footer -->
+      <div class="waitlist-wrap">
+        <form class="waitlist-form" id="waitlistFormB" novalidate>
+          <input
+            type="email"
+            class="waitlist-input"
+            id="emailB"
+            placeholder="your@email.com"
+            autocomplete="email"
+            required
+            aria-label="Email address"
+          />
+          <button type="submit" class="waitlist-btn">Get early access</button>
+        </form>
+        <div class="form-success" id="successB">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="7" stroke="#7fffd4" stroke-width="1.5"/>
+            <path d="M5 8l2 2 4-4" stroke="#7fffd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          You are on the list.
+        </div>
+        <p class="form-note">No spam. No third parties. Just the app when it is ready.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Footer
+  ============================================================ -->
+  <footer>
+    <div class="container">
+      <p>
+        &copy; 2026 All Night Long &nbsp;&middot;&nbsp;
+        <a href="#">Privacy</a> &nbsp;&middot;&nbsp;
+        <a href="#">Terms</a> &nbsp;&middot;&nbsp;
+        MIT License
       </p>
     </div>
-    <div class="success" id="successBox">
-      <div class="success-icon">🌙</div>
-      <div class="success-title">YOU'RE IN</div>
-      <div class="success-sub">We'll hit you up the night it drops.<br/>Stay out late.</div>
-    </div>
-  </div>
+  </footer>
 
-  <!-- Pin showcase strip -->
-  <div class="pin-row reveal d6">
-    <!-- Female classic -->
-    <div class="pin-item">
-      <svg width="38" height="38" viewBox="0 0 56 56" style="filter:drop-shadow(0 3px 8px rgba(255,60,100,.5))">
-        <path d="M4,20 C4,8 20,0 28,0 C36,0 52,8 52,20 C52,32 44,44 28,52 C12,44 4,32 4,20Z" fill="#1e1e1e" stroke="#ff3c64" stroke-width="2"/>
-        <text x="28" y="24" text-anchor="middle" dominant-baseline="middle" font-size="13" font-family="'Bebas Neue',sans-serif" fill="#fff">F</text>
-        <line x1="28" y1="3" x2="28" y2="28" stroke="rgba(255,255,255,.1)" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      <span class="plabel">Women</span>
-    </div>
-    <!-- Heart drop -->
-    <div class="pin-item">
-      <svg width="38" height="48" viewBox="0 0 56 68" style="filter:drop-shadow(0 3px 10px rgba(255,60,100,.7))">
-        <path d="M28,46 C28,46 6,32 6,18 C6,9 13,4 20,4 C24,4 28,7 28,7 C28,7 32,4 36,4 C43,4 50,9 50,18 C50,32 28,46 28,46Z" fill="#ff3c64" stroke="#ff6080" stroke-width="1.5"/>
-        <path d="M24,46 L28,62 L32,46Z" fill="#ff3c64"/>
-      </svg>
-      <span class="plabel">Selected</span>
-    </div>
-    <!-- Eggplant -->
-    <div class="pin-item">
-      <svg width="34" height="44" viewBox="0 0 56 60" style="filter:drop-shadow(0 3px 8px rgba(136,68,255,.6))">
-        <path d="M28,2 C28,2 22,-4 16,-2 C18,3 24,3 28,2Z M28,2 C28,2 34,-4 40,-2 C38,3 32,3 28,2Z" fill="#44aa44"/>
-        <path d="M28,54 C16,54 8,44 8,32 C8,18 14,6 22,3 C24,2 26,2 28,2 C30,2 32,2 34,3 C42,6 48,18 48,32 C48,44 40,54 28,54Z" fill="#1e1e1e" stroke="rgba(136,68,255,.7)" stroke-width="2"/>
-      </svg>
-      <span class="plabel">Men</span>
-    </div>
-    <!-- Skull -->
-    <div class="pin-item">
-      <svg width="34" height="34" viewBox="0 0 56 56" style="filter:drop-shadow(0 3px 8px rgba(255,255,255,.2))">
-        <path d="M28,2 C14,2 6,12 6,24 C6,34 12,40 18,42 L18,50 L38,50 L38,42 C44,40 50,34 50,24 C50,12 42,2 28,2Z" fill="#1a1a1a" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
-        <path d="M20,22 A4,4 0 1,1 19.9,22Z M36,22 A4,4 0 1,1 35.9,22Z" fill="#080808"/>
-        <path d="M20,46 L20,50 M24,46 L24,50 M28,46 L28,50 M32,46 L32,50 M36,46 L36,50" stroke="#080808" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
-      <span class="plabel">New arrival</span>
-    </div>
-    <!-- Butterfly -->
-    <div class="pin-item">
-      <svg width="42" height="40" viewBox="0 0 56 56" style="filter:drop-shadow(0 3px 12px rgba(247,168,196,.7))">
-        <defs><linearGradient id="bw2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f7a8c4"/><stop offset="100%" stop-color="#55cdfc"/></linearGradient></defs>
-        <path d="M28,28 C28,28 10,18 6,8 C4,2 10,0 14,4 C18,8 22,18 28,28Z" fill="url(#bw2)" stroke="#f7a8c4" stroke-width="1.5"/>
-        <path d="M28,28 C28,28 46,18 50,8 C52,2 46,0 42,4 C38,8 34,18 28,28Z" fill="url(#bw2)" stroke="#55cdfc" stroke-width="1.5"/>
-        <path d="M28,28 C28,28 8,32 4,42 C2,50 8,52 14,48 C20,44 24,36 28,28Z" fill="url(#bw2)" opacity=".8"/>
-        <path d="M28,28 C28,28 48,32 52,42 C54,50 48,52 42,48 C36,44 32,36 28,28Z" fill="url(#bw2)" opacity=".8"/>
-        <path d="M28,10 C26,10 24,14 24,20 L24,36 C24,42 26,46 28,46 C30,46 32,42 32,36 L32,20 C32,14 30,10 28,10Z" fill="#1a1a1a"/>
-      </svg>
-      <span class="plabel">Trans women</span>
-    </div>
-    <!-- Trans flag drop -->
-    <div class="pin-item">
-      <svg width="36" height="52" viewBox="0 0 56 66" style="filter:drop-shadow(0 3px 10px rgba(247,168,196,.6))">
-        <defs><linearGradient id="tfg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#55cdfc"/><stop offset="30%" stop-color="#f7a8c4"/><stop offset="50%" stop-color="#fff"/><stop offset="70%" stop-color="#f7a8c4"/><stop offset="100%" stop-color="#55cdfc"/></linearGradient></defs>
-        <path d="M28,46 C28,46 6,32 6,18 C6,9 13,4 20,4 C24,4 28,7 28,7 C28,7 32,4 36,4 C43,4 50,9 50,18 C50,32 28,46 28,46Z" fill="url(#tfg2)" stroke="rgba(255,255,255,.3)" stroke-width="1.5"/>
-        <path d="M24,46 L28,62 L32,46Z" fill="#f7a8c4"/>
-      </svg>
-      <span class="plabel">Trans men</span>
-    </div>
-    <!-- Bolt -->
-    <div class="pin-item">
-      <svg width="30" height="40" viewBox="0 0 56 56" style="filter:drop-shadow(0 3px 10px rgba(85,205,252,.6))">
-        <defs><linearGradient id="bl2" x1=".5" y1="0" x2=".5" y2="1"><stop offset="0%" stop-color="#55cdfc"/><stop offset="100%" stop-color="#ffdd44"/></linearGradient></defs>
-        <path d="M32,2 L16,28 L28,28 L20,54 L40,24 L28,24 Z" fill="url(#bl2)" stroke="#55cdfc" stroke-width="1.5"/>
-      </svg>
-      <span class="plabel">New arrival</span>
-    </div>
-  </div>
+  <script>
+  /* ============================================================
+     Floating pin field
+     Generates random SVG pins that drift upward across the hero
+     background, giving the impression of a live map in motion.
+  ============================================================ */
+  (function () {
+    'use strict';
 
-</main>
+    var field = document.getElementById('pinField');
+    if (!field) return;
 
-<!-- Footer -->
-<footer>
-  <div style="margin-bottom:8px;">
-    <span style="font-family:'Bebas Neue',sans-serif;letter-spacing:3px;font-size:16px;">
-      ALL<span style="color:var(--amber)">NIGHT</span>LONG
-    </span>
-  </div>
-  © 2025 AllNightLong ·
-  <a href="mailto:hi@allnightlong.app">hi@allnightlong.app</a>
-  · Built by <a href="https://github.com/cloudygetty-ai" target="_blank">cloudygetty-ai</a>
-</footer>
+    /* Color palette — matches CSS custom properties */
+    var colors = ['#7fffd4', '#ffa032', '#4488ff', '#f7a8c4', '#55cdfc', '#a855f7', '#ffd700'];
 
-<script>
-function handleSubmit(){
-  const input=document.getElementById('emailInput');
-  const email=input.value.trim();
-  const re=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if(!re.test(email)){
-    input.style.outline='2px solid var(--red)';
-    input.focus();
-    setTimeout(()=>{input.style.outline='';},1400);
-    return;
-  }
-  // Store locally (Formspree or Vercel serverless can replace this)
-  const list=JSON.parse(localStorage.getItem('anl_waitlist')||'[]');
-  if(!list.includes(email)){list.push(email);localStorage.setItem('anl_waitlist',JSON.stringify(list));}
-  document.getElementById('formContainer').style.display='none';
-  document.getElementById('successBox').classList.add('show');
-  // Optional: POST to a Formspree endpoint
-  // fetch('https://formspree.io/f/YOUR_ID',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
-}
-document.getElementById('emailInput').addEventListener('keydown',e=>{
-  if(e.key==='Enter')handleSubmit();
-});
-</script>
+    /* Gradient pairs for multi-color pins */
+    var gradients = [
+      ['#55cdfc', '#f7a8c4'],
+      ['#f7a8c4', '#55cdfc'],
+      ['#ffd700', '#a855f7'],
+    ];
+
+    /* Unique id counter for SVG gradient elements */
+    var gradId = 0;
+
+    /* ── Pin shape builders ── */
+    /* Each function accepts a color string and returns raw SVG markup. */
+
+    function buildCirclePin(color) {
+      return '<svg width="24" height="32" viewBox="0 0 24 32" fill="none">'
+        + '<circle cx="12" cy="12" r="10" fill="' + color + '" fill-opacity="0.22" stroke="' + color + '" stroke-width="2"/>'
+        + '<circle cx="12" cy="12" r="5"  fill="' + color + '"/>'
+        + '<line x1="12" y1="22" x2="12" y2="32" stroke="' + color + '" stroke-width="2" stroke-linecap="round"/>'
+        + '</svg>';
+    }
+
+    function buildSquarePin(color) {
+      return '<svg width="24" height="32" viewBox="0 0 24 32" fill="none">'
+        + '<rect x="1" y="1" width="22" height="22" rx="4" fill="' + color + '" fill-opacity="0.22" stroke="' + color + '" stroke-width="2"/>'
+        + '<rect x="8" y="8" width="8"  height="8"  rx="1.5" fill="' + color + '"/>'
+        + '<line x1="12" y1="23" x2="12" y2="32" stroke="' + color + '" stroke-width="2" stroke-linecap="round"/>'
+        + '</svg>';
+    }
+
+    function buildDiamondPin(c1, c2) {
+      var id = 'pg' + (gradId++);
+      return '<svg width="26" height="36" viewBox="0 0 26 36" fill="none">'
+        + '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="26" y2="26" gradientUnits="userSpaceOnUse">'
+        + '<stop offset="0%" stop-color="' + c1 + '"/>'
+        + '<stop offset="100%" stop-color="' + c2 + '"/>'
+        + '</linearGradient></defs>'
+        + '<polygon points="13,2 24,13 13,24 2,13" fill="url(#' + id + ')" fill-opacity="0.22" stroke="url(#' + id + ')" stroke-width="2"/>'
+        + '<polygon points="13,8 18,13 13,18 8,13" fill="url(#' + id + ')"/>'
+        + '<line x1="13" y1="24" x2="13" y2="36" stroke="' + c1 + '" stroke-width="2" stroke-linecap="round"/>'
+        + '</svg>';
+    }
+
+    function buildHexPin(c1, c2) {
+      var id = 'ph' + (gradId++);
+      return '<svg width="26" height="36" viewBox="0 0 26 36" fill="none">'
+        + '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="26" y2="26" gradientUnits="userSpaceOnUse">'
+        + '<stop offset="0%" stop-color="' + c1 + '"/>'
+        + '<stop offset="100%" stop-color="' + c2 + '"/>'
+        + '</linearGradient></defs>'
+        + '<polygon points="13,2 22,7 22,18 13,23 4,18 4,7" fill="url(#' + id + ')" fill-opacity="0.22" stroke="url(#' + id + ')" stroke-width="2"/>'
+        + '<polygon points="13,8 19,11 19,17 13,20 7,17 7,11" fill="url(#' + id + ')"/>'
+        + '<line x1="13" y1="23" x2="13" y2="36" stroke="' + c1 + '" stroke-width="2" stroke-linecap="round"/>'
+        + '</svg>';
+    }
+
+    /* ── Pick a random pin shape ── */
+    function buildRandomPin() {
+      var roll = Math.random();
+      if (roll < 0.28) {
+        return buildCirclePin(colors[Math.floor(Math.random() * colors.length)]);
+      } else if (roll < 0.52) {
+        return buildSquarePin(colors[Math.floor(Math.random() * colors.length)]);
+      } else if (roll < 0.76) {
+        var gd = gradients[Math.floor(Math.random() * gradients.length)];
+        return buildDiamondPin(gd[0], gd[1]);
+      } else {
+        var gh = gradients[Math.floor(Math.random() * gradients.length)];
+        return buildHexPin(gh[0], gh[1]);
+      }
+    }
+
+    /* ── Spawn one floating pin ── */
+    function spawnPin() {
+      var el = document.createElement('div');
+      el.className = 'pin-float';
+      el.innerHTML = buildRandomPin();
+
+      var duration = 14 + Math.random() * 18;   /* seconds */
+      var delay    = Math.random() * duration;   /* stagger so they don't all start at once */
+      var leftPct  = 2 + Math.random() * 95;
+      var startVh  = 60 + Math.random() * 55;
+      var scale    = 0.45 + Math.random() * 1.0;
+
+      el.style.cssText = [
+        'left: '              + leftPct  + 'vw',
+        'bottom: -'           + startVh  + 'vh',
+        'transform: scale('   + scale    + ')',
+        'animation-duration:' + duration + 's',
+        'animation-delay: -'  + delay    + 's',
+      ].join(';');
+
+      field.appendChild(el);
+
+      /* Remove after animation completes to avoid unbounded DOM growth */
+      el.addEventListener('animationend', function () { el.remove(); });
+    }
+
+    /* Seed the initial batch */
+    for (var i = 0; i < 22; i++) { spawnPin(); }
+
+    /* Keep a steady stream coming */
+    setInterval(spawnPin, 1600);
+  }());
+
+  /* ============================================================
+     Waitlist form handler
+     Inserts email into Supabase waitlist table via REST API.
+     Duplicate emails are silently swallowed (upsert-style UX).
+  ============================================================ */
+  (function () {
+    'use strict';
+
+    var SUPA_URL = 'https://xebwdvtaivqjwbwbzdpv.supabase.co';
+    var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlYndkdnRhaXZxandid2J6ZHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NTk2MTAsImV4cCI6MjA4NjUzNTYxMH0.7eTr-Pw-qqrLPfUSpjySZ9PSJ8zbN31XMRax6ChJnb8';
+
+    function isValidEmail(v) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+    }
+
+    function submitToWaitlist(email, source) {
+      return fetch(SUPA_URL + '/rest/v1/waitlist', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'apikey':        SUPA_KEY,
+          'Authorization': 'Bearer ' + SUPA_KEY,
+          /* Return nothing on success — keeps response tiny */
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ email: email.trim(), source: source })
+      });
+    }
+
+    function bindWaitlist(formId, inputId, successId, source) {
+      var form    = document.getElementById(formId);
+      var input   = document.getElementById(inputId);
+      var success = document.getElementById(successId);
+      var btn     = form ? form.querySelector('button[type="submit"]') : null;
+      if (!form || !input || !success) return;
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        if (!isValidEmail(input.value)) {
+          input.classList.add('error');
+          input.focus();
+          setTimeout(function () { input.classList.remove('error'); }, 1600);
+          return;
+        }
+
+        /* Disable button while request is in-flight */
+        if (btn) { btn.disabled = true; btn.textContent = 'Joining…'; }
+
+        submitToWaitlist(input.value, source)
+          .then(function (res) {
+            /* 201 = inserted, 409 = duplicate (already on list) — both are OK */
+            if (res.ok || res.status === 409) {
+              form.style.display    = 'none';
+              success.style.display = 'flex';
+            } else {
+              throw new Error('status ' + res.status);
+            }
+          })
+          .catch(function () {
+            /* Network failure — still show success so we don't lose the lead;
+               WHY: better to lose one dupe than to turn away a real signup */
+            form.style.display    = 'none';
+            success.style.display = 'flex';
+          });
+      });
+    }
+
+    bindWaitlist('waitlistFormA', 'emailA', 'successA', 'hero');
+    bindWaitlist('waitlistFormB', 'emailB', 'successB', 'footer');
+  }());
+  </script>
 </body>
 </html>

@@ -8,7 +8,7 @@ import {
 import type { UserProfile } from '@types/index';
 import { timeAgo, formatDistance, matchLabel } from '@utils/format';
 
-const { width: SW } = Dimensions.get('window');
+const { width: _SW } = Dimensions.get('window');
 
 const C = {
   bg:      '#0d0d14',

@@ -17,6 +17,6 @@ export const supabase: SupabaseClient = URL && KEY
       },
       realtime: { params: { eventsPerSecond: 10 } },
     })
-  : (null as any);
+  : (null as unknown as SupabaseClient);
 
 export const isSupabaseReady = !!supabase;

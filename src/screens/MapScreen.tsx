@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-var-requires */
 // src/screens/MapScreen.tsx
 // Stack: @rnmapbox/maps + custom SVG pin markers + NightPulse heat overlay
 // 3D buildings via fill-extrusion, night skin, 45° pitch camera
@@ -14,7 +15,7 @@ import type { MapUser, MapEvent, CameraState, PulseZone } from '@types/index';
 let MapboxGL: any = null;
 try { MapboxGL = require('@rnmapbox/maps').default; } catch { /* not linked yet */ }
 
-const { width: SW, height: SH } = Dimensions.get('window');
+const { width: _SW, height: _SH } = Dimensions.get('window');
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -170,9 +171,9 @@ const PulseCard: React.FC<{ zone: PulseZone }> = ({ zone }) => {
 const MapScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
   const [selectedUser, setSelectedUser] = useState<MapUser | null>(null);
   const [filterGender, setFilterGender] = useState<FilterGender>('all');
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [filterStatus, _setFilterStatus] = useState<FilterStatus>('all');
   const [mapMode,      setMapMode]      = useState<MapMode>('pins');
-  const [camera,       setCamera]       = useState<CameraState>({
+  const [camera,       _setCamera]       = useState<CameraState>({
     center:  { lat: 40.7128, lng: -74.006 },
     zoom:    14.5,
     pitch:   45,

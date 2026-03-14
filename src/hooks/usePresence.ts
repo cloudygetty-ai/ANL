@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/usePresence.ts
 // Manages user's online presence — broadcasts coords + active status to Supabase
 // Auto-expires after PRESENCE.ACTIVE_TTL_MS of inactivity

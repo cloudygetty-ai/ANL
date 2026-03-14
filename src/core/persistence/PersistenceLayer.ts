@@ -44,12 +44,18 @@ export class PersistenceLayer {
     await AsyncStorage.removeItem(SNAPSHOT_KEY);
   }
 
-  /** Autosave is handled via registered TaskQueue task — these methods kept for flexibility */
-  startAutosave(getState: () => { systemState: SystemState; health: HealthMetrics }): void {
-    if (this.autosaveTimer) return;
+  /** Start autosave interval. Accepts separate state/health accessors for flexibility. */
+  startAutosave(
+    getState:  () => SystemState,
+    getHealth: () => HealthMetrics,
+  ): void {
+    // WHY: cancel any running interval before starting a new one — idempotent start
+    if (this.autosaveTimer) {
+      clearInterval(this.autosaveTimer);
+      this.autosaveTimer = null;
+    }
     this.autosaveTimer = setInterval(async () => {
-      const { systemState, health } = getState();
-      await this.save(systemState, health).catch(console.warn);
+      await this.save(getState(), getHealth()).catch(console.warn);
     }, this.intervalMs);
   }
 

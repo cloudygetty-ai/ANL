@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // screens/PaywallScreen.tsx
 import React, { useState } from 'react';
 import {
@@ -5,11 +6,10 @@ import {
   StyleSheet, Dimensions, ActivityIndicator, Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useSubscription } from '../hooks/useSubscription';
 
-const { width } = Dimensions.get('window');
+const { width: _width } = Dimensions.get('window');
 
 const TIERS = [
   {
@@ -96,7 +96,7 @@ export default function PaywallScreen({ navigation, route }: any) {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Tier Cards */}
         {TIERS.map((tier) => {
-          const isSelected = selected === tier.id || tier.id === 'free';
+          const _isSelected = selected === tier.id || tier.id === 'free';
           const isSelectable = tier.id !== 'free';
 
           return (

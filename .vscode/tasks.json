@@ -1,0 +1,61 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🌙 Start ANL (Expo Tunnel)",
+      "type": "shell",
+      "command": "npx expo start --tunnel",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🖥️ Start Backend",
+      "type": "shell",
+      "command": "cd backend && npm run dev",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "📡 Start WebRTC Server",
+      "type": "shell",
+      "command": "cd backend && node webrtc/server.js",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🚀 Start Everything",
+      "dependsOn": [
+        "🖥️ Start Backend",
+        "📡 Start WebRTC Server",
+        "🌙 Start ANL (Expo Tunnel)"
+      ],
+      "dependsOrder": "parallel",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "🗄️ Run DB Migrations",
+      "type": "shell",
+      "command": "psql $DATABASE_URL -f backend/db/migrations/003_completion.sql && psql $DATABASE_URL -f backend/db/migrations/004_admin.sql && psql $DATABASE_URL -f backend/db/migrations/005_patent_features.sql",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

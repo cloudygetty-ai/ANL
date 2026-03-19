@@ -2,75 +2,190 @@
 
 > Dark. Late-night. Location-based. Real connections, no noise.
 
-## What This Is
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/cloudygetty-ai/ANL)
 
-ANL is a React Native / Expo app with two layers:
+---
 
-1. **Continuous Operation Engine** — autonomous background system (EventLoop, TaskQueue, HealthMonitor, PersistenceLayer, BackgroundService)
-2. **Late-Night Dating App** — proximity-based map UI with gender-specific SVG pin system, real-time chat, and matching
+## Overview
+
+ANL is a full-stack React Native dating app built for the night. Proximity-based discovery, real-time chat, WebRTC video calling, AI relationship intelligence, and five patent-pending matching technologies — all wrapped in a dark purple aesthetic built for late-night use.
 
 ---
 
 ## Stack
 
-| Layer       | Choice                          |
-|-------------|---------------------------------|
-| Framework   | React Native 0.73 + Expo ~50    |
-| Language    | TypeScript 5.3 (strict)         |
-| State       | Zustand                         |
-| Navigation  | React Navigation 6 (bottom tabs)|
-| Persistence | AsyncStorage                    |
-| Background  | react-native-background-fetch   |
-| CI          | GitHub Actions                  |
+| Layer | Choice |
+|---|---|
+| Frontend | React Native + Expo 51 |
+| Language | TypeScript 5.3 (strict) |
+| State | Zustand |
+| Navigation | React Navigation 6 |
+| Backend | Node.js + Express + Socket.io |
+| Database | PostgreSQL 14 + PostGIS |
+| Auth | JWT + AsyncStorage |
+| Payments | Stripe (Free / Plus $9.99 / Premium $24.99) |
+| Media | AWS S3 + CloudFront |
+| Video | WebRTC (react-native-webrtc) |
+| Push | Firebase Cloud Messaging + Expo Notifications |
+| Maps | Mapbox + PostGIS |
 
 ---
 
-## Structure
+## Features
+
+### Core
+- Swipe-based discovery with weighted matching engine
+- Real-time chat with typing indicators + read receipts
+- WebRTC video & audio calling
+- NightPulse heatmap — live venue activity visualization
+- Gender-specific SVG map pins with smart routing logic
+- AI intelligence layer — conversation coaching, compatibility scoring, date ideas
+
+### Monetization
+- Stripe subscription paywall (Free / Plus / Premium)
+- Profile boosts ($4.99 one-time)
+- Feature gating via `useGate()` hook
+
+### Safety
+- Photo moderation — Sightengine + AWS Rekognition
+- Face verification
+- User reports + admin review queue
+- Block / report system
+
+### Patent-Pending Features
+| Feature | Description |
+|---|---|
+| **Circadian Compatibility** | Passive activity time profiling → chronotype matching score |
+| **Venue-Anchored Matching** | Dwell-time gated mutual presence detection at venues |
+| **Voice Tone Chemistry** | Acoustic feature extraction → real-time chemistry score during calls |
+| **Cryptographic Reveal** | AES-256-GCM encrypted profiles, revealed only on mutual consent via split-key protocol |
+| **Social Graph Exclusion** | Multi-signal proximity detection filters real-world contacts from discovery |
+
+---
+
+## Project Structure
 
 ```
-src/
-├── App.tsx                    ← Root + bottom tab navigator
-├── core/                      ← Engine (EventLoop, TaskQueue, Persistence)
-├── services/
-│   ├── background/            ← iOS+Android background fetch abstraction
-│   ├── health/                ← HealthMonitor
-│   └── state/                 ← Zustand systemStore
-├── screens/
-│   ├── HomeScreen.tsx         ← System dashboard (dark neon UI)
-│   └── MapScreen.tsx          ← Proximity map + pin system
-└── types/                     ← Central type definitions
-
 ANL/
-├── screens/MapView.jsx        ← Web preview of full map UI
-└── components/pins/           ← SVG pin showcases (F, M, TM, TW variants)
+├── src/
+│   ├── App.tsx                     ← Root + StripeProvider + socket init
+│   ├── navigation/
+│   │   └── RootNavigator.tsx       ← All screens wired + tab badges
+│   ├── screens/
+│   │   ├── DiscoveryScreen.tsx
+│   │   ├── MatchesScreen.tsx
+│   │   ├── MapScreen.tsx           ← NightPulse heatmap
+│   │   ├── ChatScreen.tsx
+│   │   ├── VideoCallScreen.tsx     ← WebRTC
+│   │   ├── AIAssistantScreen.tsx
+│   │   ├── ProfileScreen.tsx
+│   │   ├── SettingsScreen.tsx
+│   │   ├── PaywallScreen.tsx       ← Stripe subscription
+│   │   ├── IncomingCallModal.tsx
+│   │   └── OnboardingScreen.tsx
+│   ├── hooks/
+│   │   ├── useSubscription.ts      ← Stripe payment sheet
+│   │   ├── useVideoCall.ts         ← WebRTC peer connection
+│   │   ├── usePhotoUpload.ts       ← S3 presigned upload
+│   │   ├── useGate.ts              ← Feature gating → paywall
+│   │   └── usePatentFeatures.ts   ← All 5 patent features
+│   └── services/
+│       └── pushNotifications.ts
+│
+├── backend/
+│   ├── server.js                   ← Express + Socket.io entry
+│   ├── routes/
+│   │   ├── auth.js
+│   │   ├── users.js                ← Contacts sync, reveal, push token
+│   │   ├── discovery.js            ← Feed, swipe, location, venue pulse
+│   │   ├── matches.js
+│   │   ├── chat.js
+│   │   ├── upload.js               ← S3 photo CRUD
+│   │   ├── stripe.js               ← Checkout, webhook, boost
+│   │   └── admin.js                ← Stats, moderation, reports
+│   ├── services/
+│   │   ├── circadian.js            ← Chronotype scoring
+│   │   ├── venueMatching.js        ← Dwell-time presence detection
+│   │   ├── voiceTone.js            ← Chemistry scoring
+│   │   ├── cryptoReveal.js         ← Encrypted profile reveal
+│   │   ├── socialGraphExclusion.js ← Contact exclusion engine
+│   │   ├── moderation.js           ← Photo moderation
+│   │   └── s3.js                   ← Upload service
+│   ├── socket/
+│   │   └── index.js                ← All real-time events
+│   ├── webrtc/
+│   │   └── server.js               ← Standalone signaling server
+│   └── db/
+│       └── migrations/
+│           ├── 003_completion.sql
+│           ├── 004_admin.sql
+│           └── 005_patent_features.sql
 ```
 
 ---
 
-## Setup
+## Quick Start
+
+### Option 1 — GitHub Codespaces (no laptop needed)
+
+Click the **Open in Codespaces** badge above. Everything installs automatically. Then:
+
+```bash
+npx expo start --tunnel
+```
+
+Scan the QR code with **Expo Go** on your phone.
+
+### Option 2 — Local
 
 ```bash
 npm install
 npx expo start
 ```
 
-Path aliases (`@core/*`, `@services/*`, etc.) work via `babel-plugin-module-resolver`.
+### Backend
+
+```bash
+cd backend
+cp .env.example .env   # fill in your keys
+npm install
+npm run dev
+```
+
+### Database
+
+```bash
+psql $DATABASE_URL -f backend/db/migrations/003_completion.sql
+psql $DATABASE_URL -f backend/db/migrations/004_admin.sql
+psql $DATABASE_URL -f backend/db/migrations/005_patent_features.sql
+```
 
 ---
 
-## Pin System
+## Environment Variables
 
-Gender-specific map pins with smart routing logic:
+See `.env.additions` in the root for the full list. Key variables:
 
-| Gender      | Default     | Selected      | 90%+ Match   | New       | Offline     |
-|-------------|-------------|---------------|--------------|-----------|-------------|
-| Women       | Classic Butt| Heart Drop    | Match Color  | Cartoon   | Minimal     |
-| Men         | Eggplant    | Eggplant Drop | Chest        | Skull     | Shield      |
-| Trans Women | Star        | Flag Drop     | Butterfly    | Lotus     | Crescent    |
-| Trans Men   | Mars        | Flag Drop     | Dragon       | Lightning | Warrior Shield |
+```env
+EXPO_PUBLIC_API_URL=
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+AWS_S3_BUCKET=
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+JWT_SECRET=
+DATABASE_URL=
+```
 
 ---
 
-## Architecture
+## Trademark
 
-See `CLAUDE.md` for full autonomous agent instructions and system design.
+ALLNIGHTLONG — USPTO trademark application pending, Classes 9 + 45.
+
+---
+
+## License
+
+Private. All rights reserved. © 2026 cloudygetty-ai.

@@ -8,6 +8,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const { registerSocket } = require('./socket/index');
+const { attachRedisAdapter } = require('./socket/adapter');
 
 // ─── ROUTES ───────────────────────────────────────────────────
 const authRouter      = require('./routes/auth');
@@ -17,6 +18,8 @@ const matchesRouter   = require('./routes/matches');
 const chatRouter      = require('./routes/chat');
 const uploadRouter    = require('./routes/upload');
 const adminRouter     = require('./routes/admin');
+const iceRouter       = require('./routes/ice');
+const pushRouter      = require('./routes/push');
 
 // Stripe webhook must receive raw body — mount BEFORE express.json()
 const stripeRouter    = require('./routes/stripe');
@@ -31,6 +34,7 @@ const io = new Server(httpServer, {
 });
 app.set('io', io); // Make io accessible in routes
 registerSocket(io);
+attachRedisAdapter(io);
 
 // ─── MIDDLEWARE ───────────────────────────────────────────────
 app.use(helmet());
@@ -66,6 +70,8 @@ app.use('/api/chat',      chatRouter);
 app.use('/api/upload',    uploadRouter);
 app.use('/api/stripe',    stripeRouter);
 app.use('/api/admin',     adminRouter);
+app.use('/api/ice',       iceRouter);
+app.use('/api/push',      pushRouter);
 
 // ─── HEALTH ───────────────────────────────────────────────────
 app.get('/health', (req, res) => {

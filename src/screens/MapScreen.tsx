@@ -1,338 +1,259 @@
 // src/screens/MapScreen.tsx
-// Stack: @rnmapbox/maps + custom SVG pin markers + NightPulse heat overlay
-// 3D buildings via fill-extrusion, night skin, 45° pitch camera
+// ANL NightPulse Map
+// Stack: @rnmapbox/maps + custom SVG pin markers + heatmap layer
+// 3D buildings via fill-extrusion, dark-v11 style, 45° pitch camera
+
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Animated, Easing, Dimensions, ScrollView,
+  Animated, Easing, Dimensions, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { MapUser, MapEvent, CameraState, PulseZone } from '@types/index';
+import { SvgXml } from 'react-native-svg';
 
-// ── Mapbox lazy import (native module) ────────────────────────────────────────
-// Wrapped so TypeScript compiles even before native linking
+// Mapbox lazy import — compiles before native linking
 let MapboxGL: any = null;
-try { MapboxGL = require('@rnmapbox/maps').default; } catch { /* not linked yet */ }
+try { MapboxGL = require('@rnmapbox/maps').default; } catch {}
 
-const { width: SW, height: SH } = Dimensions.get('window');
+const { width: SW } = Dimensions.get('window');
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
+// ── Tokens ────────────────────────────────────────────────────────
 const C = {
-  bg:        '#04040a',
-  surface:   '#0d0d14',
-  surfaceUp: '#14141f',
-  border:    'rgba(168,85,247,0.2)',
-  purple:    '#a855f7',
-  pink:      '#ec4899',
-  amber:     '#fbbf24',
-  cyan:      '#22d3ee',
-  green:     '#4ade80',
-  red:       '#f87171',
-  text:      '#f0eee8',
-  textDim:   'rgba(240,238,232,0.5)',
-  textMuted: 'rgba(240,238,232,0.22)',
-  femalePin: '#ff3c64',
-  malePin:   '#7c3aed',
-  twPin:     '#f7a8c4',
-  tmPin:     '#55cdfc',
+  bg:         '#04040a',
+  surface:    '#0d0d14',
+  surfaceUp:  '#14141f',
+  border:     'rgba(168,85,247,0.2)',
+  purple:     '#a855f7',
+  purpleDim:  'rgba(168,85,247,0.25)',
+  pink:       '#ec4899',
+  amber:      '#fbbf24',
+  green:      '#4ade80',
+  text:       '#f0eee8',
+  textDim:    'rgba(240,238,232,0.5)',
+  textMuted:  'rgba(240,238,232,0.22)',
+  femalePin:  '#f43f5e',
+  malePin:    '#7c3aed',
+  nbPin:      '#f59e0b',
+  twPin:      '#f7a8c4',
 };
 
-// ── Mapbox night style with 3D buildings ──────────────────────────────────────
-const MAPBOX_STYLE  = 'mapbox://styles/mapbox/dark-v11';
-const MAPBOX_TOKEN  = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '';
+const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '';
+const MAP_STYLE    = 'mapbox://styles/mapbox/dark-v11';
 
-// ── Mock data (replace with Supabase realtime query) ─────────────────────────
+// ── Types ─────────────────────────────────────────────────────────
+interface MapUser {
+  id: string;
+  name: string;
+  age: number;
+  gender: 'woman' | 'man' | 'nonbinary' | 'transwoman' | 'transman';
+  coords: { lat: number; lng: number };
+  online: boolean;
+  distanceMi: number;
+  compatibility: number; // 0–100
+  photos: string[];
+  bio: string;
+}
+
+interface MapEvent {
+  id: string;
+  name: string;
+  type: 'party' | 'bar' | 'concert' | 'popup';
+  coords: { lat: number; lng: number };
+  attendees: number;
+}
+
+interface PulseZone {
+  id: string;
+  coords: { lat: number; lng: number };
+  intensity: number; // 0–1
+}
+
+type MapMode = 'pins' | 'heat';
+type GenderFilter = 'all' | 'women' | 'men' | 'nonbinary';
+
+// ── Mock data ─────────────────────────────────────────────────────
 const MOCK_USERS: MapUser[] = [
-  { id:'1', name:'Mia',  age:24, gender:'f',  coords:{lat:40.7128,lng:-74.006},  online:true,  vibe:'Tonight only 🔥',   match:94, isNew:false, isTop:false },
-  { id:'2', name:'Jade', age:27, gender:'f',  coords:{lat:40.714, lng:-74.002},  online:true,  vibe:'Down for anything', match:88, isNew:false, isTop:false },
-  { id:'3', name:'Dre',  age:26, gender:'m',  coords:{lat:40.711, lng:-74.009},  online:true,  vibe:"What's good 👊",    match:89, isNew:false, isTop:true  },
-  { id:'4', name:'Luna', age:25, gender:'tw', coords:{lat:40.716, lng:-74.004},  online:true,  vibe:'Good energy only ✨',match:93, isNew:false, isTop:false },
-  { id:'5', name:'Kai',  age:23, gender:'tm', coords:{lat:40.710, lng:-74.013},  online:true,  vibe:'Free tonight',      match:72, isNew:true,  isTop:false },
-  { id:'6', name:'Nova', age:25, gender:'f',  coords:{lat:40.718, lng:-74.001},  online:true,  vibe:'No strings 😈',     match:91, isNew:false, isTop:false },
+  { id: '1', name: 'Jade',    age: 26, gender: 'woman',     coords: { lat: 40.7538, lng: -73.9840 }, online: true,  distanceMi: 0.3, compatibility: 91, photos: [], bio: 'Late night energy' },
+  { id: '2', name: 'Marcus',  age: 29, gender: 'man',       coords: { lat: 40.7520, lng: -73.9860 }, online: true,  distanceMi: 0.5, compatibility: 78, photos: [], bio: 'DJ / producer' },
+  { id: '3', name: 'Riley',   age: 24, gender: 'nonbinary', coords: { lat: 40.7555, lng: -73.9820 }, online: true,  distanceMi: 0.4, compatibility: 85, photos: [], bio: 'Art kid, night owl' },
+  { id: '4', name: 'Zara',    age: 28, gender: 'woman',     coords: { lat: 40.7510, lng: -73.9870 }, online: false, distanceMi: 0.7, compatibility: 72, photos: [], bio: 'Barista by day' },
+  { id: '5', name: 'Devon',   age: 31, gender: 'man',       coords: { lat: 40.7545, lng: -73.9800 }, online: true,  distanceMi: 0.9, compatibility: 67, photos: [], bio: 'Tech / coffee' },
+  { id: '6', name: 'Nova',    age: 23, gender: 'nonbinary', coords: { lat: 40.7560, lng: -73.9850 }, online: true,  distanceMi: 0.6, compatibility: 88, photos: [], bio: 'Fashion + nightlife' },
+  { id: '7', name: 'Simone',  age: 27, gender: 'woman',     coords: { lat: 40.7495, lng: -73.9835 }, online: false, distanceMi: 1.1, compatibility: 74, photos: [], bio: 'Writer, insomniac' },
+  { id: '8', name: 'Theo',    age: 25, gender: 'man',       coords: { lat: 40.7530, lng: -73.9815 }, online: true,  distanceMi: 0.8, compatibility: 82, photos: [], bio: 'Skater / photographer' },
 ];
 
 const MOCK_EVENTS: MapEvent[] = [
-  { id:'e1', name:'Late Night Rooftop', coords:{lat:40.7135,lng:-74.0055}, type:'party', count:34 },
-  { id:'e2', name:'Bar Night',          coords:{lat:40.7118,lng:-74.0072}, type:'bar',   count:18 },
+  { id: 'e1', name: 'Neon Rave',    type: 'party',   coords: { lat: 40.7548, lng: -73.9832 }, attendees: 214 },
+  { id: 'e2', name: 'Rooftop Bar',  type: 'bar',     coords: { lat: 40.7515, lng: -73.9856 }, attendees: 87 },
+  { id: 'e3', name: 'Late Set',     type: 'concert', coords: { lat: 40.7562, lng: -73.9808 }, attendees: 156 },
 ];
 
-const MOCK_PULSE: PulseZone[] = [
-  { id:'z1', name:'Lower East Side', center:{lat:40.715,lng:-73.988}, radiusM:600, intensity:.92, activeCount:47, trend:'peaking', peakHour:1, color:'#a855f7', updatedAt:Date.now() },
-  { id:'z2', name:'West Village',    center:{lat:40.734,lng:-74.005}, radiusM:500, intensity:.71, activeCount:31, trend:'rising',  peakHour:0, color:'#ec4899', updatedAt:Date.now() },
-  { id:'z3', name:'East Village',    center:{lat:40.727,lng:-73.985}, radiusM:550, intensity:.58, activeCount:22, trend:'rising',  peakHour:2, color:'#7c3aed', updatedAt:Date.now() },
+const MOCK_ZONES: PulseZone[] = [
+  { id: 'z1', coords: { lat: 40.7548, lng: -73.9832 }, intensity: 0.95 },
+  { id: 'z2', coords: { lat: 40.7520, lng: -73.9855 }, intensity: 0.70 },
+  { id: 'z3', coords: { lat: 40.7535, lng: -73.9810 }, intensity: 0.55 },
+  { id: 'z4', coords: { lat: 40.7505, lng: -73.9840 }, intensity: 0.40 },
+  { id: 'z5', coords: { lat: 40.7558, lng: -73.9845 }, intensity: 0.80 },
 ];
 
-// ── Pin color helper ──────────────────────────────────────────────────────────
-const pinColor = (u: MapUser) => {
-  if (u.gender === 'f')  return u.match >= 90 ? '#ff3c64' : u.match >= 75 ? '#ffa032' : '#ffcc44';
-  if (u.gender === 'm')  return u.match >= 90 ? '#7c3aed' : u.match >= 75 ? '#9333ea' : '#a855f7';
-  if (u.gender === 'tw') return u.match >= 90 ? '#f7a8c4' : '#55cdfc';
-  return '#55cdfc'; // tm / nb
-};
+// ── SVG pin generators ────────────────────────────────────────────
+function makePinSvg(color: string, emoji: string, selected = false): string {
+  const size  = selected ? 48 : 36;
+  const r     = size / 2;
+  const ring  = selected ? `<circle cx="${r}" cy="${r}" r="${r - 1}" fill="none" stroke="${color}" stroke-width="2" opacity="0.4"/>` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size + 8}">
+    ${ring}
+    <circle cx="${r}" cy="${r}" r="${r - 3}" fill="${color}" opacity="0.15"/>
+    <circle cx="${r}" cy="${r}" r="${r - 6}" fill="${color}"/>
+    <text x="${r}" y="${r + 5}" text-anchor="middle" font-size="${selected ? 16 : 13}">${emoji}</text>
+    <polygon points="${r - 5},${size - 3} ${r + 5},${size - 3} ${r},${size + 5}" fill="${color}"/>
+  </svg>`;
+}
 
-// ── Pin emoji helper ──────────────────────────────────────────────────────────
-const pinEmoji = (g: string) =>
-  g === 'f' ? '🍑' : g === 'm' ? '🍆' : g === 'tw' ? '🦋' : '⚡';
+function pinColor(g: MapUser['gender']): string {
+  return { woman: C.femalePin, man: C.malePin, nonbinary: C.nbPin, transwoman: C.twPin, transman: C.malePin }[g];
+}
+function pinEmoji(g: MapUser['gender']): string {
+  return { woman: '👩', man: '👨', nonbinary: '🧑', transwoman: '🏳️', transman: '🏳️' }[g];
+}
 
-// ── Filter types ──────────────────────────────────────────────────────────────
-type FilterGender = 'all' | 'f' | 'm' | 'tw' | 'tm';
-type FilterStatus = 'all' | 'online' | 'close';
-type MapMode     = 'pins' | 'pulse';
+function eventEmoji(t: MapEvent['type']): string {
+  return { party: '🎉', bar: '🍸', concert: '🎵', popup: '✨' }[t];
+}
 
-// ── User card component ───────────────────────────────────────────────────────
-const UserCard: React.FC<{ user: MapUser; onClose: () => void; onChat: () => void; onVideo: () => void }> = ({
-  user, onClose, onChat, onVideo,
-}) => {
-  const slide = useRef(new Animated.Value(300)).current;
-  useEffect(() => {
-    Animated.spring(slide, { toValue: 0, useNativeDriver: true, tension: 80, friction: 12 }).start();
-  }, []);
+// ── Heatmap GeoJSON ───────────────────────────────────────────────
+function buildHeatGeoJSON(zones: PulseZone[]) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: zones.map(z => ({
+      type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [z.coords.lng, z.coords.lat] },
+      properties: { intensity: z.intensity },
+    })),
+  };
+}
 
-  const col = pinColor(user);
-  const isTW = user.gender === 'tw' || user.gender === 'tm';
-
-  return (
-    <Animated.View style={[styles.card, { transform: [{ translateY: slide }] }]}>
-      {isTW && <View style={styles.transFlagStripe} />}
-      <View style={styles.cardHeader}>
-        <View style={[styles.cardAvatar, { borderColor: col, backgroundColor: `${col}22` }]}>
-          <Text style={styles.cardAvatarText}>{user.name[0]}</Text>
-          {user.online && <View style={[styles.cardOnlineDot, { backgroundColor: C.green }]} />}
-        </View>
-        <View style={{ flex: 1, marginLeft: 14 }}>
-          <Text style={styles.cardName}>{user.name}, {user.age}</Text>
-          <Text style={styles.cardVibe}>{user.vibe}</Text>
-          <Text style={[styles.cardGender, { color: col }]}>{pinEmoji(user.gender)} {user.gender.toUpperCase()}</Text>
-        </View>
-        <TouchableOpacity onPress={onClose} style={styles.cardClose}>
-          <Text style={styles.cardCloseText}>✕</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Match bar */}
-      <View style={styles.matchBarWrap}>
-        <Text style={styles.matchLabel}>MATCH</Text>
-        <View style={styles.matchTrack}>
-          <View style={[styles.matchFill, { width: `${user.match}%` as any, backgroundColor: col }]} />
-        </View>
-        <Text style={[styles.matchPct, { color: col }]}>{user.match}%</Text>
-      </View>
-
-      {/* Distance */}
-      <Text style={styles.cardDistance}>
-        📍 {((user.coords.lat - 40.7128) ** 2 + (user.coords.lng + 74.006) ** 2) < 1
-          ? '< 0.5 mi away' : '~1 mi away'}
-      </Text>
-
-      {/* Actions */}
-      <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.cardActionVibe}>
-          <Text style={styles.cardActionVibeText}>Send a Vibe {pinEmoji(user.gender)}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.cardActionIcon, { borderColor: C.cyan }]} onPress={onChat}>
-          <Text style={{ fontSize: 18 }}>💬</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.cardActionIcon, { borderColor: C.purple }]} onPress={onVideo}>
-          <Text style={{ fontSize: 18 }}>📹</Text>
-        </TouchableOpacity>
-      </View>
-    </Animated.View>
-  );
-};
-
-// ── Pulse zone card ───────────────────────────────────────────────────────────
-const PulseCard: React.FC<{ zone: PulseZone }> = ({ zone }) => {
-  const pulse = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1.06, duration: 1200, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 1,    duration: 1200, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, []);
-
-  const trendIcon = zone.trend === 'peaking' ? '🔥' : zone.trend === 'rising' ? '📈' : '📉';
-
-  return (
-    <View style={[styles.pulseCard, { borderColor: `${zone.color}44` }]}>
-      <Animated.View style={[styles.pulseCardGlow, { backgroundColor: `${zone.color}22`, transform: [{ scale: pulse }] }]} />
-      <Text style={[styles.pulseCardName, { color: zone.color }]}>{zone.name}</Text>
-      <Text style={styles.pulseCardCount}>{zone.activeCount} out {trendIcon}</Text>
-      <View style={styles.pulseBarTrack}>
-        <View style={[styles.pulseBarFill, { width: `${zone.intensity * 100}%` as any, backgroundColor: zone.color }]} />
-      </View>
-    </View>
-  );
-};
-
-// ── Main MapScreen ────────────────────────────────────────────────────────────
-const MapScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
-  const [selectedUser, setSelectedUser] = useState<MapUser | null>(null);
-  const [filterGender, setFilterGender] = useState<FilterGender>('all');
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+// ── Component ─────────────────────────────────────────────────────
+export default function MapScreen() {
   const [mapMode,      setMapMode]      = useState<MapMode>('pins');
-  const [camera,       setCamera]       = useState<CameraState>({
-    center:  { lat: 40.7128, lng: -74.006 },
-    zoom:    14.5,
-    pitch:   45,
-    bearing: -15,
-  });
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
+  const [selectedUser, setSelectedUser] = useState<MapUser | null>(null);
+  const [onlineOnly,   setOnlineOnly]   = useState(false);
 
-  const cameraRef  = useRef<any>(null);
-  const pulseAnim  = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+  const cardAnim  = useRef(new Animated.Value(0)).current;
 
-  // Pulse mode entrance
+  // Pulse ring animation
   useEffect(() => {
-    if (mapMode === 'pulse') {
-      Animated.timing(pulseAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-    } else {
-      Animated.timing(pulseAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
-    }
-  }, [mapMode]);
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  // Card slide-in
+  useEffect(() => {
+    Animated.spring(cardAnim, {
+      toValue: selectedUser ? 1 : 0,
+      useNativeDriver: true,
+      tension: 80,
+      friction: 12,
+    }).start();
+  }, [selectedUser]);
 
   const filteredUsers = MOCK_USERS.filter(u => {
-    if (filterGender !== 'all' && u.gender !== filterGender) return false;
-    if (filterStatus === 'online' && !u.online) return false;
+    if (onlineOnly && !u.online) return false;
+    if (genderFilter === 'women'    && u.gender !== 'woman')     return false;
+    if (genderFilter === 'men'      && u.gender !== 'man')       return false;
+    if (genderFilter === 'nonbinary' && u.gender !== 'nonbinary') return false;
     return true;
   });
 
-  const handlePinPress = useCallback((user: MapUser) => {
-    setSelectedUser(user);
-    cameraRef.current?.setCamera({
-      centerCoordinate: [user.coords.lng, user.coords.lat],
-      zoomLevel: 15.5,
-      pitch: 50,
-      animationDuration: 600,
-    });
+  const handlePinPress = useCallback((u: MapUser) => {
+    setSelectedUser(prev => prev?.id === u.id ? null : u);
   }, []);
 
-  // ── Render Mapbox or fallback ─────────────────────────────────────────────
-  const renderMap = () => {
-    if (!MapboxGL) {
-      // Fallback dark map canvas until @rnmapbox/maps is linked
-      return (
-        <View style={styles.mapFallback}>
-          <View style={styles.mapFallbackGrid} />
-          {/* Simulated distance rings */}
-          {[100, 200, 300].map(r => (
-            <View key={r} style={[styles.ring, { width: r*2, height: r*2, borderRadius: r, marginLeft: -r, marginTop: -r }]} />
-          ))}
-          {/* You dot */}
-          <View style={styles.youDot} />
-          <View style={styles.youGlow} />
-          {/* Simulated pins */}
-          {filteredUsers.map((u, i) => {
-            const angle = (i / filteredUsers.length) * Math.PI * 2;
-            const dist  = 60 + (i * 30) % 120;
-            const x     = Math.cos(angle) * dist;
-            const y     = Math.sin(angle) * dist;
-            const col   = pinColor(u);
-            return (
-              <TouchableOpacity
-                key={u.id}
-                style={[styles.simPin, { transform: [{ translateX: x }, { translateY: y }] }]}
-                onPress={() => handlePinPress(u)}
-              >
-                <View style={[styles.simPinDot, { backgroundColor: col, borderColor: `${col}66` }]}>
-                  <Text style={{ fontSize: 11 }}>{pinEmoji(u.gender)}</Text>
-                </View>
-                {u.online && <View style={[styles.simPinOnline, { backgroundColor: C.green }]} />}
-                {mapMode === 'pins' && (
-                  <Text style={[styles.simPinName, { color: col }]}>{u.name}</Text>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-          {/* Night Pulse zones */}
-          {mapMode === 'pulse' && MOCK_PULSE.map((z, i) => {
-            const angle = (i / MOCK_PULSE.length) * Math.PI * 2 + 0.5;
-            const dist  = 100 + i * 40;
-            return (
-              <Animated.View
-                key={z.id}
-                style={[
-                  styles.pulseBlob,
-                  {
-                    width:  z.radiusM * 0.4,
-                    height: z.radiusM * 0.4,
-                    borderRadius: z.radiusM * 0.2,
-                    backgroundColor: `${z.color}`,
-                    transform: [
-                      { translateX: Math.cos(angle) * dist },
-                      { translateY: Math.sin(angle) * dist },
-                    ],
-                    opacity: pulseAnim.interpolate({ inputRange:[0,1], outputRange:[0, z.intensity * 0.45] }),
-                  },
-                ]}
-              />
-            );
-          })}
-          <Text style={styles.mapNote}>Install @rnmapbox/maps for 3D city view</Text>
-        </View>
-      );
-    }
+  const heatGeoJSON = buildHeatGeoJSON(MOCK_ZONES);
 
-    // ── Full Mapbox 3D implementation ────────────────────────────────────────
-    MapboxGL.setAccessToken(MAPBOX_TOKEN);
+  const pulseScale   = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.8] });
+  const pulseOpacity = pulseAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.6, 0.3, 0] });
+  const cardTranslateY = cardAnim.interpolate({ inputRange: [0, 1], outputRange: [200, 0] });
+
+  // ── Fallback UI when Mapbox not linked ─────────────────────────
+  if (!MapboxGL) {
     return (
+      <View style={[styles.root, { justifyContent: 'center', alignItems: 'center', gap: 12 }]}>
+        <Text style={{ color: C.purple, fontSize: 32 }}>🗺</Text>
+        <Text style={[styles.labelBold, { textAlign: 'center' }]}>Mapbox not linked</Text>
+        <Text style={[styles.textDim, { textAlign: 'center', maxWidth: 260 }]}>
+          Run: npx expo install @rnmapbox/maps{'\n'}then set EXPO_PUBLIC_MAPBOX_TOKEN in .env
+        </Text>
+      </View>
+    );
+  }
+
+  MapboxGL.setAccessToken(MAPBOX_TOKEN);
+
+  return (
+    <View style={styles.root}>
+      {/* ── Map ───────────────────────────────────────────────── */}
       <MapboxGL.MapView
-        style={{ flex: 1 }}
-        styleURL={MAPBOX_STYLE}
-        logoEnabled={false}
+        style={StyleSheet.absoluteFill}
+        styleURL={MAP_STYLE}
         compassEnabled={false}
+        logoEnabled={false}
         attributionEnabled={false}
         onPress={() => setSelectedUser(null)}
       >
         <MapboxGL.Camera
-          ref={cameraRef}
-          centerCoordinate={[camera.center.lng, camera.center.lat]}
-          zoomLevel={camera.zoom}
-          pitch={camera.pitch}
-          bearing={camera.bearing}
-          animationMode="flyTo"
-          animationDuration={800}
+          centerCoordinate={[-73.9840, 40.7530]}
+          zoomLevel={14.5}
+          pitch={45}
+          heading={0}
+          animationDuration={0}
         />
 
-        {/* 3D Buildings layer */}
+        {/* 3D buildings */}
         <MapboxGL.FillExtrusionLayer
-          id="3d-buildings"
+          id="buildings-3d"
           sourceLayerID="building"
-          filter={['==', 'extrude', 'true']}
-          minZoomLevel={12}
+          sourceID="composite"
           style={{
-            fillExtrusionColor: [
-              'interpolate', ['linear'], ['get', 'height'],
-              0,   '#0d0d14',
-              50,  '#13131e',
-              100, '#1a1a2e',
-              200, '#16213e',
-            ],
-            fillExtrusionHeight:    ['get', 'height'],
-            fillExtrusionBase:      ['get', 'min_height'],
-            fillExtrusionOpacity:   0.85,
+            fillExtrusionColor:   '#1a0a2e',
+            fillExtrusionHeight:  ['get', 'height'],
+            fillExtrusionBase:    ['get', 'min_height'],
+            fillExtrusionOpacity: 0.85,
           }}
         />
 
-        {/* Heat layer for NightPulse mode */}
-        {mapMode === 'pulse' && (
-          <MapboxGL.HeatmapLayer
-            id="nightpulse-heat"
-            sourceID="pulse-source"
-            style={{
-              heatmapRadius:    60,
-              heatmapOpacity:   0.7,
-              heatmapIntensity: 1.2,
-              heatmapColor: [
-                'interpolate', ['linear'], ['heatmap-density'],
-                0,    'rgba(168,85,247,0)',
-                0.2,  'rgba(168,85,247,0.4)',
-                0.5,  'rgba(236,72,153,0.7)',
-                0.8,  'rgba(251,191,36,0.85)',
-                1,    'rgba(255,255,255,0.9)',
-              ],
-            }}
-          />
+        {/* NightPulse heatmap layer */}
+        {mapMode === 'heat' && (
+          <>
+            <MapboxGL.ShapeSource id="pulse-source" shape={heatGeoJSON}>
+              <MapboxGL.HeatmapLayer
+                id="nightpulse-heat"
+                sourceID="pulse-source"
+                style={{
+                  heatmapRadius:    70,
+                  heatmapOpacity:   0.75,
+                  heatmapIntensity: 1.4,
+                  heatmapWeight: ['interpolate', ['linear'], ['get', 'intensity'], 0, 0, 1, 1],
+                  heatmapColor: [
+                    'interpolate', ['linear'], ['heatmap-density'],
+                    0,    'rgba(168,85,247,0)',
+                    0.15, 'rgba(168,85,247,0.35)',
+                    0.35, 'rgba(139,92,246,0.55)',
+                    0.6,  'rgba(236,72,153,0.75)',
+                    0.8,  'rgba(251,191,36,0.88)',
+                    1,    'rgba(255,255,255,0.95)',
+                  ],
+                }}
+              />
+            </MapboxGL.ShapeSource>
+          </>
         )}
 
         {/* User pins */}
@@ -340,182 +261,217 @@ const MapScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
           <MapboxGL.MarkerView
             key={u.id}
             coordinate={[u.coords.lng, u.coords.lat]}
+            anchor={{ x: 0.5, y: 1 }}
           >
-            <TouchableOpacity onPress={() => handlePinPress(u)} style={{ alignItems: 'center' }}>
-              <View style={[
-                styles.mbPin,
-                { backgroundColor: pinColor(u), borderColor: `${pinColor(u)}88` },
-                selectedUser?.id === u.id && styles.mbPinSelected,
-              ]}>
-                <Text style={{ fontSize: 12 }}>{pinEmoji(u.gender)}</Text>
-              </View>
-              {u.online && <View style={[styles.mbPinOnline, { backgroundColor: C.green }]} />}
-              {selectedUser?.id === u.id && (
-                <Text style={[styles.mbPinLabel, { color: pinColor(u) }]}>{u.name}</Text>
+            <TouchableOpacity
+              onPress={() => handlePinPress(u)}
+              activeOpacity={0.85}
+              style={styles.pinContainer}
+            >
+              {u.online && selectedUser?.id === u.id && (
+                <Animated.View style={[
+                  styles.pulseRing,
+                  { borderColor: pinColor(u.gender), transform: [{ scale: pulseScale }], opacity: pulseOpacity },
+                ]} />
+              )}
+              <SvgXml
+                xml={makePinSvg(pinColor(u.gender), pinEmoji(u.gender), selectedUser?.id === u.id)}
+                width={selectedUser?.id === u.id ? 48 : 36}
+                height={selectedUser?.id === u.id ? 56 : 44}
+              />
+              {u.online && (
+                <View style={[styles.onlineDot, { backgroundColor: C.green }]} />
               )}
             </TouchableOpacity>
           </MapboxGL.MarkerView>
         ))}
 
-        {/* Event markers */}
+        {/* Event pins */}
         {MOCK_EVENTS.map(ev => (
           <MapboxGL.MarkerView
             key={ev.id}
             coordinate={[ev.coords.lng, ev.coords.lat]}
+            anchor={{ x: 0.5, y: 1 }}
           >
-            <View style={styles.eventPin}>
-              <Text style={{ fontSize: 14 }}>{ev.type === 'party' ? '🎉' : '🍸'}</Text>
-              <Text style={styles.eventCount}>{ev.count}</Text>
-            </View>
+            <TouchableOpacity activeOpacity={0.85}>
+              <View style={styles.eventPin}>
+                <Text style={{ fontSize: 12 }}>{eventEmoji(ev.type)}</Text>
+                <Text style={styles.eventPinText}>{ev.attendees}</Text>
+              </View>
+            </TouchableOpacity>
           </MapboxGL.MarkerView>
         ))}
       </MapboxGL.MapView>
-    );
-  };
 
-  return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.brand}>ALL<Text style={{ color: C.amber }}>NIGHT</Text>LONG</Text>
-          <Text style={styles.sub}>🌙 {filteredUsers.filter(u => u.online).length} ACTIVE NEARBY</Text>
-        </View>
-        {/* Mode toggle */}
-        <View style={styles.modeToggle}>
+      {/* ── HUD overlay ──────────────────────────────────────── */}
+      <SafeAreaView style={styles.hud} pointerEvents="box-none">
+
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.wordmark}>ALL<Text style={{ color: C.purple }}>NIGHT</Text>LONG</Text>
+            <Text style={styles.subline}>
+              {filteredUsers.filter(u => u.online).length} active nearby
+            </Text>
+          </View>
           <TouchableOpacity
-            style={[styles.modeBtn, mapMode === 'pins' && styles.modeBtnActive]}
-            onPress={() => setMapMode('pins')}
+            style={[styles.modePill, mapMode === 'heat' && styles.modePillActive]}
+            onPress={() => setMapMode(m => m === 'pins' ? 'heat' : 'pins')}
           >
-            <Text style={[styles.modeBtnText, mapMode === 'pins' && { color: C.text }]}>PINS</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modeBtn, mapMode === 'pulse' && { ...styles.modeBtnActive, borderColor: C.purple }]}
-            onPress={() => setMapMode('pulse')}
-          >
-            <Text style={[styles.modeBtnText, mapMode === 'pulse' && { color: C.purple }]}>⚡ PULSE</Text>
+            <Text style={[styles.modePillText, mapMode === 'heat' && { color: C.purple }]}>
+              {mapMode === 'heat' ? '🔥 NightPulse' : '📍 Pins'}
+            </Text>
           </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Map */}
-      <View style={styles.mapWrap}>
-        {renderMap()}
-      </View>
-
-      {/* Night Pulse zone cards */}
-      {mapMode === 'pulse' && (
-        <Animated.View style={[styles.pulseRow, { opacity: pulseAnim }]}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
-            {MOCK_PULSE.map(z => <PulseCard key={z.id} zone={z} />)}
-          </ScrollView>
-        </Animated.View>
-      )}
-
-      {/* Filter bar */}
-      {mapMode === 'pins' && (
-        <View style={styles.filterBar}>
-          {([['all','All'],['f','🍑'],['m','🍆'],['tw','🦋'],['tm','⚡']] as [FilterGender, string][]).map(([g, label]) => (
+        {/* Filter bar */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterBar}
+          contentContainerStyle={styles.filterBarContent}
+        >
+          {(['all', 'women', 'men', 'nonbinary'] as GenderFilter[]).map(f => (
             <TouchableOpacity
-              key={g}
-              style={[styles.filterPill, filterGender === g && styles.filterPillActive]}
-              onPress={() => setFilterGender(g)}
+              key={f}
+              style={[styles.filterPill, genderFilter === f && styles.filterPillActive]}
+              onPress={() => setGenderFilter(f)}
             >
-              <Text style={[styles.filterLabel, filterGender === g && { color: C.text }]}>{label}</Text>
+              <Text style={[styles.filterPillText, genderFilter === f && styles.filterPillTextActive]}>
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </Text>
             </TouchableOpacity>
           ))}
+          <TouchableOpacity
+            style={[styles.filterPill, onlineOnly && styles.filterPillActive]}
+            onPress={() => setOnlineOnly(v => !v)}
+          >
+            <Text style={[styles.filterPillText, onlineOnly && styles.filterPillTextActive]}>
+              Online only
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        {/* Spacer */}
+        <View style={{ flex: 1 }} pointerEvents="none" />
+
+        {/* Selected user card */}
+        <Animated.View
+          style={[styles.userCard, { transform: [{ translateY: cardTranslateY }] }]}
+          pointerEvents={selectedUser ? 'auto' : 'none'}
+        >
+          {selectedUser && (
+            <>
+              <View style={styles.cardRow}>
+                <View style={[styles.avatarCircle, { borderColor: pinColor(selectedUser.gender) }]}>
+                  <Text style={{ fontSize: 22 }}>{pinEmoji(selectedUser.gender)}</Text>
+                </View>
+                <View style={{ flex: 1, gap: 3 }}>
+                  <View style={styles.cardNameRow}>
+                    <Text style={styles.cardName}>{selectedUser.name}, {selectedUser.age}</Text>
+                    {selectedUser.online && (
+                      <View style={styles.onlineBadge}>
+                        <View style={[styles.onlineDotSmall, { backgroundColor: C.green }]} />
+                        <Text style={styles.onlineBadgeText}>online</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.cardBio} numberOfLines={1}>{selectedUser.bio}</Text>
+                  <Text style={styles.cardMeta}>
+                    {selectedUser.distanceMi} mi away · {selectedUser.compatibility}% match
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedUser(null)} style={styles.closeBtn}>
+                  <Text style={{ color: C.textDim, fontSize: 18 }}>×</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Compatibility bar */}
+              <View style={styles.compatBar}>
+                <View style={[styles.compatFill, {
+                  width: `${selectedUser.compatibility}%` as any,
+                  backgroundColor: selectedUser.compatibility >= 80 ? C.purple
+                    : selectedUser.compatibility >= 60 ? C.amber : C.pink,
+                }]} />
+              </View>
+
+              {/* Actions */}
+              <View style={styles.cardActions}>
+                <TouchableOpacity style={styles.actionBtnGhost}>
+                  <Text style={styles.actionBtnGhostText}>Skip</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.purple }]}>
+                  <Text style={styles.actionBtnText}>Like</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.pink }]}>
+                  <Text style={styles.actionBtnText}>Message</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </Animated.View>
+
+        {/* Pin legend */}
+        <View style={styles.legend}>
+          {[
+            { label: 'Women',    color: C.femalePin },
+            { label: 'Men',      color: C.malePin },
+            { label: 'Nonbinary', color: C.nbPin },
+          ].map(l => (
+            <View key={l.label} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: l.color }]} />
+              <Text style={styles.legendText}>{l.label}</Text>
+            </View>
+          ))}
         </View>
-      )}
-
-      {/* User card */}
-      {selectedUser && (
-        <UserCard
-          user={selectedUser}
-          onClose={() => setSelectedUser(null)}
-          onChat={() => navigation?.navigate('Chat', { userId: selectedUser.id, userName: selectedUser.name })}
-          onVideo={() => navigation?.navigate('Video', { userId: selectedUser.id, userName: selectedUser.name })}
-        />
-      )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
-};
+}
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: C.bg },
-  header:  { flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingHorizontal:20, paddingVertical:12 },
-  brand:   { fontSize:20, fontWeight:'900', color:C.text, letterSpacing:2 },
-  sub:     { fontSize:10, color:C.textMuted, letterSpacing:1, marginTop:2 },
-
-  modeToggle:    { flexDirection:'row', backgroundColor:C.surface, borderRadius:12, borderWidth:1, borderColor:C.border, overflow:'hidden' },
-  modeBtn:       { paddingHorizontal:12, paddingVertical:7 },
-  modeBtnActive: { backgroundColor:C.surfaceUp, borderWidth:1, borderColor:'rgba(255,255,255,0.12)', borderRadius:10 },
-  modeBtnText:   { fontSize:10, fontWeight:'700', letterSpacing:1.5, color:C.textMuted },
-
-  mapWrap:     { flex:1, position:'relative' },
-  mapFallback: { flex:1, backgroundColor:'#04040a', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' },
-  mapFallbackGrid: { position:'absolute', inset:0 },
-
-  ring:    { position:'absolute', top:'50%', left:'50%', borderWidth:1, borderColor:'rgba(255,255,255,0.05)' },
-  youDot:  { width:14, height:14, borderRadius:7, backgroundColor:C.amber, borderWidth:3, borderColor:'#fff', zIndex:10 },
-  youGlow: { position:'absolute', width:70, height:70, borderRadius:35, backgroundColor:'rgba(251,191,36,0.15)', top:'50%', left:'50%', marginLeft:-35, marginTop:-35 },
-
-  simPin:       { position:'absolute', alignItems:'center' },
-  simPinDot:    { width:36, height:36, borderRadius:18, alignItems:'center', justifyContent:'center', borderWidth:2 },
-  simPinOnline: { position:'absolute', top:0, right:0, width:10, height:10, borderRadius:5, borderWidth:2, borderColor:C.bg },
-  simPinName:   { fontSize:10, fontWeight:'700', marginTop:3, letterSpacing:0.3 },
-
-  pulseBlob: { position:'absolute', filter:'blur(20px)' } as any,
-  mapNote:   { position:'absolute', bottom:16, fontSize:11, color:C.textMuted, textAlign:'center' },
-
-  mbPin:         { width:34, height:34, borderRadius:17, alignItems:'center', justifyContent:'center', borderWidth:2 },
-  mbPinSelected: { transform:[{scale:1.3}], shadowColor:'#fff', shadowOpacity:.5, shadowRadius:8, elevation:8 },
-  mbPinOnline:   { position:'absolute', top:-1, right:-1, width:10, height:10, borderRadius:5, borderWidth:2, borderColor:C.bg },
-  mbPinLabel:    { fontSize:10, fontWeight:'800', marginTop:3 },
-  eventPin:      { backgroundColor:C.surfaceUp, borderRadius:10, padding:6, alignItems:'center', borderWidth:1, borderColor:C.border },
-  eventCount:    { fontSize:9, color:C.textDim, fontWeight:'700' },
-
-  // Filter
-  filterBar:       { flexDirection:'row', paddingHorizontal:16, paddingVertical:10, gap:8, justifyContent:'center', flexWrap:'wrap' },
-  filterPill:      { paddingHorizontal:14, paddingVertical:6, borderRadius:20, borderWidth:1, borderColor:'rgba(255,255,255,0.1)', backgroundColor:'rgba(255,255,255,0.03)' },
-  filterPillActive:{ borderColor:C.amber, backgroundColor:'rgba(251,191,36,0.1)' },
-  filterLabel:     { fontSize:11, fontWeight:'600', color:C.textMuted },
-
-  // Night Pulse row
-  pulseRow: { paddingVertical:10 },
-  pulseCard: { width:140, backgroundColor:C.surface, borderRadius:14, padding:12, borderWidth:1, overflow:'hidden' },
-  pulseCardGlow: { position:'absolute', inset:0, borderRadius:14 },
-  pulseCardName:  { fontSize:11, fontWeight:'800', letterSpacing:0.3, marginBottom:2 },
-  pulseCardCount: { fontSize:11, color:C.textDim, marginBottom:8 },
-  pulseBarTrack:  { height:3, backgroundColor:'rgba(255,255,255,0.08)', borderRadius:2 },
-  pulseBarFill:   { height:3, borderRadius:2 },
-
-  // User card
-  card:           { position:'absolute', bottom:0, left:0, right:0, backgroundColor:C.surface, borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, borderWidth:1, borderColor:C.border, borderBottomWidth:0 },
-  transFlagStripe:{ position:'absolute', top:0, left:0, right:0, height:3, borderTopLeftRadius:24, borderTopRightRadius:24, backgroundColor:'transparent',
-    // Trans flag gradient effect via multiple Views would need LinearGradient — stubbed
-  },
-  cardHeader:     { flexDirection:'row', alignItems:'center', marginBottom:16 },
-  cardAvatar:     { width:52, height:52, borderRadius:26, alignItems:'center', justifyContent:'center', borderWidth:2 },
-  cardAvatarText: { fontSize:22, fontWeight:'900', color:C.text },
-  cardOnlineDot:  { position:'absolute', bottom:1, right:1, width:12, height:12, borderRadius:6, borderWidth:2, borderColor:C.surface },
-  cardName:       { fontSize:18, fontWeight:'800', color:C.text },
-  cardVibe:       { fontSize:12, color:C.textDim, marginTop:2 },
-  cardGender:     { fontSize:11, fontWeight:'700', marginTop:3, letterSpacing:0.5 },
-  cardClose:      { width:32, height:32, borderRadius:16, backgroundColor:'rgba(255,255,255,0.06)', alignItems:'center', justifyContent:'center' },
-  cardCloseText:  { fontSize:12, color:C.textMuted },
-  cardDistance:   { fontSize:12, color:C.textMuted, marginBottom:14 },
-
-  matchBarWrap: { flexDirection:'row', alignItems:'center', marginBottom:8 },
-  matchLabel:   { fontSize:9, color:C.textMuted, fontWeight:'700', letterSpacing:1.5, width:40 },
-  matchTrack:   { flex:1, height:4, backgroundColor:'rgba(255,255,255,0.08)', borderRadius:2, marginHorizontal:10 },
-  matchFill:    { height:4, borderRadius:2 },
-  matchPct:     { fontSize:12, fontWeight:'800', width:36, textAlign:'right' },
-
-  cardActions:      { flexDirection:'row', gap:10, alignItems:'center' },
-  cardActionVibe:   { flex:1, backgroundColor:C.femalePin, borderRadius:14, paddingVertical:13, alignItems:'center' },
-  cardActionVibeText:{ fontSize:13, fontWeight:'800', color:'#fff', letterSpacing:0.3 },
-  cardActionIcon:   { width:48, height:48, borderRadius:14, borderWidth:1.5, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.04)' },
+  root:               { flex: 1, backgroundColor: C.bg },
+  hud:                { flex: 1 },
+  header:             { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  wordmark:           { fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', fontSize: 20, fontWeight: '700', color: C.text, letterSpacing: 2 },
+  subline:            { fontSize: 11, color: C.textDim, marginTop: 2, letterSpacing: 0.5 },
+  modePill:           { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
+  modePillActive:     { backgroundColor: 'rgba(168,85,247,0.12)', borderColor: 'rgba(168,85,247,0.4)' },
+  modePillText:       { fontSize: 12, color: C.textDim, fontWeight: '500' },
+  filterBar:          { maxHeight: 44 },
+  filterBarContent:   { paddingHorizontal: 16, gap: 8, flexDirection: 'row', alignItems: 'center' },
+  filterPill:         { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.05)' },
+  filterPillActive:   { backgroundColor: C.purpleDim, borderColor: C.purple },
+  filterPillText:     { fontSize: 12, color: C.textDim, fontWeight: '500' },
+  filterPillTextActive: { color: C.purple },
+  pinContainer:       { alignItems: 'center', justifyContent: 'center' },
+  pulseRing:          { position: 'absolute', width: 50, height: 50, borderRadius: 25, borderWidth: 1.5, zIndex: -1 },
+  onlineDot:          { position: 'absolute', bottom: 10, right: 0, width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: C.bg },
+  onlineDotSmall:     { width: 6, height: 6, borderRadius: 3 },
+  eventPin:           { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(244,63,94,0.9)', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 0.5, borderColor: 'rgba(244,63,94,0.6)' },
+  eventPinText:       { fontSize: 11, color: '#fff', fontWeight: '600' },
+  userCard:           { marginHorizontal: 12, marginBottom: 8, backgroundColor: C.surface, borderRadius: 20, borderWidth: 0.5, borderColor: C.border, padding: 16, gap: 12 },
+  cardRow:            { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatarCircle:       { width: 52, height: 52, borderRadius: 26, backgroundColor: C.surfaceUp, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  cardNameRow:        { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardName:           { fontSize: 17, fontWeight: '600', color: C.text },
+  cardBio:            { fontSize: 13, color: C.textDim },
+  cardMeta:           { fontSize: 12, color: C.textMuted },
+  onlineBadge:        { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(74,222,128,0.12)', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3 },
+  onlineBadgeText:    { fontSize: 11, color: C.green },
+  closeBtn:           { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  compatBar:          { height: 3, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' },
+  compatFill:         { height: '100%', borderRadius: 2 },
+  cardActions:        { flexDirection: 'row', gap: 8 },
+  actionBtnGhost:     { flex: 1, paddingVertical: 11, borderRadius: 12, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center' },
+  actionBtnGhostText: { fontSize: 14, color: C.textDim, fontWeight: '500' },
+  actionBtn:          { flex: 2, paddingVertical: 11, borderRadius: 12, alignItems: 'center' },
+  actionBtnText:      { fontSize: 14, color: '#fff', fontWeight: '600' },
+  legend:             { flexDirection: 'row', gap: 14, paddingHorizontal: 16, paddingBottom: 4, justifyContent: 'center' },
+  legendItem:         { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot:          { width: 7, height: 7, borderRadius: 3.5 },
+  legendText:         { fontSize: 11, color: C.textMuted },
+  labelBold:          { fontSize: 15, fontWeight: '600', color: C.text },
+  textDim:            { fontSize: 13, color: C.textDim, lineHeight: 20 },
 });
-
-export default MapScreen;

@@ -1,5 +1,85 @@
+# ── Node ──────────────────────────────────────────────────────────
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── Expo / React Native ───────────────────────────────────────────
 .expo/
 dist/
-*.log
+web-build/
+expo-env.d.ts
+
+# iOS
+ios/Pods/
+ios/build/
+*.xcworkspace
+DerivedData/
+*.ipa
+
+# Android
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+*.apk
+*.aab
+
+# ── Secrets (NEVER commit) ────────────────────────────────────────
 .env
+.env.local
+.env.production
+.env.staging
+*.pem
+*.key
+*.p8
+*.p12
+*.mobileprovision
+
+# Firebase — service account keys
+google-services.json
+GoogleService-Info.plist
+google-service-account.json
+firebase-adminsdk*.json
+
+# ── Build outputs ─────────────────────────────────────────────────
+build/
+out/
+.output/
+*.tgz
+coverage/
+
+# ── EAS ───────────────────────────────────────────────────────────
+# Keep eas.json (no secrets) but not credentials cache
+.eas/build/
+
+# ── OS ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── Editor ────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ── TypeScript ────────────────────────────────────────────────────
+*.tsbuildinfo
+
+# ── Backend specific ──────────────────────────────────────────────
+backend/.env
+backend/node_modules/
+backend/dist/
+uploads/
+logs/
+*.log
+
+# ── Certificates ──────────────────────────────────────────────────
+nginx/ssl/
+turn-server/certs/
+certbot/

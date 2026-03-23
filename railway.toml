@@ -1,17 +1,10 @@
-# railway.toml — ANL Backend
 [build]
 builder = "nixpacks"
+buildCommand = "cd backend && npm install"
 
 [deploy]
-startCommand = "node backend/server.js"
+startCommand = "cd backend && node server.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
-
-[[services]]
-name = "anl-api"
-
-[[services]]
-name = "anl-turn"
-startCommand = "docker build -t turn ./turn-server && docker run -p 3478:3478/udp -p 3478:3478/tcp -p 5349:5349/tcp turn"

@@ -5,6 +5,7 @@ import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, Animated, ScrollView,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '@services/auth';
@@ -23,6 +24,125 @@ const C = {
   textDim: 'rgba(240,238,232,0.5)',
   textMuted: 'rgba(240,238,232,0.2)',
 };
+
+// ── Night city background ────────────────────────────────────────────────────
+
+const SW = Dimensions.get('window').width;
+
+// Buildings ordered back-to-front so foreground layers render on top.
+// Coordinates: x = left edge, w = width, h = height from screen bottom.
+const BUILDINGS: { x: number; w: number; h: number; shade: string }[] = [
+  // Left cluster — deep background (tallest shapes set the skyline)
+  { x: 83,       w: 68, h: 220, shade: '#06060e' },
+  { x: 145,      w: 44, h: 155, shade: '#08080f' },
+  // Left cluster — mid-ground
+  { x: 0,        w: 55, h: 160, shade: '#09090f' },
+  { x: 183,      w: 36, h: 198, shade: '#07070e' },
+  // Left cluster — foreground (shorter, slightly lighter = closer)
+  { x: 50,       w: 36, h: 100, shade: '#0c0c16' },
+  // Right cluster — deep background
+  { x: SW - 165, w: 68, h: 234, shade: '#06060e' },
+  { x: SW - 209, w: 44, h: 165, shade: '#08080f' },
+  // Right cluster — mid-ground
+  { x: SW - 55,  w: 60, h: 180, shade: '#09090f' },
+  { x: SW - 209, w: 44, h: 165, shade: '#08080f' },
+  // Right cluster — foreground
+  { x: SW - 97,  w: 42, h: 142, shade: '#0b0b15' },
+];
+
+// Deterministic window glow — no randomness, result is stable across renders.
+// Hash spreads amber / blue / purple windows across the building face.
+function makeWindows(bIdx: number, bw: number, bh: number) {
+  const wins: { wx: number; wy: number; color: string }[] = [];
+  const rows  = Math.floor(bh / 30);
+  const cols  = bw >= 48 ? 2 : 1;
+  const colGap = bw >= 48 ? Math.floor(bw / 2) - 8 : 0;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const hash  = (bIdx * 17 + r * 7 + c * 5) % 13;
+      const color = hash < 2 ? 'rgba(251,191,36,0.20)'   // amber lit window
+                  : hash < 3 ? 'rgba(147,197,253,0.14)'  // cool blue
+                  : hash < 4 ? 'rgba(168,85,247,0.12)'   // purple
+                  : '';
+      if (color) {
+        wins.push({ wx: 8 + c * colGap, wy: 14 + r * 28, color });
+      }
+    }
+  }
+  return wins;
+}
+
+// Street lights: x = pole base, h = total pole height.
+const STREET_LIGHTS = [
+  { x: 78,      h: 142 },
+  { x: SW - 92, h: 128 },
+];
+
+// CityScape sits absolutely behind all other content. pointerEvents="none"
+// ensures it never intercepts taps on the form below.
+const CityScape: React.FC = () => (
+  <View style={StyleSheet.absoluteFill} pointerEvents="none">
+
+    {/* ── Buildings ── */}
+    {BUILDINGS.map((b, i) => (
+      <View
+        key={`b${i}`}
+        style={{ position: 'absolute', bottom: 0, left: b.x, width: b.w, height: b.h, backgroundColor: b.shade }}
+      >
+        {makeWindows(i, b.w, b.h).map((win, j) => (
+          <View
+            key={`w${j}`}
+            style={{
+              position: 'absolute',
+              left: win.wx, top: win.wy,
+              width: 7, height: 9, borderRadius: 1,
+              backgroundColor: win.color,
+            }}
+          />
+        ))}
+      </View>
+    ))}
+
+    {/* ── Street lights ── */}
+    {STREET_LIGHTS.map((sl, i) => (
+      <React.Fragment key={`sl${i}`}>
+        {/* Vertical pole */}
+        <View style={{
+          position: 'absolute', bottom: 0, left: sl.x + 1,
+          width: 2, height: sl.h,
+          backgroundColor: '#1e1a12',
+        }} />
+        {/* Horizontal arm extending right from pole top */}
+        <View style={{
+          position: 'absolute', bottom: sl.h - 2, left: sl.x + 1,
+          width: 20, height: 2,
+          backgroundColor: '#1e1a12',
+        }} />
+        {/* Amber bulb at arm tip */}
+        <View style={{
+          position: 'absolute', bottom: sl.h, left: sl.x + 16,
+          width: 8, height: 8, borderRadius: 4,
+          backgroundColor: '#fbbf24',
+          shadowColor: '#fbbf24', shadowOpacity: 0.9,
+          shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+          elevation: 8,
+        }} />
+        {/* Light cone — downward triangle below the bulb */}
+        <View style={{
+          position: 'absolute', bottom: sl.h - 22, left: sl.x + 10,
+          width: 0, height: 0,
+          borderLeftWidth: 11, borderRightWidth: 11, borderTopWidth: 24,
+          borderLeftColor: 'transparent', borderRightColor: 'transparent',
+          borderTopColor: 'rgba(251,191,36,0.07)',
+        }} />
+      </React.Fragment>
+    ))}
+
+  </View>
+);
+
+// ── Onboarding screen ────────────────────────────────────────────────────────
 
 type Step = 'phone' | 'verify' | 'profile' | 'vibe';
 type Gender = 'f' | 'm' | 'tw' | 'tm' | 'nb';
@@ -121,6 +241,8 @@ const OnboardingScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      {/* City skyline renders absolutely behind the form content */}
+      <CityScape />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
 

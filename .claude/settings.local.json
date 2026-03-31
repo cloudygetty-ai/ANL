@@ -1,7 +1,21 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -s http://localhost:3001/health)",
+      "Bash(node backend/server.js)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":3001\")",
+      "Bash(cmd /c \"taskkill /PID 37460 /F\")",
+      "Bash(cmd /c \"taskkill /F /PID 37460\")",
+      "Bash(cmd /c \"netstat -ano | findstr :3001\")",
+      "Bash(node server.js)",
+      "Bash(curl -s http://localhost:4083/health)",
+      "Bash(node -e \"require\\(''dotenv''\\).config\\(\\); console.log\\(''BUCKET:'', process.env.AWS_S3_BUCKET, ''STRIPE:'', process.env.STRIPE_SECRET_KEY\\)\")",
+      "Bash(npm install:*)",
+      "mcp__Windows-MCP__PowerShell"
     ]
   }
 }

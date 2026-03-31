@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Animated, Dimensions, ScrollView,
+  Animated, Dimensions, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { VideoService } from '@services/video/VideoService';
@@ -328,8 +328,5 @@ const styles = StyleSheet.create({
   endedTitle:    { fontSize:24, fontWeight:'900', color:C.text, letterSpacing:1 },
   endedDuration: { fontSize:16, color:C.textDim },
 });
-
-// Fix missing Platform import
-import { Platform } from 'react-native';
 
 export default VideoScreen;

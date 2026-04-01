@@ -11,7 +11,7 @@
     {
       "name": "expo-dev",
       "runtimeExecutable": "C:/Program Files/nodejs/node.exe",
-      "runtimeArgs": ["-e", "const h=require('http'),f=require('fs'),p=require('path');const port=process.env.PORT||8081;h.createServer((q,r)=>{const url=q.url||'/';const file=url==='/screens'?'screens.html':'index.html';const fp=p.join('public',file);if(!f.existsSync(fp)){r.writeHead(404);r.end('not found');return}r.writeHead(200,{'Content-Type':'text/html'});f.createReadStream(fp).pipe(r)}).listen(port,()=>console.log('ready on '+port))"],
+      "runtimeArgs": ["-e", "const h=require('http'),f=require('fs'),p=require('path');const port=process.env.PORT||8081;const base=process.cwd();h.createServer((q,r)=>{const url=(q.url||'/').split('?')[0];const file=url.startsWith('/screens')?'screens.html':'index.html';const fp=p.join(base,'public',file);console.log('req:',url,'->',fp);if(!f.existsSync(fp)){r.writeHead(404);r.end('not found: '+fp);return}r.writeHead(200,{'Content-Type':'text/html'});f.createReadStream(fp).pipe(r)}).listen(port,()=>console.log('ready on '+port+' cwd='+base))"],
       "port": 8081,
       "autoPort": true
     }

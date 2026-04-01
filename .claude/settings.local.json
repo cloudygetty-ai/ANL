@@ -15,7 +15,8 @@
       "Bash(curl -s http://localhost:4083/health)",
       "Bash(node -e \"require\\(''dotenv''\\).config\\(\\); console.log\\(''BUCKET:'', process.env.AWS_S3_BUCKET, ''STRIPE:'', process.env.STRIPE_SECRET_KEY\\)\")",
       "Bash(npm install:*)",
-      "mcp__Windows-MCP__PowerShell"
+      "mcp__Windows-MCP__PowerShell",
+      "Bash(gh auth:*)"
     ]
   }
 }

@@ -9,12 +9,16 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useUserStore } from '@services/state/userStore';
 import { authService } from '@services/auth';
 
-import OnboardingScreen from '@screens/OnboardingScreen';
-import MapScreen        from '@screens/MapScreen';
-import ChatScreen       from '@screens/ChatScreen';
-import VideoScreen      from '@screens/VideoScreen';
-import HomeScreen       from '@screens/HomeScreen';
-import ProfileScreen    from '@screens/ProfileScreen';
+import OnboardingScreen  from '@screens/OnboardingScreen';
+import MapScreen         from '@screens/MapScreen';
+import ChatScreen        from '@screens/ChatScreen';
+import VideoScreen       from '@screens/VideoScreen';
+import VideoFeedScreen   from '@screens/VideoFeedScreen';
+import HomeScreen        from '@screens/HomeScreen';
+import ProfileScreen     from '@screens/ProfileScreen';
+import VisitsScreen      from '@screens/VisitsScreen';
+import PremiumScreen     from '@screens/PremiumScreen';
+import SecurityScreen    from '@screens/SecurityScreen';
 
 // NightPulse tab (inline)
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -107,11 +111,12 @@ const MainTabs: React.FC = () => (
       tabBarLabelStyle:        { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
     }}
   >
-    <Tab.Screen name="Nearby"  component={MapScreen}    options={{ tabBarLabel: '🌐 Nearby'  }} />
-    <Tab.Screen name="Chat"    component={ChatScreen}   options={{ tabBarLabel: '💬 Chat'    }} />
-    <Tab.Screen name="Pulse"   component={PulseScreen}  options={{ tabBarLabel: '⚡ Pulse'   }} />
-    <Tab.Screen name="Video"   component={VideoScreen}  options={{ tabBarLabel: '📹 Video'   }} />
-    <Tab.Screen name="System"  component={HomeScreen}   options={{ tabBarLabel: '⚙️ System'  }} />
+    <Tab.Screen name="Nearby"  component={MapScreen}        options={{ tabBarLabel: '🌐 Nearby'   }} />
+    <Tab.Screen name="Chat"    component={ChatScreen}       options={{ tabBarLabel: '💬 Chat'     }} />
+    <Tab.Screen name="Pulse"   component={PulseScreen}      options={{ tabBarLabel: '⚡ Pulse'    }} />
+    <Tab.Screen name="Videos"  component={VideoFeedScreen}  options={{ tabBarLabel: '📹 Videos'   }} />
+    <Tab.Screen name="Visits"  component={VisitsScreen}     options={{ tabBarLabel: '👀 Visits'   }} />
+    <Tab.Screen name="System"  component={HomeScreen}       options={{ tabBarLabel: '⚙️ System'   }} />
   </Tab.Navigator>
 );
 
@@ -122,9 +127,11 @@ const RootStack: React.FC = () => {
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
       {isOnboarded ? (
         <>
-          <Stack.Screen name="Main"    component={MainTabs}      />
-          <Stack.Screen name="Profile" component={ProfileScreen} options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="Video"   component={VideoScreen}   options={{ animation: 'slide_from_bottom', presentation: 'fullScreenModal' }} />
+          <Stack.Screen name="Main"     component={MainTabs}       />
+          <Stack.Screen name="Profile"  component={ProfileScreen}  options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="Video"    component={VideoScreen}    options={{ animation: 'slide_from_bottom', presentation: 'fullScreenModal' }} />
+          <Stack.Screen name="Premium"  component={PremiumScreen}  options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
+          <Stack.Screen name="Security" component={SecurityScreen} options={{ animation: 'slide_from_right' }} />
         </>
       ) : (
         <Stack.Screen name="Onboarding" component={OnboardingScreen as any} />

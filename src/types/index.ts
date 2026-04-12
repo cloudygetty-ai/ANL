@@ -156,6 +156,68 @@ export interface VideoParticipant {
   isSpeaking:  boolean;
 }
 
+// ── Visits ────────────────────────────────────────────────────────────────────
+export interface Visit {
+  id:          string;
+  visitorId:   string;
+  visitorName: string;
+  visitorAge:  number;
+  visitorGender: Gender;
+  visitorPhotoUrl?: string;
+  visitedAt:   number;
+  isNew:       boolean;    // unseen since last check
+}
+
+// ── Subscription ──────────────────────────────────────────────────────────────
+export type SubscriptionTier = 'free' | 'premium' | 'premium_plus';
+
+export interface SubscriptionPlan {
+  id:          SubscriptionTier;
+  name:        string;
+  priceMonth:  number;         // USD cents
+  priceYear:   number;         // USD cents (annual)
+  features:    string[];
+  highlight:   boolean;        // featured/recommended plan
+  color:       string;
+}
+
+export interface UserSubscription {
+  tier:        SubscriptionTier;
+  expiresAt:   number | null;  // null = never (lifetime) or free
+  autoRenew:   boolean;
+  purchasedAt: number | null;
+  boostTokens: number;         // remaining boosts
+  boostActiveUntil: number | null;
+}
+
+// ── Security / Discreet ───────────────────────────────────────────────────────
+export interface DiscreetSettings {
+  enabled:           boolean;   // hide from map entirely
+  hiddenFromSearch:  boolean;   // don't appear in member lists
+  appearOffline:     boolean;   // show as offline even when active
+  requirePinToOpen:  boolean;   // app-lock pin
+  discreetIcon:      boolean;   // replace app icon with neutral icon
+  screenshotAlert:   boolean;   // alert me when someone screenshots
+}
+
+// ── Video Feed (short clips) ───────────────────────────────────────────────────
+export interface VideoPost {
+  id:           string;
+  authorId:     string;
+  authorName:   string;
+  authorAge:    number;
+  authorGender: Gender;
+  authorPhotoUrl?: string;
+  videoUrl:     string;
+  thumbnailUrl: string;
+  caption:      string;
+  likes:        number;
+  views:        number;
+  durationSec:  number;
+  createdAt:    number;
+  isLiked:      boolean;
+}
+
 // ── Night Pulse ───────────────────────────────────────────────────────────────
 export interface PulseZone {
   id:           string;

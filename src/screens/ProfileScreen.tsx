@@ -177,6 +177,24 @@ const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
           </View>
         </View>
 
+        {/* Quick links */}
+        <View style={styles.quickLinks}>
+          {[
+            { icon: '👀', label: 'Visits',   route: 'Visits'   },
+            { icon: '⭐', label: 'Premium',  route: 'Premium'  },
+            { icon: '🔒', label: 'Security', route: 'Security' },
+          ].map(({ icon, label, route }) => (
+            <TouchableOpacity
+              key={route}
+              style={styles.quickLink}
+              onPress={() => navigation?.navigate(route)}
+            >
+              <Text style={styles.quickLinkIcon}>{icon}</Text>
+              <Text style={styles.quickLinkLabel}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
           <GlowButton
             label={saving ? 'Saving...' : 'Save Changes'}
@@ -227,6 +245,11 @@ const styles = StyleSheet.create({
   statItem:  { alignItems: 'center' },
   statValue: { fontSize: 15, fontWeight: '800', color: C.text },
   statLabel: { fontSize: 10, color: C.textMuted, marginTop: 3, letterSpacing: 0.5 },
+
+  quickLinks:     { flexDirection: 'row', justifyContent: 'space-around', marginHorizontal: 20, marginBottom: 20 },
+  quickLink:      { flex: 1, alignItems: 'center', backgroundColor: C.surface, marginHorizontal: 4, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: C.border, gap: 6 },
+  quickLinkIcon:  { fontSize: 22 },
+  quickLinkLabel: { fontSize: 11, fontWeight: '700', color: C.textDim, letterSpacing: 0.5 },
 });
 
 export default ProfileScreen;

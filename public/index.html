@@ -4,6 +4,17 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>AllNightLong — Drop In. Link Up. Tonight.</title>
+<meta name="theme-color" content="#a855f7"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ANL"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+<link rel="icon" type="image/png" href="/icons/icon-192.png"/>
+<meta name="format-detection" content="telephone=no"/>
+<meta name="msapplication-config" content="/browserconfig.xml"/>
 <meta name="description" content="The late-night proximity app. See who's out right now, within walking distance. Early access dropping soon."/>
 <meta property="og:title" content="AllNightLong"/>
 <meta property="og:description" content="Drop in. Link up. Tonight."/>
@@ -609,6 +620,18 @@ function handleSubmit(){
 document.getElementById('emailInput').addEventListener('keydown',e=>{
   if(e.key==='Enter')handleSubmit();
 });
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then((r) => {
+      console.log('[SW] Registered:', r.scope);
+    }).catch((e) => {
+      console.warn('[SW] Registration failed:', e);
+    });
+  });
+}
 </script>
 </body>
 </html>

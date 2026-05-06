@@ -1,5 +1,16 @@
 // backend/server.js
 require('dotenv').config();
+
+// Sentry must init before anything else
+if (process.env.SENTRY_DSN) {
+  const Sentry = require('@sentry/node');
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
+    tracesSampleRate: 0.1,
+  });
+}
+
 const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
@@ -88,6 +99,11 @@ app.get('/health', (req, res) => {
     },
   });
 });
+
+if (process.env.SENTRY_DSN) {
+  const Sentry = require('@sentry/node');
+  app.use(Sentry.Handlers.errorHandler());
+}
 
 app.use((err, req, res, next) => {
   console.error('[error]', err.message);

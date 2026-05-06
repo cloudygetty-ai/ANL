@@ -6,11 +6,20 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
+import * as Sentry from '@sentry/react-native';
 
 import RootNavigator from './navigation/RootNavigator';
 import { useAuthStore } from './stores/authStore';
 import { useSocketStore } from './stores/socketStore';
 import { setupPushNotifications } from './services/pushNotifications';
+import { setApiToken } from './lib/api';
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  environment: process.env.EXPO_PUBLIC_ENV || 'development',
+  tracesSampleRate: 0.1,
+  enableNative: true,
+});
 
 LogBox.ignoreLogs(['Non-serializable values were found']);
 
@@ -23,7 +32,7 @@ Notifications.setNotificationHandler({
 });
 
 export default function App() {
-  const { user, restoreSession } = useAuthStore();
+  const { user, token, restoreSession } = useAuthStore();
   const { connect, disconnect } = useSocketStore();
 
   useEffect(() => {
@@ -32,10 +41,14 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
-      connect(user.token);
+      setApiToken(token);
+      connect(token!);
       setupPushNotifications(user.id);
+      Sentry.setUser({ id: user.id });
     } else {
+      setApiToken(null);
       disconnect();
+      Sentry.setUser(null);
     }
     return () => disconnect();
   }, [user?.id]);

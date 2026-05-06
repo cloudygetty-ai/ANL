@@ -1,6 +1,7 @@
 FROM node:20-alpine
 
-RUN apk add --no-cache curl
+# ffmpeg for voice sample decode (webm/opus → PCM for VCS engine)
+RUN apk add --no-cache curl ffmpeg
 
 WORKDIR /app/backend
 

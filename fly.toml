@@ -14,11 +14,20 @@ primary_region = "ewr"
   auto_stop_machines = true
   auto_start_machines = true
   min_machines_running = 1
+  sticky_sessions = true
 
   [http_service.concurrency]
     type = "connections"
     hard_limit = 500
     soft_limit = 400
+
+[[services.ports]]
+  port = 443
+  handlers = ["tls", "http"]
+
+[[services.ports]]
+  port = 80
+  handlers = ["http"]
 
 [[vm]]
   memory = "512mb"
@@ -28,7 +37,7 @@ primary_region = "ewr"
 [checks]
   [checks.health]
     grace_period = "10s"
-    interval = "30s"
+    interval = "15s"
     method = "GET"
     path = "/health"
     port = 3000

@@ -29,6 +29,30 @@ const COLORS    = [C.accent,"#a855f7","#f97316","#ec4899","#06b6d4","#eab308","#
 const FAKE_REPLIES = ["Come through 🔥","DM me your loc","👀","What u into?","Stats?","U host?","On my way 💦","Horny af rn","Yes daddy"];
 const CRUISING_STATUSES = ["Hosting now 🏠","In my car 🚗","Come find me 👀","Door's unlocked 🚪","Need it bad 💦","Cruising the park 🌲","Glory hole open 🕳","Group happening now 🔥","Wired and ready ⚡"];
 
+// ─── PROFILE FIELD OPTIONS ────────────────────────────────────────────────────
+const OPT = {
+  height:      ["4'10\"","4'11\"","5'0\"","5'1\"","5'2\"","5'3\"","5'4\"","5'5\"","5'6\"","5'7\"","5'8\"","5'9\"","5'10\"","5'11\"","6'0\"","6'1\"","6'2\"","6'3\"","6'4\"","6'5\"","6'6\"","6'7\"","6'8\""],
+  weight:      ["< 120 lbs","120–130","130–140","140–150","150–160","160–170","170–180","180–190","190–200","200–220","220–240","240–260","260+"],
+  endowment:   ["< 4\"","4\"","5\"","6\"","7\"","8\"","9\"","10\"","11\"","12\"+"],
+  bodyType:    ["Slim","Twink","Athletic","Fit","Average","Stocky","Bear","Muscular","Chubby","Jock","Otter"],
+  gender:      ["Man","Woman","Non-binary","Trans man","Trans woman","Genderqueer","Other"],
+  expression:  ["Masculine","Feminine","Androgynous","Discreet bro","Femme","Butch","Fluid"],
+  sexuality:   ["Gay","Bi","Straight","Queer","Pan","Curious","Fluid","Asexual"],
+  position:    ["Top","Bottom","Versatile","Vers top","Vers bottom","Side"],
+  hosting:     ["Hosting now","Can host","Not hosting","Travel only","Can travel, can host"],
+  intoPublic:  ["Arcades","Bars/clubs","Bathhouses","Beaches","Gyms","Parties/events","Cars","Outdoors","Parks","Restrooms","Truckstops","Saunas","Cruising areas"],
+  lookingFor:  ["Hookup","Relationship","Friends","Dating","Networking","NSA","Discreet","Anything"],
+  fetishes:    ["Ass","Feet","Leather","Uniforms","Rubber","Muscle","Hairy","Long hair","Tattoos","Piercings","Facial hair"],
+  kinks:       ["Bondage","Watersports","Fisting","Voyeur","Exhibitionist","Roleplay","BDSM","Sensory","Power exchange","Edging","CNC"],
+  intoActs:    ["Fucking","Rimming","Oral","Massage","JO","Mutual","Frottage","Kissing","Breeding","Snowballing"],
+  interaction: ["Cum and go","Flip/swap","Mild to wild","Slow and sensual","Rough","Group","Discreet","Friends first"],
+  practices:   ["Bareback","Condoms","Bareback or condoms","Depends on chemistry"],
+  hivStatus:   ["Negative","Negative on PrEP","Positive undetectable","Positive","Unknown","Prefer not to say"],
+  safeguards:  ["Condoms","PrEP","PEP","Regular testing","Vaccination","Discuss first"],
+  comfort:     ["Very comfortable","Comfortable","Let's discuss","Case by case","Cautious","Prefer protection"],
+  iCarry:      ["Condoms","Lube","Drug test strips","Naloxone","PrEP","Toys","Let's discuss"],
+};
+
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 const KEY     = "he_profile_v4";
 const POS_KEY = "he_pin_pos_v1";
@@ -37,7 +61,29 @@ const saveProfile = p => localStorage.setItem(KEY, JSON.stringify(p));
 const loadPinPos  = () => { try { return JSON.parse(localStorage.getItem(POS_KEY)); } catch { return null; } };
 const savePinPos  = p => localStorage.setItem(POS_KEY, JSON.stringify(p));
 
-const DEFAULT = { name:"", age:"", bio:"", role:"Versatile", looking:"hookup", tags:[], emoji:"🍑", col:C.accent, isAnon:false, isSetup:false, videoURL:null, photoURL:null };
+const DEFAULT_VIS = {
+  age:true, height:false, weight:false, endowment:true, bodyType:true,
+  gender:true, expression:false, sexuality:true, position:true,
+  hosting:true, intoPublic:true, lookingFor:true, fetishes:true,
+  kinks:false, intoActs:true, interaction:true,
+  practices:true, hivStatus:true, hivTested:true, stiTested:true,
+  safeguards:true, comfort:true, iCarry:false,
+};
+
+const DEFAULT = {
+  name:"", age:"", bio:"", role:"Versatile", looking:"hookup", tags:[],
+  emoji:"🍑", col:C.accent, isAnon:false, isSetup:false, videoURL:null, photoURL:null,
+  // stats
+  height:"", weight:"", endowment:"", bodyType:"",
+  // identity
+  gender:"Man", expression:"", sexuality:"", position:"Versatile",
+  // scene
+  hosting:"Not hosting", intoPublic:[], lookingFor:[], fetishes:[], kinks:[], intoActs:[], interaction:[],
+  // health
+  practices:"", hivStatus:"", hivTested:"", stiTested:"", safeguards:[], comfort:"", iCarry:[],
+  // visibility per-field
+  vis: { ...DEFAULT_VIS },
+};
 
 // ─── VIDEO AVATAR ─────────────────────────────────────────────────────────────
 function VideoAvatar({ user, size=44, showStatus=true }) {
@@ -374,48 +420,204 @@ function MyProfileSheet({ profile, onEdit, onClose, onReset, onGoLive, onCruisin
 }
 
 // ─── PROFILE EDITOR ───────────────────────────────────────────────────────────
-function ProfileEditor({ profile, onSave, onClose }) {
-  const [form,setForm]=useState({...profile});
-  const [saving,setSaving]=useState(false); const [saved,setSaved]=useState(false);
-  const vidRef=useRef(null); const photoRef=useRef(null);
 
-  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
-  const toggleTag=t=>set("tags",form.tags.includes(t)?form.tags.filter(x=>x!==t):form.tags.length<5?[...form.tags,t]:form.tags);
-  const handleMedia=(e,type)=>{ const f=e.target.files?.[0];if(!f)return;const url=URL.createObjectURL(f);type==="video"?set("videoURL",url):set("photoURL",url);e.target.value=""; };
-  const handleSave=()=>{ setSaving(true);setTimeout(()=>{ saveProfile(form);setSaving(false);setSaved(true);onSave(form);setTimeout(()=>setSaved(false),1500); },500); };
+// iOS-style toggle
+function IOSToggle({ on, onChange }) {
+  return (
+    <div onClick={()=>onChange(!on)} style={{ width:44,height:26,borderRadius:13,background:on?"#3478f6":"#3a3a3c",cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0 }}>
+      <div style={{ position:"absolute",top:3,left:on?21:3,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.4)" }}/>
+    </div>
+  );
+}
+
+// Single row: label | value + chevron | toggle
+function FieldRow({ label, value, onPick, visOn, onVis, info }) {
+  const display = Array.isArray(value) ? (value.length ? value.join(", ") : <span style={{color:"#3478f6"}}>select</span>) : (value || <span style={{color:"#3478f6"}}>select</span>);
+  return (
+    <div style={{ display:"flex",alignItems:"center",minHeight:48,borderBottom:`1px solid ${C.border}`,gap:10,padding:"4px 0" }}>
+      <div style={{ flex:"0 0 110px",fontSize:14,color:C.muted,display:"flex",alignItems:"center",gap:4 }}>
+        {label}
+        {info && <span style={{ width:16,height:16,borderRadius:"50%",border:`1px solid ${C.dim}`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:9,color:C.dim,cursor:"default" }}>?</span>}
+      </div>
+      <div onClick={onPick} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:5,cursor:"pointer",minWidth:0 }}>
+        <div style={{ fontSize:14,fontWeight:600,color:C.text,textAlign:"right",lineHeight:1.35,overflow:"hidden" }}>{display}</div>
+        <div style={{ fontSize:12,color:C.dim,flexShrink:0 }}>▾</div>
+      </div>
+      <IOSToggle on={visOn} onChange={onVis}/>
+    </div>
+  );
+}
+
+// Bold section header with "Show" all toggle
+function SectionHead({ title, onShowAll }) {
+  return (
+    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:24,paddingBottom:4 }}>
+      <div style={{ fontSize:16,fontWeight:700,color:C.text }}>{title}</div>
+      <button onClick={onShowAll} style={{ background:"none",border:"none",fontSize:13,color:C.muted,cursor:"pointer",padding:0 }}>Show</button>
+    </div>
+  );
+}
+
+// Bottom-sheet picker (single or multi)
+function PickerSheet({ title, options, selected, multi, onSelect, onClose }) {
+  const isArr = Array.isArray(selected);
+  const isOn  = v => isArr ? selected.includes(v) : selected === v;
+  const toggle = v => {
+    if (!multi) { onSelect(v); onClose(); return; }
+    onSelect(isOn(v) ? selected.filter(x=>x!==v) : [...selected, v]);
+  };
+  return (
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:700,display:"flex",alignItems:"flex-end",backdropFilter:"blur(4px)" }}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ width:"100%",maxWidth:480,margin:"0 auto",background:"#1c1c1e",borderRadius:"16px 16px 0 0",maxHeight:"70vh",display:"flex",flexDirection:"column",fontFamily:C.sans }}>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ fontSize:15,fontWeight:700,color:C.text }}>{title}</div>
+          <button onClick={onClose} style={{ background:"none",border:"none",color:"#3478f6",fontSize:14,cursor:"pointer",fontWeight:600 }}>Done</button>
+        </div>
+        <div style={{ overflowY:"auto",flex:1 }}>
+          {options.map(o=>(
+            <div key={o} onClick={()=>toggle(o)} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:`1px solid ${C.border}`,cursor:"pointer" }}>
+              <div style={{ fontSize:15,color:C.text }}>{o}</div>
+              {isOn(o) && <div style={{ fontSize:18,color:"#3478f6" }}>✓</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileEditor({ profile, onSave, onClose }) {
+  const [form,   setForm]   = useState({ ...DEFAULT, ...profile, vis:{ ...DEFAULT_VIS, ...(profile.vis||{}) } });
+  const [picker, setPicker] = useState(null); // { field, title, options, multi }
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+  const [editBio,setEditBio]= useState(false);
+  const vidRef   = useRef(null);
+  const photoRef = useRef(null);
+
+  const set    = (k,v) => setForm(f=>({...f,[k]:v}));
+  const setVis = (k,v) => setForm(f=>({...f,vis:{...f.vis,[k]:v}}));
+  const showAll = keys => setForm(f=>({...f,vis:{...f.vis,...Object.fromEntries(keys.map(k=>[k,true]))}}));
+  const handleMedia = (e,type) => { const f=e.target.files?.[0];if(!f)return;const url=URL.createObjectURL(f);type==="video"?set("videoURL",url):set("photoURL",url);e.target.value=""; };
+  const handleSave  = () => { setSaving(true);setTimeout(()=>{ saveProfile(form);setSaving(false);setSaved(true);onSave(form);setTimeout(()=>setSaved(false),1500); },500); };
+
+  const pick = (field,title,options,multi=false) => setPicker({field,title,options,multi});
+  const onPickSelect = v => setForm(f=>({...f,[picker.field]:v}));
 
   return (
-    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:500,display:"flex",alignItems:"flex-end",backdropFilter:"blur(6px)" }}
-      onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ width:"100%",maxWidth:480,margin:"0 auto",background:C.surface,borderRadius:"16px 16px 0 0",padding:"20px 20px 32px",maxHeight:"92vh",overflowY:"auto",fontFamily:C.sans,display:"flex",flexDirection:"column",gap:14 }}>
-        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-          <div style={{ fontSize:15,fontWeight:700,color:C.text }}>Edit Profile</div>
-          <button onClick={onClose} style={{ background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer" }}>✕</button>
-        </div>
-        <div style={{ display:"flex",gap:12,alignItems:"center" }}>
-          <VideoAvatar user={form} size={60} showStatus={false}/>
+    <div style={{ position:"fixed",inset:0,background:C.bg,zIndex:500,display:"flex",flexDirection:"column",fontFamily:C.sans }}>
+      {/* Header */}
+      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:`1px solid ${C.border}`,background:C.surface,flexShrink:0 }}>
+        <button onClick={onClose} style={{ background:"none",border:"none",color:"#3478f6",fontSize:16,cursor:"pointer",padding:0 }}>‹ Back</button>
+        <div style={{ fontSize:16,fontWeight:700,color:C.text }}>Edit Profile</div>
+        <button onClick={handleSave} disabled={saving||!form.name.trim()} style={{ background:"none",border:"none",color:saving?"#888":"#3478f6",fontSize:15,fontWeight:700,cursor:"pointer" }}>
+          {saving?"…":saved?"✓":"Save"}
+        </button>
+      </div>
+
+      <div style={{ flex:1,overflowY:"auto",padding:"0 20px 40px" }}>
+
+        {/* Avatar + media */}
+        <div style={{ display:"flex",gap:14,alignItems:"center",padding:"20px 0 16px",borderBottom:`1px solid ${C.border}` }}>
+          <VideoAvatar user={form} size={64} showStatus={false}/>
           <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
-            <input ref={photoRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>handleMedia(e,"photo")}/>
-            <input ref={vidRef} type="file" accept="video/*" style={{ display:"none" }} onChange={e=>handleMedia(e,"video")}/>
-            <Btn label="📷 Set Photo" small onClick={()=>photoRef.current?.click()} outline col={form.col}/>
-            <Btn label="📹 Set Video Profile" small onClick={()=>vidRef.current?.click()} outline col={form.col}/>
+            <input ref={photoRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>handleMedia(e,"photo")}/>
+            <input ref={vidRef}   type="file" accept="video/*" style={{display:"none"}} onChange={e=>handleMedia(e,"video")}/>
+            <Btn label="📷 Photo"         small onClick={()=>photoRef.current?.click()} outline col={form.col}/>
+            <Btn label="📹 Video profile" small onClick={()=>vidRef.current?.click()}   outline col={form.col}/>
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex",flexWrap:"wrap",gap:5,marginBottom:8 }}>{EMOJIS.map(e=><div key={e} onClick={()=>set("emoji",e)} style={{ fontSize:20,cursor:"pointer",border:`2px solid ${form.emoji===e?C.accent:"transparent"}`,borderRadius:6,padding:3 }}>{e}</div>)}</div>
+            <div style={{ display:"flex",gap:6 }}>{COLORS.map(c=><div key={c} onClick={()=>set("col",c)} style={{ width:20,height:20,borderRadius:"50%",background:c,cursor:"pointer",border:`2px solid ${form.col===c?"#fff":"transparent"}` }}/>)}</div>
           </div>
         </div>
-        {form.videoURL&&<div style={{ display:"flex",alignItems:"center",gap:8 }}><div style={{ fontSize:10,color:C.green,fontFamily:C.font }}>✓ Video profile set</div><button onClick={()=>set("videoURL",null)} style={{ background:"none",border:"none",color:C.dim,fontSize:11,cursor:"pointer" }}>Remove</button></div>}
-        <FI label="HANDLE" value={form.name} onChange={v=>set("name",v)} placeholder="Your handle" maxLength={24}/>
-        <FI label="AGE" value={String(form.age)} onChange={v=>set("age",v.replace(/\D/g,"").slice(0,2))} placeholder="Age" maxLength={2}/>
-        <FI label="BIO" value={form.bio} onChange={v=>set("bio",v)} placeholder="Say something real..." multi maxLength={160}/>
-        <div style={{ display:"flex",flexDirection:"column",gap:5 }}><div style={{ fontSize:9,color:C.dim,fontFamily:C.font,letterSpacing:"0.1em" }}>ROLE</div><div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>{ROLES.map(r=><Tag key={r} label={r} col={form.col} active={form.role===r} onClick={()=>set("role",r)}/>)}</div></div>
-        <div style={{ display:"flex",flexDirection:"column",gap:5 }}><div style={{ fontSize:9,color:C.dim,fontFamily:C.font,letterSpacing:"0.1em" }}>LOOKING FOR</div><div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>{LOOKING.map(l=><Tag key={l} label={l} col={form.col} active={form.looking===l} onClick={()=>set("looking",l)}/>)}</div></div>
-        <div style={{ display:"flex",flexDirection:"column",gap:5 }}><div style={{ fontSize:9,color:C.dim,fontFamily:C.font,letterSpacing:"0.1em" }}>TAGS (max 5) — {form.tags.length}/5</div><div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>{VIBE_TAGS.map(t=><Tag key={t} label={t} col={form.col} active={form.tags.includes(t)} onClick={()=>toggleTag(t)}/>)}</div></div>
-        <div style={{ display:"flex",flexDirection:"column",gap:5 }}><div style={{ fontSize:9,color:C.dim,fontFamily:C.font,letterSpacing:"0.1em" }}>EMOJI</div><div style={{ display:"flex",flexWrap:"wrap",gap:5 }}>{EMOJIS.map(e=><div key={e} onClick={()=>set("emoji",e)} style={{ fontSize:22,cursor:"pointer",border:`2px solid ${form.emoji===e?C.accent:"transparent"}`,borderRadius:8,padding:4 }}>{e}</div>)}</div></div>
-        <div style={{ display:"flex",flexDirection:"column",gap:5 }}><div style={{ fontSize:9,color:C.dim,fontFamily:C.font,letterSpacing:"0.1em" }}>COLOR</div><div style={{ display:"flex",gap:8 }}>{COLORS.map(c=><div key={c} onClick={()=>set("col",c)} style={{ width:22,height:22,borderRadius:"50%",background:c,cursor:"pointer",border:`2px solid ${form.col===c?"#fff":"transparent"}` }}/>)}</div></div>
-        <div style={{ display:"flex",alignItems:"center",gap:10,background:C.surf2,border:`1px solid ${C.border2}`,borderRadius:8,padding:"10px 14px",cursor:"pointer" }} onClick={()=>set("isAnon",!form.isAnon)}>
-          <div style={{ width:20,height:20,borderRadius:4,background:form.isAnon?C.accent:"transparent",border:`2px solid ${form.isAnon?C.accent:C.border2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,transition:"all 0.15s" }}>{form.isAnon?"✓":""}</div>
-          <div><div style={{ fontSize:11,color:C.text }}>Ghost Mode</div><div style={{ fontSize:10,color:C.dim }}>Hidden on map</div></div>
+
+        {/* Handle */}
+        <div style={{ borderBottom:`1px solid ${C.border}`,padding:"12px 0" }}>
+          <FI label="HANDLE" value={form.name} onChange={v=>set("name",v)} placeholder="Your handle" maxLength={24}/>
         </div>
-        <Btn label={saving?"Saving…":saved?"✓ Saved!":"Save Changes"} onClick={handleSave} disabled={saving||!form.name.trim()} col={saved?C.green:C.accent} full/>
+
+        {/* Bio */}
+        <div style={{ padding:"12px 0",borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ display:"flex",alignItems:"flex-start",gap:10,background:C.surf2,borderRadius:10,padding:"10px 14px" }}>
+            <div style={{ fontSize:22,opacity:0.4 }}>"</div>
+            <div style={{ flex:1 }}>
+              {editBio
+                ? <textarea value={form.bio} onChange={e=>set("bio",e.target.value)} maxLength={160} rows={3} autoFocus onBlur={()=>setEditBio(false)}
+                    style={{ width:"100%",background:"none",border:"none",outline:"none",resize:"none",color:C.text,fontSize:13,fontFamily:C.sans,lineHeight:1.5 }}/>
+                : <div onClick={()=>setEditBio(true)} style={{ fontSize:13,color:form.bio?C.text:C.dim,lineHeight:1.5,cursor:"text",minHeight:20 }}>
+                    {form.bio||"Tap to add a bio…"}
+                  </div>
+              }
+            </div>
+            <button onClick={()=>setEditBio(true)} style={{ background:"none",border:"none",color:"#3478f6",fontSize:12,cursor:"pointer",flexShrink:0 }}>Edit</button>
+          </div>
+        </div>
+
+        {/* Hosting status */}
+        <div style={{ display:"flex",alignItems:"center",minHeight:48,borderBottom:`1px solid ${C.border}`,gap:10 }}>
+          <div style={{ flex:"0 0 110px",fontSize:14,color:C.muted }}>Hosting Status</div>
+          <div onClick={()=>pick("hosting","Hosting Status",OPT.hosting)} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:5,cursor:"pointer" }}>
+            <div style={{ fontSize:14,fontWeight:600,color:C.text }}>{form.hosting||"Not hosting"}</div>
+            <div style={{ fontSize:12,color:C.dim }}>▾</div>
+          </div>
+        </div>
+
+        {/* Ghost mode */}
+        <div style={{ display:"flex",alignItems:"center",minHeight:48,borderBottom:`1px solid ${C.border}`,gap:10 }}>
+          <div style={{ flex:"0 0 110px",fontSize:14,color:C.muted }}>Ghost Mode</div>
+          <div style={{ flex:1,fontSize:12,color:C.dim,textAlign:"right",paddingRight:8 }}>Hidden on map</div>
+          <IOSToggle on={form.isAnon} onChange={v=>set("isAnon",v)}/>
+        </div>
+
+        {/* ── STATS ── */}
+        <SectionHead title="Stats" onShowAll={()=>showAll(["age","height","weight","endowment","bodyType"])}/>
+        <FieldRow label="Age"       value={form.age}        onPick={()=>pick("age","Age",Array.from({length:82},(_,i)=>String(i+18)))}                       visOn={form.vis.age}       onVis={v=>setVis("age",v)}/>
+        <FieldRow label="Height"    value={form.height}     onPick={()=>pick("height","Height",OPT.height)}                                                    visOn={form.vis.height}    onVis={v=>setVis("height",v)}/>
+        <FieldRow label="Weight"    value={form.weight}     onPick={()=>pick("weight","Weight",OPT.weight)}                                                    visOn={form.vis.weight}    onVis={v=>setVis("weight",v)}/>
+        <FieldRow label="Endowment" value={form.endowment}  onPick={()=>pick("endowment","Endowment",OPT.endowment)}                                           visOn={form.vis.endowment} onVis={v=>setVis("endowment",v)}/>
+        <FieldRow label="Body Type" value={form.bodyType}   onPick={()=>pick("bodyType","Body Type",OPT.bodyType)}                                             visOn={form.vis.bodyType}  onVis={v=>setVis("bodyType",v)}/>
+
+        {/* ── IDENTITY ── */}
+        <SectionHead title="Identity" onShowAll={()=>showAll(["gender","expression","sexuality","position"])}/>
+        <FieldRow label="Gender"     value={form.gender}     onPick={()=>pick("gender","Gender",OPT.gender)}                 visOn={form.vis.gender}     onVis={v=>setVis("gender",v)}     info/>
+        <FieldRow label="Expression" value={form.expression} onPick={()=>pick("expression","Expression",OPT.expression)}     visOn={form.vis.expression} onVis={v=>setVis("expression",v)} info/>
+        <FieldRow label="Sexuality"  value={form.sexuality}  onPick={()=>pick("sexuality","Sexuality",OPT.sexuality)}         visOn={form.vis.sexuality}  onVis={v=>setVis("sexuality",v)}/>
+        <FieldRow label="Position"   value={form.position}   onPick={()=>pick("position","Position",OPT.position)}           visOn={form.vis.position}   onVis={v=>setVis("position",v)}/>
+
+        {/* ── SCENE ── */}
+        <SectionHead title="Scene" onShowAll={()=>showAll(["hosting","intoPublic","lookingFor","fetishes","kinks","intoActs","interaction"])}/>
+        <FieldRow label="Location"    value={form.hosting}     onPick={()=>pick("hosting","Location",OPT.hosting)}                               visOn={form.vis.hosting}     onVis={v=>setVis("hosting",v)}/>
+        <FieldRow label="Into Public" value={form.intoPublic}  onPick={()=>pick("intoPublic","Into Public",OPT.intoPublic,true)}                 visOn={form.vis.intoPublic}  onVis={v=>setVis("intoPublic",v)}/>
+        <FieldRow label="Looking For" value={form.lookingFor}  onPick={()=>pick("lookingFor","Looking For",OPT.lookingFor,true)}                 visOn={form.vis.lookingFor}  onVis={v=>setVis("lookingFor",v)}/>
+        <FieldRow label="Fetishes"    value={form.fetishes}    onPick={()=>pick("fetishes","Fetishes",OPT.fetishes,true)}                        visOn={form.vis.fetishes}    onVis={v=>setVis("fetishes",v)}/>
+        <FieldRow label="Kinks"       value={form.kinks}       onPick={()=>pick("kinks","Kinks",OPT.kinks,true)}                                visOn={form.vis.kinks}       onVis={v=>setVis("kinks",v)}/>
+        <FieldRow label="Into"        value={form.intoActs}    onPick={()=>pick("intoActs","Into",OPT.intoActs,true)}                           visOn={form.vis.intoActs}    onVis={v=>setVis("intoActs",v)}/>
+        <FieldRow label="Interaction" value={form.interaction} onPick={()=>pick("interaction","Interaction",OPT.interaction,true)}               visOn={form.vis.interaction} onVis={v=>setVis("interaction",v)}/>
+
+        {/* ── HEALTH ── */}
+        <SectionHead title="Health Practices & Preferences" onShowAll={()=>showAll(["practices","hivStatus","hivTested","stiTested","safeguards","comfort","iCarry"])}/>
+        <FieldRow label="Practices"       value={form.practices}  onPick={()=>pick("practices","Practices",OPT.practices)}                   visOn={form.vis.practices}  onVis={v=>setVis("practices",v)}/>
+        <FieldRow label="HIV Status"      value={form.hivStatus}  onPick={()=>pick("hivStatus","HIV Status",OPT.hivStatus)}                   visOn={form.vis.hivStatus}  onVis={v=>setVis("hivStatus",v)}/>
+        <FieldRow label="HIV Tested"      value={form.hivTested}  onPick={()=>{ const d=prompt("HIV tested date (e.g. Mar 1, 2026)","");if(d)set("hivTested",d); }} visOn={form.vis.hivTested}  onVis={v=>setVis("hivTested",v)}/>
+        <FieldRow label="STI Tested"      value={form.stiTested}  onPick={()=>{ const d=prompt("STI tested date (e.g. Mar 1, 2026)","");if(d)set("stiTested",d); }} visOn={form.vis.stiTested}  onVis={v=>setVis("stiTested",v)}/>
+        <FieldRow label="Safeguards"      value={form.safeguards} onPick={()=>pick("safeguards","Safeguards",OPT.safeguards,true)}             visOn={form.vis.safeguards} onVis={v=>setVis("safeguards",v)} info/>
+        <FieldRow label="My Comfort"      value={form.comfort}    onPick={()=>pick("comfort","My Comfort Levels",OPT.comfort)}                 visOn={form.vis.comfort}    onVis={v=>setVis("comfort",v)}/>
+        <FieldRow label="I carry…"        value={form.iCarry}     onPick={()=>pick("iCarry","I carry…",OPT.iCarry,true)}                      visOn={form.vis.iCarry}     onVis={v=>setVis("iCarry",v)} info/>
+
       </div>
+
+      {picker && (
+        <PickerSheet
+          title={picker.title}
+          options={picker.options}
+          selected={form[picker.field]}
+          multi={picker.multi}
+          onSelect={onPickSelect}
+          onClose={()=>setPicker(null)}
+        />
+      )}
     </div>
   );
 }

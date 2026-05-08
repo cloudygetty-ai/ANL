@@ -14,14 +14,14 @@ type Props = NativeStackScreenProps<any, 'AIAssistant'>;
 const STARTERS = [
   'Write me an icebreaker opener',
   'Help me respond to this message',
-  'What should I say first?',
+  "What should I say first?",
   'Make my bio more interesting',
 ];
 
 const CANNED: Record<string, string> = {
   'Write me an icebreaker opener': 'Try: "The vibe you\'re giving is midnight mischief. What are you actually up to tonight?"',
   'Help me respond to this message': 'Keep it playful and short. Match their energy — if they\'re flirty, be flirty back. Ask one question.',
-  'What should I say first?': '"Hey, you nearby? I\'m free for the next hour."  Simple, direct, works.',
+  "What should I say first?": '"Hey, you nearby? I\'m free for the next hour."  Simple, direct, works.',
   'Make my bio more interesting': 'Drop the generic stuff. Try: "Out tonight. Looking for something real, or at least interesting. [your vibe tag]"',
 };
 

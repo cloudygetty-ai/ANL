@@ -83,3 +83,4 @@ logs/
 nginx/ssl/
 turn-server/certs/
 certbot/
+hole-eaters/mapbox.config.js

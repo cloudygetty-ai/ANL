@@ -421,45 +421,51 @@ function MyProfileSheet({ profile, onEdit, onClose, onReset, onGoLive, onCruisin
 
 // ─── PROFILE EDITOR ───────────────────────────────────────────────────────────
 
-// iOS-style toggle
-function IOSToggle({ on, onChange }) {
+function IOSToggle({ on, onChange, col }) {
+  const bg = on ? (col || C.accent) : "#3a3a3c";
   return (
-    <div onClick={()=>onChange(!on)} style={{ width:44,height:26,borderRadius:13,background:on?"#3478f6":"#3a3a3c",cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0 }}>
+    <div onClick={()=>onChange(!on)} style={{ width:44,height:26,borderRadius:13,background:bg,cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0,boxShadow:on?`0 0 8px ${bg}66`:"none" }}>
       <div style={{ position:"absolute",top:3,left:on?21:3,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.4)" }}/>
     </div>
   );
 }
 
-// Single row: label | value + chevron | toggle
-function FieldRow({ label, value, onPick, visOn, onVis, info }) {
-  const display = Array.isArray(value) ? (value.length ? value.join(", ") : <span style={{color:"#3478f6"}}>select</span>) : (value || <span style={{color:"#3478f6"}}>select</span>);
+// Section header — colored left-border accent, subtle tinted background
+function SectionHead({ title, icon, col, onShowAll }) {
   return (
-    <div style={{ display:"flex",alignItems:"center",minHeight:48,borderBottom:`1px solid ${C.border}`,gap:10,padding:"4px 0" }}>
-      <div style={{ flex:"0 0 110px",fontSize:14,color:C.muted,display:"flex",alignItems:"center",gap:4 }}>
+    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",margin:"20px -20px 0",padding:"10px 20px",background:`${col}0d`,borderLeft:`3px solid ${col}`,borderTop:`1px solid ${col}22`,borderBottom:`1px solid ${col}22` }}>
+      <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+        <span style={{ fontSize:16 }}>{icon}</span>
+        <span style={{ fontSize:13,fontWeight:700,color:C.text,letterSpacing:"0.04em" }}>{title}</span>
+      </div>
+      <button onClick={onShowAll} style={{ background:"none",border:"none",fontSize:11,color:col,cursor:"pointer",padding:0,fontWeight:600,letterSpacing:"0.05em" }}>SHOW ALL</button>
+    </div>
+  );
+}
+
+// Field row — glows with section accent when visible
+function FieldRow({ label, value, onPick, visOn, onVis, col, info }) {
+  const empty   = Array.isArray(value) ? value.length === 0 : !value;
+  const display = Array.isArray(value)
+    ? (value.length ? value.join(", ") : <span style={{color:col,fontSize:12}}>tap to select</span>)
+    : (value || <span style={{color:col,fontSize:12}}>tap to select</span>);
+  return (
+    <div style={{ display:"flex",alignItems:"center",minHeight:50,borderBottom:`1px solid ${C.border}`,gap:10,padding:"4px 0",opacity:visOn?1:0.45,transition:"opacity 0.2s" }}>
+      <div style={{ flex:"0 0 108px",fontSize:13,color:C.muted,display:"flex",alignItems:"center",gap:4 }}>
         {label}
-        {info && <span style={{ width:16,height:16,borderRadius:"50%",border:`1px solid ${C.dim}`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:9,color:C.dim,cursor:"default" }}>?</span>}
+        {info && <span style={{ width:14,height:14,borderRadius:"50%",border:`1px solid ${C.dim}`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:8,color:C.dim }}>?</span>}
       </div>
-      <div onClick={onPick} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:5,cursor:"pointer",minWidth:0 }}>
-        <div style={{ fontSize:14,fontWeight:600,color:C.text,textAlign:"right",lineHeight:1.35,overflow:"hidden" }}>{display}</div>
-        <div style={{ fontSize:12,color:C.dim,flexShrink:0 }}>▾</div>
+      <div onClick={onPick} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4,cursor:"pointer",minWidth:0 }}>
+        <div style={{ fontSize:13,fontWeight:600,color:empty?C.dim:C.text,textAlign:"right",lineHeight:1.35 }}>{display}</div>
+        <div style={{ fontSize:11,color:C.dim,flexShrink:0 }}>▾</div>
       </div>
-      <IOSToggle on={visOn} onChange={onVis}/>
+      <IOSToggle on={visOn} onChange={onVis} col={col}/>
     </div>
   );
 }
 
-// Bold section header with "Show" all toggle
-function SectionHead({ title, onShowAll }) {
-  return (
-    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:24,paddingBottom:4 }}>
-      <div style={{ fontSize:16,fontWeight:700,color:C.text }}>{title}</div>
-      <button onClick={onShowAll} style={{ background:"none",border:"none",fontSize:13,color:C.muted,cursor:"pointer",padding:0 }}>Show</button>
-    </div>
-  );
-}
-
-// Bottom-sheet picker (single or multi)
-function PickerSheet({ title, options, selected, multi, onSelect, onClose }) {
+// Picker bottom sheet
+function PickerSheet({ title, options, selected, multi, col, onSelect, onClose }) {
   const isArr = Array.isArray(selected);
   const isOn  = v => isArr ? selected.includes(v) : selected === v;
   const toggle = v => {
@@ -467,18 +473,18 @@ function PickerSheet({ title, options, selected, multi, onSelect, onClose }) {
     onSelect(isOn(v) ? selected.filter(x=>x!==v) : [...selected, v]);
   };
   return (
-    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:700,display:"flex",alignItems:"flex-end",backdropFilter:"blur(4px)" }}
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:700,display:"flex",alignItems:"flex-end",backdropFilter:"blur(6px)" }}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ width:"100%",maxWidth:480,margin:"0 auto",background:"#1c1c1e",borderRadius:"16px 16px 0 0",maxHeight:"70vh",display:"flex",flexDirection:"column",fontFamily:C.sans }}>
+      <div style={{ width:"100%",maxWidth:480,margin:"0 auto",background:"#141418",borderRadius:"18px 18px 0 0",maxHeight:"72vh",display:"flex",flexDirection:"column",fontFamily:C.sans,border:`1px solid ${col}33`,borderBottom:"none" }}>
         <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:`1px solid ${C.border}` }}>
           <div style={{ fontSize:15,fontWeight:700,color:C.text }}>{title}</div>
-          <button onClick={onClose} style={{ background:"none",border:"none",color:"#3478f6",fontSize:14,cursor:"pointer",fontWeight:600 }}>Done</button>
+          <button onClick={onClose} style={{ background:col,border:"none",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",borderRadius:8,padding:"5px 14px",letterSpacing:"0.04em" }}>DONE</button>
         </div>
         <div style={{ overflowY:"auto",flex:1 }}>
           {options.map(o=>(
-            <div key={o} onClick={()=>toggle(o)} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:`1px solid ${C.border}`,cursor:"pointer" }}>
-              <div style={{ fontSize:15,color:C.text }}>{o}</div>
-              {isOn(o) && <div style={{ fontSize:18,color:"#3478f6" }}>✓</div>}
+            <div key={o} onClick={()=>toggle(o)} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 20px",borderBottom:`1px solid ${C.border}`,cursor:"pointer",background:isOn(o)?`${col}0f`:"transparent",transition:"background 0.1s" }}>
+              <div style={{ fontSize:14,color:isOn(o)?C.text:C.muted }}>{o}</div>
+              {isOn(o) && <div style={{ width:20,height:20,borderRadius:"50%",background:col,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",fontWeight:700 }}>✓</div>}
             </div>
           ))}
         </div>
@@ -487,135 +493,209 @@ function PickerSheet({ title, options, selected, multi, onSelect, onClose }) {
   );
 }
 
+// Pulse slider — HE exclusive, 0–100 energy meter
+function PulseMeter({ value, onChange, col }) {
+  return (
+    <div style={{ padding:"16px 0",borderBottom:`1px solid ${C.border}` }}>
+      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
+        <div style={{ fontSize:13,color:C.muted }}>⚡ Pulse — right now</div>
+        <div style={{ fontSize:13,fontWeight:700,color:col }}>{value}<span style={{ fontSize:10,color:C.dim }}>/100</span></div>
+      </div>
+      <div style={{ position:"relative",height:6,borderRadius:3,background:C.surf3,cursor:"pointer" }}
+        onClick={e=>{ const r=e.currentTarget.getBoundingClientRect();onChange(Math.round(Math.max(0,Math.min(100,((e.clientX-r.left)/r.width)*100)))); }}>
+        <div style={{ position:"absolute",left:0,top:0,height:"100%",width:`${value}%`,borderRadius:3,background:`linear-gradient(90deg,${col}88,${col})`,transition:"width 0.1s",boxShadow:`0 0 8px ${col}66` }}/>
+        <div style={{ position:"absolute",top:"50%",left:`${value}%`,transform:"translate(-50%,-50%)",width:16,height:16,borderRadius:"50%",background:"#fff",boxShadow:`0 0 6px ${col}` }}/>
+      </div>
+      <div style={{ display:"flex",justifyContent:"space-between",marginTop:6,fontSize:9,color:C.dim,fontFamily:C.font }}>
+        <span>chilling</span><span>cruising</span><span>need it now</span>
+      </div>
+    </div>
+  );
+}
+
 function ProfileEditor({ profile, onSave, onClose }) {
-  const [form,   setForm]   = useState({ ...DEFAULT, ...profile, vis:{ ...DEFAULT_VIS, ...(profile.vis||{}) } });
-  const [picker, setPicker] = useState(null); // { field, title, options, multi }
-  const [saving, setSaving] = useState(false);
-  const [saved,  setSaved]  = useState(false);
-  const [editBio,setEditBio]= useState(false);
+  const [form,    setForm]    = useState({ ...DEFAULT, ...profile, vis:{ ...DEFAULT_VIS, ...(profile.vis||{}) } });
+  const [picker,  setPicker]  = useState(null);
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
+  const [editBio, setEditBio] = useState(false);
+  const [editSecret, setEditSecret] = useState(false);
   const vidRef   = useRef(null);
   const photoRef = useRef(null);
 
-  const set    = (k,v) => setForm(f=>({...f,[k]:v}));
-  const setVis = (k,v) => setForm(f=>({...f,vis:{...f.vis,[k]:v}}));
-  const showAll = keys => setForm(f=>({...f,vis:{...f.vis,...Object.fromEntries(keys.map(k=>[k,true]))}}));
+  const set     = (k,v) => setForm(f=>({...f,[k]:v}));
+  const setVis  = (k,v) => setForm(f=>({...f,vis:{...f.vis,[k]:v}}));
+  const showAll = keys  => setForm(f=>({...f,vis:{...f.vis,...Object.fromEntries(keys.map(k=>[k,true]))}}));
   const handleMedia = (e,type) => { const f=e.target.files?.[0];if(!f)return;const url=URL.createObjectURL(f);type==="video"?set("videoURL",url):set("photoURL",url);e.target.value=""; };
   const handleSave  = () => { setSaving(true);setTimeout(()=>{ saveProfile(form);setSaving(false);setSaved(true);onSave(form);setTimeout(()=>setSaved(false),1500); },500); };
 
-  const pick = (field,title,options,multi=false) => setPicker({field,title,options,multi});
+  const pick = (field,title,options,multi=false,col=C.accent) => setPicker({field,title,options,multi,col});
   const onPickSelect = v => setForm(f=>({...f,[picker.field]:v}));
+
+  // Section accent colors — each section has its own identity
+  const SC = { tonight:C.accent, stats:"#a855f7", identity:"#06b6d4", scene:"#f97316", health:C.green };
 
   return (
     <div style={{ position:"fixed",inset:0,background:C.bg,zIndex:500,display:"flex",flexDirection:"column",fontFamily:C.sans }}>
+      <style>{`
+        input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;}
+        input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;}
+      `}</style>
+
       {/* Header */}
-      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:`1px solid ${C.border}`,background:C.surface,flexShrink:0 }}>
-        <button onClick={onClose} style={{ background:"none",border:"none",color:"#3478f6",fontSize:16,cursor:"pointer",padding:0 }}>‹ Back</button>
-        <div style={{ fontSize:16,fontWeight:700,color:C.text }}>Edit Profile</div>
-        <button onClick={handleSave} disabled={saving||!form.name.trim()} style={{ background:"none",border:"none",color:saving?"#888":"#3478f6",fontSize:15,fontWeight:700,cursor:"pointer" }}>
-          {saving?"…":saved?"✓":"Save"}
+      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:`1px solid ${C.border}`,background:C.surface,flexShrink:0 }}>
+        <button onClick={onClose} style={{ background:"none",border:"none",color:C.accent,fontSize:22,cursor:"pointer",lineHeight:1 }}>‹</button>
+        <div style={{ fontSize:15,fontWeight:700,color:C.text,letterSpacing:"0.03em" }}>Edit Profile</div>
+        <button onClick={handleSave} disabled={saving||!form.name.trim()}
+          style={{ background:saved?C.green:C.accent,border:"none",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",borderRadius:8,padding:"6px 14px",letterSpacing:"0.06em",opacity:(!form.name.trim()&&!saving)?0.4:1,transition:"background 0.3s" }}>
+          {saving?"…":saved?"SAVED ✓":"SAVE"}
         </button>
       </div>
 
-      <div style={{ flex:1,overflowY:"auto",padding:"0 20px 40px" }}>
+      <div style={{ flex:1,overflowY:"auto",padding:"0 20px 60px" }}>
 
-        {/* Avatar + media */}
-        <div style={{ display:"flex",gap:14,alignItems:"center",padding:"20px 0 16px",borderBottom:`1px solid ${C.border}` }}>
-          <VideoAvatar user={form} size={64} showStatus={false}/>
+        {/* ── AVATAR CARD ── */}
+        <div style={{ display:"flex",gap:14,alignItems:"center",padding:"18px 0 14px",borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ position:"relative" }}>
+            <VideoAvatar user={form} size={70} showStatus={false}/>
+            {/* Pulse glow ring around avatar */}
+            <div style={{ position:"absolute",inset:-(form.pulse||0)*0.06-2,borderRadius:"50%",border:`2px solid ${form.col}`,opacity:(form.pulse||0)/100,pointerEvents:"none",boxShadow:`0 0 ${(form.pulse||0)*0.3}px ${form.col}` }}/>
+          </div>
           <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
             <input ref={photoRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>handleMedia(e,"photo")}/>
             <input ref={vidRef}   type="file" accept="video/*" style={{display:"none"}} onChange={e=>handleMedia(e,"video")}/>
-            <Btn label="📷 Photo"         small onClick={()=>photoRef.current?.click()} outline col={form.col}/>
-            <Btn label="📹 Video profile" small onClick={()=>vidRef.current?.click()}   outline col={form.col}/>
+            <Btn label="📷 Photo"   small onClick={()=>photoRef.current?.click()} outline col={form.col}/>
+            <Btn label="📹 Video"   small onClick={()=>vidRef.current?.click()}   outline col={form.col}/>
+            {form.videoURL&&<button onClick={()=>set("videoURL",null)} style={{background:"none",border:"none",color:C.dim,fontSize:10,cursor:"pointer",textAlign:"left"}}>remove video</button>}
           </div>
           <div style={{ flex:1 }}>
-            <div style={{ display:"flex",flexWrap:"wrap",gap:5,marginBottom:8 }}>{EMOJIS.map(e=><div key={e} onClick={()=>set("emoji",e)} style={{ fontSize:20,cursor:"pointer",border:`2px solid ${form.emoji===e?C.accent:"transparent"}`,borderRadius:6,padding:3 }}>{e}</div>)}</div>
-            <div style={{ display:"flex",gap:6 }}>{COLORS.map(c=><div key={c} onClick={()=>set("col",c)} style={{ width:20,height:20,borderRadius:"50%",background:c,cursor:"pointer",border:`2px solid ${form.col===c?"#fff":"transparent"}` }}/>)}</div>
+            <div style={{ display:"flex",flexWrap:"wrap",gap:4,marginBottom:8 }}>
+              {EMOJIS.map(e=><div key={e} onClick={()=>set("emoji",e)} style={{ fontSize:19,cursor:"pointer",border:`2px solid ${form.emoji===e?form.col:"transparent"}`,borderRadius:6,padding:2 }}>{e}</div>)}
+            </div>
+            <div style={{ display:"flex",gap:5,flexWrap:"wrap" }}>
+              {COLORS.map(c=><div key={c} onClick={()=>set("col",c)} style={{ width:19,height:19,borderRadius:"50%",background:c,cursor:"pointer",border:`2px solid ${form.col===c?"#fff":"transparent"}` }}/>)}
+            </div>
           </div>
         </div>
 
         {/* Handle */}
-        <div style={{ borderBottom:`1px solid ${C.border}`,padding:"12px 0" }}>
+        <div style={{ padding:"12px 0",borderBottom:`1px solid ${C.border}` }}>
           <FI label="HANDLE" value={form.name} onChange={v=>set("name",v)} placeholder="Your handle" maxLength={24}/>
         </div>
 
         {/* Bio */}
         <div style={{ padding:"12px 0",borderBottom:`1px solid ${C.border}` }}>
-          <div style={{ display:"flex",alignItems:"flex-start",gap:10,background:C.surf2,borderRadius:10,padding:"10px 14px" }}>
-            <div style={{ fontSize:22,opacity:0.4 }}>"</div>
-            <div style={{ flex:1 }}>
-              {editBio
-                ? <textarea value={form.bio} onChange={e=>set("bio",e.target.value)} maxLength={160} rows={3} autoFocus onBlur={()=>setEditBio(false)}
-                    style={{ width:"100%",background:"none",border:"none",outline:"none",resize:"none",color:C.text,fontSize:13,fontFamily:C.sans,lineHeight:1.5 }}/>
-                : <div onClick={()=>setEditBio(true)} style={{ fontSize:13,color:form.bio?C.text:C.dim,lineHeight:1.5,cursor:"text",minHeight:20 }}>
-                    {form.bio||"Tap to add a bio…"}
-                  </div>
-              }
-            </div>
-            <button onClick={()=>setEditBio(true)} style={{ background:"none",border:"none",color:"#3478f6",fontSize:12,cursor:"pointer",flexShrink:0 }}>Edit</button>
+          <div style={{ fontSize:9,color:C.dim,fontFamily:C.font,letterSpacing:"0.1em",marginBottom:6 }}>PUBLIC BIO</div>
+          <div style={{ background:C.surf2,borderRadius:10,padding:"10px 14px",cursor:"text" }} onClick={()=>setEditBio(true)}>
+            {editBio
+              ? <textarea value={form.bio} onChange={e=>set("bio",e.target.value)} maxLength={160} rows={3} autoFocus onBlur={()=>setEditBio(false)}
+                  style={{ width:"100%",background:"none",border:"none",outline:"none",resize:"none",color:C.text,fontSize:13,fontFamily:C.sans,lineHeight:1.6 }}/>
+              : <div style={{ fontSize:13,color:form.bio?C.text:C.dim,lineHeight:1.6 }}>{form.bio||"Say something real…"}</div>
+            }
           </div>
         </div>
 
-        {/* Hosting status */}
-        <div style={{ display:"flex",alignItems:"center",minHeight:48,borderBottom:`1px solid ${C.border}`,gap:10 }}>
-          <div style={{ flex:"0 0 110px",fontSize:14,color:C.muted }}>Hosting Status</div>
-          <div onClick={()=>pick("hosting","Hosting Status",OPT.hosting)} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:5,cursor:"pointer" }}>
-            <div style={{ fontSize:14,fontWeight:600,color:C.text }}>{form.hosting||"Not hosting"}</div>
-            <div style={{ fontSize:12,color:C.dim }}>▾</div>
+        {/* Secret note — HE exclusive */}
+        <div style={{ padding:"12px 0",borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ fontSize:9,color:C.dim,fontFamily:C.font,letterSpacing:"0.1em",marginBottom:6,display:"flex",alignItems:"center",gap:6 }}>
+            🔒 SECRET NOTE <span style={{ color:C.dim,fontWeight:400 }}>— only shown after mutual like</span>
+          </div>
+          <div style={{ background:C.surf2,borderRadius:10,padding:"10px 14px",cursor:"text",border:`1px solid ${C.accent}22` }} onClick={()=>setEditSecret(true)}>
+            {editSecret
+              ? <textarea value={form.secretNote||""} onChange={e=>set("secretNote",e.target.value)} maxLength={120} rows={2} autoFocus onBlur={()=>setEditSecret(false)}
+                  style={{ width:"100%",background:"none",border:"none",outline:"none",resize:"none",color:C.text,fontSize:13,fontFamily:C.sans,lineHeight:1.6 }}/>
+              : <div style={{ fontSize:13,color:form.secretNote?C.muted:C.dim,fontStyle:"italic",lineHeight:1.6 }}>{form.secretNote||"Your private message after matching…"}</div>
+            }
           </div>
         </div>
 
-        {/* Ghost mode */}
-        <div style={{ display:"flex",alignItems:"center",minHeight:48,borderBottom:`1px solid ${C.border}`,gap:10 }}>
-          <div style={{ flex:"0 0 110px",fontSize:14,color:C.muted }}>Ghost Mode</div>
-          <div style={{ flex:1,fontSize:12,color:C.dim,textAlign:"right",paddingRight:8 }}>Hidden on map</div>
-          <IOSToggle on={form.isAnon} onChange={v=>set("isAnon",v)}/>
+        {/* ── TONIGHT ── */}
+        <SectionHead title="TONIGHT" icon="🔥" col={SC.tonight} onShowAll={()=>showAll(["hosting"])}/>
+
+        {/* Pulse meter */}
+        <PulseMeter value={form.pulse||0} onChange={v=>set("pulse",v)} col={form.col}/>
+
+        {/* Available until */}
+        <div style={{ display:"flex",alignItems:"center",minHeight:50,borderBottom:`1px solid ${C.border}`,gap:10 }}>
+          <div style={{ flex:"0 0 108px",fontSize:13,color:C.muted }}>⏱ Free until</div>
+          <div onClick={()=>{ const t=prompt("Available until (e.g. 3:00 AM)","");if(t)set("freeUntil",t); }}
+            style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4,cursor:"pointer" }}>
+            <div style={{ fontSize:13,fontWeight:600,color:form.freeUntil?C.text:C.dim }}>{form.freeUntil||"not set"}</div>
+            <div style={{ fontSize:11,color:C.dim }}>▾</div>
+          </div>
+          <IOSToggle on={!!form.freeUntil} onChange={v=>{ if(!v) set("freeUntil",""); }} col={SC.tonight}/>
+        </div>
+
+        {/* Hosting */}
+        <div style={{ display:"flex",alignItems:"center",minHeight:50,borderBottom:`1px solid ${C.border}`,gap:10 }}>
+          <div style={{ flex:"0 0 108px",fontSize:13,color:C.muted }}>🏠 Hosting</div>
+          <div onClick={()=>pick("hosting","Hosting",OPT.hosting,false,SC.tonight)} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4,cursor:"pointer" }}>
+            <div style={{ fontSize:13,fontWeight:600,color:C.text }}>{form.hosting||"Not hosting"}</div>
+            <div style={{ fontSize:11,color:C.dim }}>▾</div>
+          </div>
+        </div>
+
+        {/* Scene radius — HE exclusive */}
+        <div style={{ padding:"14px 0",borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ display:"flex",justifyContent:"space-between",marginBottom:8 }}>
+            <div style={{ fontSize:13,color:C.muted }}>📍 Scene radius</div>
+            <div style={{ fontSize:13,fontWeight:700,color:SC.tonight }}>{(form.radius||0.5).toFixed(1)} mi</div>
+          </div>
+          <input type="range" min={0.1} max={5} step={0.1} value={form.radius||0.5} onChange={e=>set("radius",parseFloat(e.target.value))}
+            style={{ width:"100%",accentColor:SC.tonight,height:4,borderRadius:2 }}/>
+          <div style={{ display:"flex",justifyContent:"space-between",marginTop:4,fontSize:9,color:C.dim,fontFamily:C.font }}>
+            <span>0.1 mi</span><span>walking distance</span><span>5 mi</span>
+          </div>
+        </div>
+
+        {/* Ghost */}
+        <div style={{ display:"flex",alignItems:"center",minHeight:50,borderBottom:`1px solid ${C.border}`,gap:10 }}>
+          <div style={{ flex:"0 0 108px",fontSize:13,color:C.muted }}>👻 Ghost Mode</div>
+          <div style={{ flex:1,fontSize:11,color:C.dim,textAlign:"right",paddingRight:8 }}>invisible on map</div>
+          <IOSToggle on={form.isAnon} onChange={v=>set("isAnon",v)} col={SC.tonight}/>
         </div>
 
         {/* ── STATS ── */}
-        <SectionHead title="Stats" onShowAll={()=>showAll(["age","height","weight","endowment","bodyType"])}/>
-        <FieldRow label="Age"       value={form.age}        onPick={()=>pick("age","Age",Array.from({length:82},(_,i)=>String(i+18)))}                       visOn={form.vis.age}       onVis={v=>setVis("age",v)}/>
-        <FieldRow label="Height"    value={form.height}     onPick={()=>pick("height","Height",OPT.height)}                                                    visOn={form.vis.height}    onVis={v=>setVis("height",v)}/>
-        <FieldRow label="Weight"    value={form.weight}     onPick={()=>pick("weight","Weight",OPT.weight)}                                                    visOn={form.vis.weight}    onVis={v=>setVis("weight",v)}/>
-        <FieldRow label="Endowment" value={form.endowment}  onPick={()=>pick("endowment","Endowment",OPT.endowment)}                                           visOn={form.vis.endowment} onVis={v=>setVis("endowment",v)}/>
-        <FieldRow label="Body Type" value={form.bodyType}   onPick={()=>pick("bodyType","Body Type",OPT.bodyType)}                                             visOn={form.vis.bodyType}  onVis={v=>setVis("bodyType",v)}/>
+        <SectionHead title="STATS" icon="📊" col={SC.stats} onShowAll={()=>showAll(["age","height","weight","endowment","bodyType"])}/>
+        <FieldRow label="Age"       value={form.age}       onPick={()=>pick("age","Age",Array.from({length:82},(_,i)=>String(i+18)),false,SC.stats)}  visOn={form.vis.age}       onVis={v=>setVis("age",v)}       col={SC.stats}/>
+        <FieldRow label="Height"    value={form.height}    onPick={()=>pick("height","Height",OPT.height,false,SC.stats)}                              visOn={form.vis.height}    onVis={v=>setVis("height",v)}    col={SC.stats}/>
+        <FieldRow label="Weight"    value={form.weight}    onPick={()=>pick("weight","Weight",OPT.weight,false,SC.stats)}                              visOn={form.vis.weight}    onVis={v=>setVis("weight",v)}    col={SC.stats}/>
+        <FieldRow label="Endowment" value={form.endowment} onPick={()=>pick("endowment","Endowment",OPT.endowment,false,SC.stats)}                    visOn={form.vis.endowment} onVis={v=>setVis("endowment",v)} col={SC.stats}/>
+        <FieldRow label="Body Type" value={form.bodyType}  onPick={()=>pick("bodyType","Body Type",OPT.bodyType,false,SC.stats)}                      visOn={form.vis.bodyType}  onVis={v=>setVis("bodyType",v)}  col={SC.stats}/>
 
         {/* ── IDENTITY ── */}
-        <SectionHead title="Identity" onShowAll={()=>showAll(["gender","expression","sexuality","position"])}/>
-        <FieldRow label="Gender"     value={form.gender}     onPick={()=>pick("gender","Gender",OPT.gender)}                 visOn={form.vis.gender}     onVis={v=>setVis("gender",v)}     info/>
-        <FieldRow label="Expression" value={form.expression} onPick={()=>pick("expression","Expression",OPT.expression)}     visOn={form.vis.expression} onVis={v=>setVis("expression",v)} info/>
-        <FieldRow label="Sexuality"  value={form.sexuality}  onPick={()=>pick("sexuality","Sexuality",OPT.sexuality)}         visOn={form.vis.sexuality}  onVis={v=>setVis("sexuality",v)}/>
-        <FieldRow label="Position"   value={form.position}   onPick={()=>pick("position","Position",OPT.position)}           visOn={form.vis.position}   onVis={v=>setVis("position",v)}/>
+        <SectionHead title="IDENTITY" icon="🪪" col={SC.identity} onShowAll={()=>showAll(["gender","expression","sexuality","position"])}/>
+        <FieldRow label="Gender"     value={form.gender}     onPick={()=>pick("gender","Gender",OPT.gender,false,SC.identity)}           visOn={form.vis.gender}     onVis={v=>setVis("gender",v)}     col={SC.identity} info/>
+        <FieldRow label="Expression" value={form.expression} onPick={()=>pick("expression","Expression",OPT.expression,false,SC.identity)} visOn={form.vis.expression} onVis={v=>setVis("expression",v)} col={SC.identity} info/>
+        <FieldRow label="Sexuality"  value={form.sexuality}  onPick={()=>pick("sexuality","Sexuality",OPT.sexuality,false,SC.identity)}   visOn={form.vis.sexuality}  onVis={v=>setVis("sexuality",v)}  col={SC.identity}/>
+        <FieldRow label="Position"   value={form.position}   onPick={()=>pick("position","Position",OPT.position,false,SC.identity)}     visOn={form.vis.position}   onVis={v=>setVis("position",v)}   col={SC.identity}/>
 
         {/* ── SCENE ── */}
-        <SectionHead title="Scene" onShowAll={()=>showAll(["hosting","intoPublic","lookingFor","fetishes","kinks","intoActs","interaction"])}/>
-        <FieldRow label="Location"    value={form.hosting}     onPick={()=>pick("hosting","Location",OPT.hosting)}                               visOn={form.vis.hosting}     onVis={v=>setVis("hosting",v)}/>
-        <FieldRow label="Into Public" value={form.intoPublic}  onPick={()=>pick("intoPublic","Into Public",OPT.intoPublic,true)}                 visOn={form.vis.intoPublic}  onVis={v=>setVis("intoPublic",v)}/>
-        <FieldRow label="Looking For" value={form.lookingFor}  onPick={()=>pick("lookingFor","Looking For",OPT.lookingFor,true)}                 visOn={form.vis.lookingFor}  onVis={v=>setVis("lookingFor",v)}/>
-        <FieldRow label="Fetishes"    value={form.fetishes}    onPick={()=>pick("fetishes","Fetishes",OPT.fetishes,true)}                        visOn={form.vis.fetishes}    onVis={v=>setVis("fetishes",v)}/>
-        <FieldRow label="Kinks"       value={form.kinks}       onPick={()=>pick("kinks","Kinks",OPT.kinks,true)}                                visOn={form.vis.kinks}       onVis={v=>setVis("kinks",v)}/>
-        <FieldRow label="Into"        value={form.intoActs}    onPick={()=>pick("intoActs","Into",OPT.intoActs,true)}                           visOn={form.vis.intoActs}    onVis={v=>setVis("intoActs",v)}/>
-        <FieldRow label="Interaction" value={form.interaction} onPick={()=>pick("interaction","Interaction",OPT.interaction,true)}               visOn={form.vis.interaction} onVis={v=>setVis("interaction",v)}/>
+        <SectionHead title="SCENE" icon="🌃" col={SC.scene} onShowAll={()=>showAll(["intoPublic","lookingFor","fetishes","kinks","intoActs","interaction"])}/>
+        <FieldRow label="Into Public" value={form.intoPublic}  onPick={()=>pick("intoPublic","Into Public",OPT.intoPublic,true,SC.scene)}   visOn={form.vis.intoPublic}  onVis={v=>setVis("intoPublic",v)}  col={SC.scene}/>
+        <FieldRow label="Looking For" value={form.lookingFor}  onPick={()=>pick("lookingFor","Looking For",OPT.lookingFor,true,SC.scene)}   visOn={form.vis.lookingFor}  onVis={v=>setVis("lookingFor",v)}  col={SC.scene}/>
+        <FieldRow label="Fetishes"    value={form.fetishes}    onPick={()=>pick("fetishes","Fetishes",OPT.fetishes,true,SC.scene)}          visOn={form.vis.fetishes}    onVis={v=>setVis("fetishes",v)}    col={SC.scene}/>
+        <FieldRow label="Kinks"       value={form.kinks}       onPick={()=>pick("kinks","Kinks",OPT.kinks,true,SC.scene)}                  visOn={form.vis.kinks}       onVis={v=>setVis("kinks",v)}       col={SC.scene}/>
+        <FieldRow label="Into"        value={form.intoActs}    onPick={()=>pick("intoActs","Into",OPT.intoActs,true,SC.scene)}             visOn={form.vis.intoActs}    onVis={v=>setVis("intoActs",v)}    col={SC.scene}/>
+        <FieldRow label="Interaction" value={form.interaction} onPick={()=>pick("interaction","Interaction",OPT.interaction,true,SC.scene)} visOn={form.vis.interaction} onVis={v=>setVis("interaction",v)} col={SC.scene}/>
 
         {/* ── HEALTH ── */}
-        <SectionHead title="Health Practices & Preferences" onShowAll={()=>showAll(["practices","hivStatus","hivTested","stiTested","safeguards","comfort","iCarry"])}/>
-        <FieldRow label="Practices"       value={form.practices}  onPick={()=>pick("practices","Practices",OPT.practices)}                   visOn={form.vis.practices}  onVis={v=>setVis("practices",v)}/>
-        <FieldRow label="HIV Status"      value={form.hivStatus}  onPick={()=>pick("hivStatus","HIV Status",OPT.hivStatus)}                   visOn={form.vis.hivStatus}  onVis={v=>setVis("hivStatus",v)}/>
-        <FieldRow label="HIV Tested"      value={form.hivTested}  onPick={()=>{ const d=prompt("HIV tested date (e.g. Mar 1, 2026)","");if(d)set("hivTested",d); }} visOn={form.vis.hivTested}  onVis={v=>setVis("hivTested",v)}/>
-        <FieldRow label="STI Tested"      value={form.stiTested}  onPick={()=>{ const d=prompt("STI tested date (e.g. Mar 1, 2026)","");if(d)set("stiTested",d); }} visOn={form.vis.stiTested}  onVis={v=>setVis("stiTested",v)}/>
-        <FieldRow label="Safeguards"      value={form.safeguards} onPick={()=>pick("safeguards","Safeguards",OPT.safeguards,true)}             visOn={form.vis.safeguards} onVis={v=>setVis("safeguards",v)} info/>
-        <FieldRow label="My Comfort"      value={form.comfort}    onPick={()=>pick("comfort","My Comfort Levels",OPT.comfort)}                 visOn={form.vis.comfort}    onVis={v=>setVis("comfort",v)}/>
-        <FieldRow label="I carry…"        value={form.iCarry}     onPick={()=>pick("iCarry","I carry…",OPT.iCarry,true)}                      visOn={form.vis.iCarry}     onVis={v=>setVis("iCarry",v)} info/>
+        <SectionHead title="HEALTH" icon="🩺" col={SC.health} onShowAll={()=>showAll(["practices","hivStatus","hivTested","stiTested","safeguards","comfort","iCarry"])}/>
+        <FieldRow label="Practices"  value={form.practices}  onPick={()=>pick("practices","Practices",OPT.practices,false,SC.health)}        visOn={form.vis.practices}  onVis={v=>setVis("practices",v)}  col={SC.health}/>
+        <FieldRow label="HIV Status" value={form.hivStatus}  onPick={()=>pick("hivStatus","HIV Status",OPT.hivStatus,false,SC.health)}        visOn={form.vis.hivStatus}  onVis={v=>setVis("hivStatus",v)}  col={SC.health}/>
+        <FieldRow label="HIV Tested" value={form.hivTested}  onPick={()=>{ const d=prompt("HIV tested (e.g. Mar 1, 2026)","");if(d)set("hivTested",d); }}  visOn={form.vis.hivTested}  onVis={v=>setVis("hivTested",v)}  col={SC.health}/>
+        <FieldRow label="STI Tested" value={form.stiTested}  onPick={()=>{ const d=prompt("STI tested (e.g. Mar 1, 2026)","");if(d)set("stiTested",d); }}  visOn={form.vis.stiTested}  onVis={v=>setVis("stiTested",v)}  col={SC.health}/>
+        <FieldRow label="Safeguards" value={form.safeguards} onPick={()=>pick("safeguards","Safeguards",OPT.safeguards,true,SC.health)}       visOn={form.vis.safeguards} onVis={v=>setVis("safeguards",v)} col={SC.health} info/>
+        <FieldRow label="Comfort"    value={form.comfort}    onPick={()=>pick("comfort","My Comfort Level",OPT.comfort,false,SC.health)}       visOn={form.vis.comfort}    onVis={v=>setVis("comfort",v)}    col={SC.health}/>
+        <FieldRow label="I carry…"   value={form.iCarry}     onPick={()=>pick("iCarry","I carry…",OPT.iCarry,true,SC.health)}                visOn={form.vis.iCarry}     onVis={v=>setVis("iCarry",v)}     col={SC.health} info/>
 
       </div>
 
       {picker && (
         <PickerSheet
-          title={picker.title}
-          options={picker.options}
-          selected={form[picker.field]}
-          multi={picker.multi}
-          onSelect={onPickSelect}
-          onClose={()=>setPicker(null)}
+          title={picker.title} options={picker.options}
+          selected={form[picker.field]} multi={picker.multi} col={picker.col}
+          onSelect={onPickSelect} onClose={()=>setPicker(null)}
         />
       )}
     </div>

@@ -84,3 +84,6 @@ nginx/ssl/
 turn-server/certs/
 certbot/
 hole-eaters/mapbox.config.js
+hole-eaters/dist/
+hole-eaters/.env
+hole-eaters/node_modules/

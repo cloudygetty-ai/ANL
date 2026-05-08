@@ -824,8 +824,8 @@ function MapView({ users, myProfile, myPos, onMovePin, onSelectUser, cruisingSta
     loadMapbox().then(mapboxgl => {
       if (!containerRef.current || mapRef.current) return;
       mapboxgl.accessToken =
+        (typeof import.meta !== "undefined" && import.meta.env?.VITE_MAPBOX_TOKEN) ||
         window.__MAPBOX_TOKEN__ ||
-        (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_MAPBOX_TOKEN) ||
         "";
 
       map = new mapboxgl.Map({

@@ -499,28 +499,218 @@ function ProfileSetup({ onSave }) {
   );
 }
 
+// ─── MAPBOX LOADER ────────────────────────────────────────────────────────────
+// Injects mapbox-gl CSS+JS from CDN once, resolves when mapboxgl is ready.
+const MAPBOX_CDN_VERSION = "3.4.0";
+let _mapboxReady = null;
+function loadMapbox() {
+  if (_mapboxReady) return _mapboxReady;
+  _mapboxReady = new Promise(resolve => {
+    if (window.mapboxgl) { resolve(window.mapboxgl); return; }
+    const link = document.createElement("link");
+    link.rel  = "stylesheet";
+    link.href = `https://api.mapbox.com/mapbox-gl-js/v${MAPBOX_CDN_VERSION}/mapbox-gl.css`;
+    document.head.appendChild(link);
+    const script = document.createElement("script");
+    script.src = `https://api.mapbox.com/mapbox-gl-js/v${MAPBOX_CDN_VERSION}/mapbox-gl.js`;
+    script.onload = () => resolve(window.mapboxgl);
+    document.head.appendChild(script);
+  });
+  return _mapboxReady;
+}
+
+// Seed users get deterministic offsets around a center point
+const CENTER_LNG = -73.9857;
+const CENTER_LAT =  40.7484;
+const USER_OFFSETS = [
+  [-0.0018,  0.0012], [ 0.0025, -0.0008], [-0.0031,  0.0021],
+  [ 0.0012,  0.0031], [-0.0009, -0.0025], [ 0.0038,  0.0005],
+  [-0.0022, -0.0018], [ 0.0015,  0.0038],
+];
+
 // ─── MAP VIEW ─────────────────────────────────────────────────────────────────
 function MapView({ users, myProfile, myPos, onMovePin, onSelectUser, cruisingStatus }) {
-  const PIN_POSITIONS = users.map((u,i) => ({ left:10+(i*137.5%80), top:10+(i*97.3%75) }));
+  const containerRef = useRef(null);
+  const mapRef       = useRef(null);
+  const markersRef   = useRef({});
+  const myMarkerRef  = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  // Boot Mapbox and create map
+  useEffect(() => {
+    let map;
+    loadMapbox().then(mapboxgl => {
+      if (!containerRef.current || mapRef.current) return;
+      mapboxgl.accessToken =
+        window.__MAPBOX_TOKEN__ ||
+        (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_MAPBOX_TOKEN) ||
+        "";
+
+      map = new mapboxgl.Map({
+        container:  containerRef.current,
+        style:      "mapbox://styles/mapbox/dark-v11",
+        center:     [CENTER_LNG, CENTER_LAT],
+        zoom:       14.5,
+        pitch:      30,
+        bearing:    -10,
+        attributionControl: false,
+      });
+
+      map.addControl(new mapboxgl.AttributionControl({ compact: true }));
+      mapRef.current = map;
+      map.on("load", () => setMapReady(true));
+    });
+
+    return () => { map?.remove(); mapRef.current = null; };
+  }, []);
+
+  // Add / update other-user markers
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    const existing = new Set(Object.keys(markersRef.current));
+
+    users.forEach((u, i) => {
+      const [dlng, dlat] = USER_OFFSETS[i] || [0, 0];
+      const lngLat = [CENTER_LNG + dlng, CENTER_LAT + dlat];
+
+      const el = document.createElement("div");
+      el.style.cssText = `
+        width:40px;height:40px;border-radius:50%;
+        background:linear-gradient(135deg,${u.col}cc,${u.col}55);
+        border:2px solid ${u.col};
+        display:flex;align-items:center;justify-content:center;
+        font-size:18px;cursor:pointer;
+        box-shadow:0 0 12px ${u.col}66;
+        transition:transform 0.15s;
+        position:relative;
+      `;
+      el.textContent = u.emoji;
+      el.title = u.name;
+
+      if (u.online) {
+        const dot = document.createElement("div");
+        dot.style.cssText = `
+          position:absolute;bottom:1px;right:1px;
+          width:10px;height:10px;border-radius:50%;
+          background:${C.green};border:2px solid ${C.bg};
+        `;
+        el.appendChild(dot);
+      }
+
+      el.addEventListener("mouseenter", () => el.style.transform = "scale(1.2)");
+      el.addEventListener("mouseleave", () => el.style.transform = "scale(1)");
+      el.addEventListener("click", () => onSelectUser(u));
+
+      if (markersRef.current[u.id]) {
+        markersRef.current[u.id].remove();
+      }
+      markersRef.current[u.id] = new window.mapboxgl.Marker({ element: el, anchor: "center" })
+        .setLngLat(lngLat)
+        .addTo(mapRef.current);
+
+      existing.delete(String(u.id));
+    });
+
+    // Remove stale markers
+    existing.forEach(id => { markersRef.current[id]?.remove(); delete markersRef.current[id]; });
+  }, [mapReady, users]);
+
+  // Add / update my pin
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !myProfile || myProfile.isAnon) {
+      myMarkerRef.current?.remove();
+      myMarkerRef.current = null;
+      return;
+    }
+
+    const el = document.createElement("div");
+    el.style.cssText = `
+      display:flex;flex-direction:column;align-items:center;gap:2px;
+      cursor:grab;
+    `;
+
+    const ring = document.createElement("div");
+    ring.style.cssText = `
+      position:absolute;width:56px;height:56px;border-radius:50%;
+      border:1.5px solid ${myProfile.col}55;
+      animation:mePing 2s ease-out infinite;
+      pointer-events:none;
+    `;
+
+    const avatar = document.createElement("div");
+    avatar.style.cssText = `
+      width:44px;height:44px;border-radius:50%;
+      background:linear-gradient(135deg,${myProfile.col}cc,${myProfile.col}55);
+      border:3px solid ${myProfile.col};
+      display:flex;align-items:center;justify-content:center;
+      font-size:20px;
+      box-shadow:0 0 18px ${myProfile.col}88;
+      position:relative;z-index:1;
+    `;
+    avatar.textContent = myProfile.emoji;
+
+    const label = document.createElement("div");
+    label.style.cssText = `
+      font-size:9px;color:${C.accent};
+      font-family:${C.font};
+      background:rgba(8,9,13,0.88);
+      padding:1px 5px;border-radius:3px;
+      white-space:nowrap;
+    `;
+    label.textContent = cruisingStatus ? "📡 " + cruisingStatus.slice(0, 14) : "YOU";
+
+    el.appendChild(ring);
+    el.appendChild(avatar);
+    el.appendChild(label);
+
+    myMarkerRef.current?.remove();
+    myMarkerRef.current = new window.mapboxgl.Marker({ element: el, anchor: "bottom", draggable: true })
+      .setLngLat([CENTER_LNG, CENTER_LAT])
+      .addTo(mapRef.current);
+
+    myMarkerRef.current.on("dragend", () => {
+      const { lng, lat } = myMarkerRef.current.getLngLat();
+      // Convert back to % coords for compatibility with existing state
+      onMovePin({ x: 50 + (lng - CENTER_LNG) * 5000, y: 50 - (lat - CENTER_LAT) * 5000 });
+    });
+
+    return () => { myMarkerRef.current?.remove(); myMarkerRef.current = null; };
+  }, [mapReady, myProfile, cruisingStatus]);
+
   return (
-    <div data-mapcontainer="1" style={{ position:"relative",width:"100%",height:"100%",background:`radial-gradient(ellipse at 40% 40%,#0d1020,#08090d)`,overflow:"hidden" }}>
-      {[...Array(12)].map((_,i)=><div key={`h${i}`} style={{ position:"absolute",left:0,right:0,top:`${(i+1)*8}%`,height:1,background:"#ffffff04" }}/>)}
-      {[...Array(12)].map((_,i)=><div key={`v${i}`} style={{ position:"absolute",top:0,bottom:0,left:`${(i+1)*8}%`,width:1,background:"#ffffff04" }}/>)}
-      <div style={{ position:"absolute",left:"35%",top:"30%",width:200,height:200,background:`radial-gradient(circle,${C.accent}18,transparent 70%)`,borderRadius:"50%",animation:"pulse 3s ease-in-out infinite" }}/>
-      {users.map((u,i)=>(
-        <div key={u.id} style={{ position:"absolute",left:`${PIN_POSITIONS[i].left}%`,top:`${PIN_POSITIONS[i].top}%`,transform:"translate(-50%,-50%)" }}>
-          <Pin user={u} onClick={()=>onSelectUser(u)}/>
+    <div style={{ position:"relative", width:"100%", height:"100%" }}>
+      <style>{`
+        @keyframes mePing {
+          0%   { transform:scale(1);   opacity:0.7; }
+          100% { transform:scale(2.4); opacity:0;   }
+        }
+        .mapboxgl-ctrl-attrib { font-size:9px !important; }
+      `}</style>
+
+      {/* Map canvas */}
+      <div ref={containerRef} style={{ width:"100%", height:"100%" }}/>
+
+      {/* Loading state */}
+      {!mapReady && (
+        <div style={{ position:"absolute",inset:0,background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10 }}>
+          <div style={{ fontSize:28 }}>🗺</div>
+          <div style={{ fontSize:11,color:C.dim,fontFamily:C.font }}>Loading map…</div>
         </div>
-      ))}
-      {myProfile && !myProfile.isAnon && (
-        <DraggableMyPin profile={myProfile} pos={myPos} onMove={onMovePin} cruisingStatus={cruisingStatus}/>
       )}
-      {myProfile?.isAnon && (
-        <div style={{ position:"absolute",bottom:60,left:"50%",transform:"translateX(-50%)",background:`${C.accent}22`,border:`1px solid ${C.accent}44`,borderRadius:8,padding:"6px 12px",fontSize:10,color:C.accent,fontFamily:C.font,whiteSpace:"nowrap" }}>👻 Ghost Mode — you're invisible</div>
+
+      {/* Ghost mode banner */}
+      {myProfile?.isAnon && mapReady && (
+        <div style={{ position:"absolute",bottom:60,left:"50%",transform:"translateX(-50%)",background:`${C.accent}22`,border:`1px solid ${C.accent}44`,borderRadius:8,padding:"6px 12px",fontSize:10,color:C.accent,fontFamily:C.font,whiteSpace:"nowrap",pointerEvents:"none" }}>
+          👻 Ghost Mode — you're invisible
+        </div>
       )}
-      <div style={{ position:"absolute",top:12,left:12,background:"rgba(8,9,13,0.88)",border:`1px solid ${C.border2}`,borderRadius:8,padding:"6px 10px",fontSize:10,color:C.muted,fontFamily:C.font,backdropFilter:"blur(8px)" }}>
-        {users.filter(u=>u.online).length} online nearby
-      </div>
+
+      {/* Online count */}
+      {mapReady && (
+        <div style={{ position:"absolute",top:12,left:12,background:"rgba(8,9,13,0.88)",border:`1px solid ${C.border2}`,borderRadius:8,padding:"6px 10px",fontSize:10,color:C.muted,fontFamily:C.font,backdropFilter:"blur(8px)" }}>
+          {users.filter(u=>u.online).length} online nearby
+        </div>
+      )}
     </div>
   );
 }

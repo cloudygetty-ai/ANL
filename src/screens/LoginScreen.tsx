@@ -1,33 +1,32 @@
-// src/screens/LoginScreen.tsx
+﻿// src/screens/LoginScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-const C = {
-  bg: '#04040a', surface: '#0d0d14', border: 'rgba(168,85,247,0.2)',
-  purple: '#a855f7', text: '#f0eee8', textDim: 'rgba(240,238,232,0.5)',
+const C = { bg: '#04040a', surface: '#0d0d14', border: 'rgba(168,85,247,0.2)', purple: '#a855f7', text: '#f0eee8', textDim: 'rgba(240,238,232,0.5)' };
+
+type Props = Partial<NativeStackScreenProps<any, 'Login'>> & {
+  onGetStarted?: () => void;
+  onRegister?:   () => void;
 };
 
-type Props = NativeStackScreenProps<any, 'Login'>;
+const LoginScreen: React.FC<Props> = ({ navigation, onGetStarted, onRegister }) => {
+  const handleGetStarted = () => { if (onGetStarted) { onGetStarted(); return; } navigation?.navigate('Onboarding'); };
+  const handleRegister   = () => { if (onRegister)   { onRegister();   return; } navigation?.navigate('Register');   };
 
-const LoginScreen: React.FC<Props> = ({ navigation }) => (
-  <SafeAreaView style={s.safe}>
-    <View style={s.wrap}>
-      <Text style={s.logo}>ANL</Text>
-      <Text style={s.tagline}>All Night Long</Text>
-      <Text style={s.sub}>Nightlife. Connections. Real-time.</Text>
-
-      <TouchableOpacity style={s.btn} onPress={() => navigation.navigate('Onboarding')}>
-        <Text style={s.btnText}>Get Started</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={s.ghost} onPress={() => navigation.navigate('Register')}>
-        <Text style={s.ghostText}>Create Account</Text>
-      </TouchableOpacity>
-    </View>
-  </SafeAreaView>
-);
+  return (
+    <SafeAreaView style={s.safe}>
+      <View style={s.wrap}>
+        <Text style={s.logo}>ANL</Text>
+        <Text style={s.tagline}>All Night Long</Text>
+        <Text style={s.sub}>Nightlife. Connections. Real-time.</Text>
+        <TouchableOpacity style={s.btn}   onPress={handleGetStarted}><Text style={s.btnText}>Get Started</Text></TouchableOpacity>
+        <TouchableOpacity style={s.ghost} onPress={handleRegister}><Text style={s.ghostText}>Create Account</Text></TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+};
 
 const s = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: C.bg },

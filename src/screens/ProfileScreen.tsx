@@ -25,7 +25,7 @@ const C = {
 const VIBE_TAGS = [
   'Tonight only', 'Down for anything', 'No strings', 'Good vibes only',
   'Spontaneous', 'Late night magic', 'Come find me', 'Free tonight',
-  "Let's link", 'Adventurous', 'Just got out', 'Dream energy',
+  'Let's link', 'Adventurous', 'Just got out', 'Dream energy',
 ];
 
 const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {

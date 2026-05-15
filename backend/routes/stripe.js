@@ -11,6 +11,25 @@ const PLANS = {
   premium: { priceId: process.env.STRIPE_PREMIUM_PRICE_ID, label: 'Premium', price: 24.99 },
 };
 
+
+// ─── WEBHOOK IDEMPOTENCY ──────────────────────────────────────
+// Stripe can deliver the same event multiple times.
+// We record processed event IDs to prevent double-upgrades.
+// Migration required: CREATE TABLE IF NOT EXISTS stripe_events (
+//   id TEXT PRIMARY KEY, processed_at TIMESTAMPTZ DEFAULT NOW()
+// );
+async function isEventProcessed(eventId) {
+  const { rows } = await db.query(
+    'SELECT 1 FROM stripe_events WHERE id = $1', [eventId]
+  );
+  return rows.length > 0;
+}
+async function markEventProcessed(eventId) {
+  await db.query(
+    'INSERT INTO stripe_events (id) VALUES ($1) ON CONFLICT DO NOTHING', [eventId]
+  );
+}
+
 // ─── CREATE / RETRIEVE CUSTOMER ───────────────────────────────
 async function getOrCreateCustomer(userId, email) {
   const { rows } = await db.query(

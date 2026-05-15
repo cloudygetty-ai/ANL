@@ -30,7 +30,8 @@
     "sharp": "^0.33.4",
     "socket.io": "^4.7.5",
     "stripe": "^16.0.0",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "livekit-server-sdk": "^2.6.0"
   },
   "engines": {
     "node": ">=18.0.0"

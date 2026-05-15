@@ -30,7 +30,7 @@ type Gender = 'f' | 'm' | 'tw' | 'tm' | 'nb';
 const VIBE_TAGS = [
   'Tonight only', 'Down for anything', 'No strings', 'Good vibes only',
   'Spontaneous', 'Late night magic', 'Come find me', 'Free tonight',
-  'Let's link', 'Adventurous', 'Just got out', 'Dream energy',
+  "Let's link", 'Adventurous', 'Just got out', 'Dream energy',
 ];
 
 const GENDER_OPTIONS: { key: Gender; label: string; emoji: string }[] = [

@@ -33,10 +33,15 @@ router.post('/', auth, async (req, res) => {
 
 router.delete('/:matchId', auth, async (req, res) => {
   try {
-    await db.query(
-      'UPDATE matches SET is_active = FALSE WHERE id = $1 AND (user1_id = $2 OR user2_id = $2)',
+    const { rows } = await db.query(
+      'UPDATE matches SET is_active = FALSE WHERE id = $1 AND (user1_id = $2 OR user2_id = $2) RETURNING user1_id, user2_id',
       [req.params.matchId, req.user.id]
     );
+    if (rows[0]) {
+      const partnerId = rows[0].user1_id === req.user.id ? rows[0].user2_id : rows[0].user1_id;
+      const io = req.app.get('io');
+      io?.to(`user:${partnerId}`).emit('match:removed', { matchId: req.params.matchId });
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

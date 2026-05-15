@@ -83,20 +83,28 @@ app.use('/api/stripe',    stripeRouter);
 app.use('/api/admin',     adminRouter);
 app.use('/api/ice',       iceRouter);
 app.use('/api/push',      pushRouter);
+app.use('/api/livekit',   livekitRouter);
 
 // ─── HEALTH ───────────────────────────────────────────────────
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    uptime: process.uptime(),
+app.get('/health', async (req, res) => {
+  const uptime = process.uptime();
+  const mem    = process.memoryUsage();
+
+  // Real dependency checks
+  let dbStatus = 'ok', dbMeta = {};
+  try { dbMeta = await require('./db/pool').healthCheck(); }
+  catch (e) { dbStatus = 'error'; dbMeta = { error: e.message }; }
+
+  const redisOk = !!process.env.REDIS_URL; // adapter logs its own status
+
+  const status = dbStatus === 'ok' ? 'ok' : 'degraded';
+  res.status(status === 'ok' ? 200 : 503).json({
+    status,
+    uptime: Math.floor(uptime),
     timestamp: new Date().toISOString(),
-    services: {
-      circadian:       '✅',
-      venueMatching:   '✅',
-      voiceTone:       '✅',
-      cryptoReveal:    '✅',
-      socialExclusion: '✅',
-    },
+    memory: { rss: `${Math.round(mem.rss / 1024 / 1024)}MB`, heap: `${Math.round(mem.heapUsed / 1024 / 1024)}MB` },
+    db:    { status: dbStatus, ...dbMeta },
+    redis: { configured: redisOk },
   });
 });
 

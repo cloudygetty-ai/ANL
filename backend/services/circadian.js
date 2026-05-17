@@ -31,10 +31,10 @@ async function computeCircadianProfile(userId, days = 30) {
   const { rows } = await db.query(
     `SELECT hour_of_day, COUNT(*) as count
      FROM user_activity_log
-     WHERE user_id = $1 AND created_at > NOW() - INTERVAL '${days} days'
+     WHERE user_id = $1 AND created_at > NOW() - ($2 || ' days')::interval
      GROUP BY hour_of_day
      ORDER BY hour_of_day`,
-    [userId]
+    [userId, String(Math.max(1, Math.min(365, parseInt(days, 10) || 30)))]
   );
 
   if (rows.length < 10) return null; // insufficient data

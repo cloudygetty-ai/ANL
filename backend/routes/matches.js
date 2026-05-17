@@ -19,7 +19,19 @@ router.get('/', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   const { targetUserId } = req.body;
   if (!targetUserId) return res.status(400).json({ error: 'targetUserId required' });
+  if (targetUserId === req.user.id) return res.status(400).json({ error: 'Cannot match with self' });
   try {
+    const { rows: mutual } = await db.query(
+      `SELECT 1 FROM swipes WHERE swiper_id = $1 AND swipee_id = $2 AND direction IN ('right','super') LIMIT 1`,
+      [req.user.id, targetUserId]
+    );
+    const { rows: reverse } = await db.query(
+      `SELECT 1 FROM swipes WHERE swiper_id = $1 AND swipee_id = $2 AND direction IN ('right','super') LIMIT 1`,
+      [targetUserId, req.user.id]
+    );
+    if (!mutual.length || !reverse.length) {
+      return res.status(403).json({ error: 'Mutual consent required' });
+    }
     const [u1, u2] = [req.user.id, targetUserId].sort();
     const { rows } = await db.query(
       'INSERT INTO matches (user1_id, user2_id, is_active, created_at) VALUES ($1, $2, TRUE, NOW()) ON CONFLICT (user1_id, user2_id) DO UPDATE SET is_active = TRUE RETURNING *',
@@ -27,7 +39,8 @@ router.post('/', auth, async (req, res) => {
     );
     res.status(201).json(rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const msg = process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message;
+    res.status(500).json({ error: msg });
   }
 });
 

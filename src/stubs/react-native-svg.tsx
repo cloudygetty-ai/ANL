@@ -1,5 +1,6 @@
 // Web stub for react-native-svg
 import React from 'react';
+import DOMPurify from 'dompurify';
 
 interface SvgXmlProps {
   xml: string;
@@ -10,10 +11,14 @@ interface SvgXmlProps {
 
 export const SvgXml: React.FC<SvgXmlProps> = ({ xml, width, height, style }) => {
   const flatStyle = Array.isArray(style) ? Object.assign({}, ...(style as object[])) : style ?? {};
+  const sanitized = DOMPurify.sanitize(xml, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    FORBID_TAGS: ['script', 'style'],
+  });
   return (
     <div
       style={{ width, height, ...flatStyle }}
-      dangerouslySetInnerHTML={{ __html: xml }}
+      dangerouslySetInnerHTML={{ __html: sanitized }}
     />
   );
 };

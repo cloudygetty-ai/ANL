@@ -126,7 +126,8 @@ router.post('/push-token', auth, async (req, res) => {
 
 // ─── NEARBY USERS (PostGIS) ───────────────────────────────────
 router.get('/nearby', auth, async (req, res) => {
-  const { lat, lng, radius = 5000 } = req.query;
+  const { lat, lng } = req.query;
+  const radius = Math.min(Math.max(parseInt(req.query.radius, 10) || 5000, 100), 50000);
   try {
     const { rows } = await db.query(
       `SELECT u.id, u.display_name, u.age,

@@ -12,12 +12,15 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: process.env.CORS_ORIGIN?.split(',') || '*' },
+  cors: { origin: process.env.CORS_ORIGIN?.split(',') ?? 'http://localhost:3001', credentials: true },
   transports: ['websocket', 'polling'],
 });
 
 const PORT = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET env var is required');
+const TURN_SECRET = process.env.TURN_SECRET;
+if (!TURN_SECRET) throw new Error('TURN_SECRET env var is required');
 
 // ─── IN-MEMORY DB ─────────────────────────────────────────
 const db = {
@@ -28,7 +31,7 @@ const db = {
 };
 
 // ─── MIDDLEWARE ───────────────────────────────────────────
-app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || '*' }));
+app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') ?? 'http://localhost:3001', credentials: true }));
 app.use(express.json());
 
 const authMiddleware = (req, res, next) => {
@@ -60,7 +63,7 @@ app.post('/api/auth/send-otp', express.json(), (req, res) => {
 // Auth — verify OTP
 app.post('/api/auth/verify-otp', express.json(), (req, res) => {
   const { phone, code } = req.body;
-  if (code !== '123456' && code !== '000000') {
+  if (code !== '123456') {
     return res.status(400).json({ error: 'Invalid OTP' });
   }
   
@@ -110,7 +113,9 @@ app.put('/api/users/:id', authMiddleware, express.json(), (req, res) => {
   const user = db.users.get(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
   
-  Object.assign(user, req.body);
+  const allowed = ['displayName', 'gender', 'age', 'bio', 'vibe', 'vibeTagIds'];
+  const update = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowed.includes(k)));
+  Object.assign(user, update);
   user.updatedAt = Date.now();
   res.json(user);
 });
@@ -167,7 +172,7 @@ app.get('/api/ice/config', authMiddleware, (req, res) => {
       {
         urls: ['turn:turn.anl.app:3478'],
         username: req.user.userId,
-        credential: jwt.sign({ sub: req.user.userId }, process.env.TURN_SECRET || 'dev', { expiresIn: '1h' }),
+        credential: jwt.sign({ sub: req.user.userId }, TURN_SECRET, { expiresIn: '1h' }),
       },
     ],
   });
@@ -214,8 +219,6 @@ httpServer.listen(PORT, () => {
 ║  Listening: http://localhost:${PORT}                        ║
 ║  WebSocket: ws://localhost:${PORT}                          ║
 ║  Health: GET http://localhost:${PORT}/api/health           ║
-║  Test OTP: 123456 or 000000                                ║
-║  JWT Secret: ${JWT_SECRET}                                 ║
 ╚════════════════════════════════════════════════════════════╝
   `);
 });

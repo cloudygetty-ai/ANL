@@ -6,7 +6,7 @@ const auth = require('../middleware/auth');
 
 router.get('/:matchId', auth, async (req, res) => {
   const { matchId } = req.params;
-  const limit = req.query.limit || 50;
+  const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
   try {
     const { rows: matchRows } = await db.query(
       'SELECT id FROM matches WHERE id = $1 AND (user1_id = $2 OR user2_id = $2)',
@@ -23,10 +23,14 @@ router.get('/:matchId', auth, async (req, res) => {
   }
 });
 
+const VALID_MSG_TYPES = new Set(['text', 'image', 'audio']);
+
 router.post('/:matchId', auth, async (req, res) => {
   const { matchId } = req.params;
   const { content, type = 'text' } = req.body;
-  if (!content) return res.status(400).json({ error: 'content required' });
+  if (!content || typeof content !== 'string') return res.status(400).json({ error: 'content required' });
+  if (content.length > 500) return res.status(400).json({ error: 'Message too long' });
+  if (!VALID_MSG_TYPES.has(type)) return res.status(400).json({ error: 'Invalid type' });
   try {
     const { rows: matchRows } = await db.query(
       'SELECT id FROM matches WHERE id = $1 AND (user1_id = $2 OR user2_id = $2) AND is_active = TRUE',

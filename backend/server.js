@@ -39,8 +39,14 @@ const app = express();
 const httpServer = createServer(app);
 
 // ─── SOCKET.IO ────────────────────────────────────────────────
+const corsOrigin = process.env.CORS_ORIGIN;
+if (!corsOrigin && process.env.NODE_ENV === 'production') {
+  throw new Error('CORS_ORIGIN must be set in production');
+}
+const resolvedOrigin = corsOrigin ?? 'http://localhost:3000';
+
 const io = new Server(httpServer, {
-  cors: { origin: process.env.CORS_ORIGIN || '*', methods: ['GET', 'POST'] },
+  cors: { origin: resolvedOrigin, methods: ['GET', 'POST'], credentials: true },
   transports: ['websocket', 'polling'],
 });
 app.set('io', io); // Make io accessible in routes
@@ -49,7 +55,7 @@ attachRedisAdapter(io);
 
 // ─── MIDDLEWARE ───────────────────────────────────────────────
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
+app.use(cors({ origin: resolvedOrigin, credentials: true }));
 
 // Stripe webhook — raw body required
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));

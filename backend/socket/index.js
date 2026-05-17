@@ -6,6 +6,7 @@ const { detectVenueMatches } = require('../services/venueMatching');
 const { ingestSnapshot, computeChemistryScore, generateCallReport } = require('../services/voiceTone');
 
 const onlineUsers = new Map(); // userId → Set<socketId>
+const msgTimestamps = new Map(); // userId → number[] (per-minute rate limiting)
 
 function registerSocket(io) {
   // Store io on app for route access
@@ -38,6 +39,13 @@ function registerSocket(io) {
     // ─── MESSAGING ────────────────────────────────────────
     socket.on('message:send', async ({ matchId, content, type = 'text' }) => {
       try {
+        const now = Date.now();
+        const recent = (msgTimestamps.get(userId) ?? []).filter(t => now - t < 60_000);
+        if (recent.length >= 60) {
+          return socket.emit('error', { event: 'message:send', message: 'Rate limit exceeded' });
+        }
+        msgTimestamps.set(userId, [...recent, now]);
+
         recordActivity(userId, 'message_sent').catch(console.error);
 
         const { rows } = await db.query(
@@ -159,15 +167,23 @@ function registerSocket(io) {
     });
 
     // ─── CALL LIFECYCLE ───────────────────────────────────
-    socket.on('call:initiate', ({ targetUserId, callType = 'video' }) => {
-      if (!isOnline(targetUserId)) {
-        return socket.emit('call:unavailable', { targetUserId });
+    socket.on('call:initiate', async ({ targetUserId, callType = 'video' }) => {
+      try {
+        const { rows } = await db.query(
+          `SELECT 1 FROM matches WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1) AND is_active = TRUE LIMIT 1`,
+          [userId, targetUserId]
+        );
+        if (!rows.length) {
+          return socket.emit('call:unavailable', { targetUserId, reason: 'no_match' });
+        }
+        if (!isOnline(targetUserId)) {
+          return socket.emit('call:unavailable', { targetUserId });
+        }
+        emitToUser(io, targetUserId, 'call:incoming', { callerId: userId, callType });
+        socket.emit('call:ringing', { targetUserId });
+      } catch (err) {
+        console.error('[socket] call:initiate error:', err.message);
       }
-      emitToUser(io, targetUserId, 'call:incoming', {
-        callerId: userId,
-        callType,
-      });
-      socket.emit('call:ringing', { targetUserId });
     });
 
     socket.on('call:accept', async ({ callerId, callType }) => {

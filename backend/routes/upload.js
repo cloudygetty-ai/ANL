@@ -55,6 +55,16 @@ router.post('/presign', auth, async (req, res) => {
 // ─── CONFIRM PRESIGNED UPLOAD ─────────────────────────────────
 router.post('/confirm', auth, async (req, res) => {
   const { key, url } = req.body;
+  const expectedPrefix = `photos/${req.user.id}/`;
+  if (!key || !key.startsWith(expectedPrefix)) {
+    return res.status(400).json({ error: 'Invalid key' });
+  }
+  const bucket = process.env.AWS_S3_BUCKET;
+  const validUrlBase = `https://${bucket}.s3.`;
+  const validCfBase = process.env.CLOUDFRONT_URL;
+  if (!url || (!url.startsWith(validUrlBase) && !(validCfBase && url.startsWith(validCfBase)))) {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
   try {
     const { rows } = await db.query(
       `INSERT INTO user_photos (user_id, url, s3_key, is_primary, position)

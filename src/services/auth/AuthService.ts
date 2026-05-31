@@ -2,18 +2,8 @@
 // Stack: Supabase Auth — phone OTP, session management, token refresh
 import type { UserProfile } from '@types/index';
 
-let supabase: any = null;
-const sb = () => {
-  if (supabase) return supabase;
-  try {
-    const { createClient } = require('@supabase/supabase-js');
-    supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL    ?? '',
-      import.meta.env.VITE_SUPABASE_ANON_KEY ?? '',
-    );
-  } catch { /* not installed */ }
-  return supabase;
-};
+import { supabase, isSupabaseReady } from '../../config/supabase';
+const sb = () => isSupabaseReady ? supabase : null;
 
 export interface AuthSession {
   userId:      string;

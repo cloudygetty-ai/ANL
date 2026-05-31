@@ -49,7 +49,7 @@ export class PushService {
     if (finalStatus !== 'granted') return null;
 
     const tokenData = await N.getExpoPushTokenAsync({
-      projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
+      projectId: import.meta.env.VITE_PROJECT_ID,
     });
 
     this.token = tokenData.data;
@@ -104,8 +104,8 @@ export class PushService {
     try {
       const { createClient } = require('@supabase/supabase-js');
       const sb = createClient(
-        process.env.EXPO_PUBLIC_SUPABASE_URL    ?? '',
-        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        import.meta.env.VITE_SUPABASE_URL    ?? '',
+        import.meta.env.VITE_SUPABASE_ANON_KEY ?? '',
       );
       await sb.from('users').update({ push_token: this.token }).eq('id', userId);
     } catch { /* supabase not configured */ }

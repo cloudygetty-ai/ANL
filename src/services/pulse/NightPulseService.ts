@@ -35,8 +35,8 @@ export class NightPulseService {
     try {
       const { createClient } = require('@supabase/supabase-js');
       supabase = createClient(
-        process.env.EXPO_PUBLIC_SUPABASE_URL    ?? '',
-        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        import.meta.env.VITE_SUPABASE_URL    ?? '',
+        import.meta.env.VITE_SUPABASE_ANON_KEY ?? '',
       );
     } catch { /* not installed */ }
 
@@ -75,8 +75,8 @@ export class NightPulseService {
     try {
       const { createClient } = require('@supabase/supabase-js');
       supabase = createClient(
-        process.env.EXPO_PUBLIC_SUPABASE_URL    ?? '',
-        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        import.meta.env.VITE_SUPABASE_URL    ?? '',
+        import.meta.env.VITE_SUPABASE_ANON_KEY ?? '',
       );
     } catch { /* mock mode */ }
 

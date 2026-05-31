@@ -10,8 +10,8 @@ const getSupabase = () => {
   try {
     const { createClient } = require('@supabase/supabase-js');
     supabase = createClient(
-      process.env.EXPO_PUBLIC_SUPABASE_URL    ?? '',
-      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+      import.meta.env.VITE_SUPABASE_URL    ?? '',
+      import.meta.env.VITE_SUPABASE_ANON_KEY ?? '',
     );
   } catch { /* not installed yet */ }
   return supabase;

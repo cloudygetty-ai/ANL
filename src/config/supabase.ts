@@ -1,8 +1,8 @@
 // src/config/supabase.ts
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const URL = process.env.EXPO_PUBLIC_SUPABASE_URL    ?? '';
-const KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const URL = import.meta.env.VITE_SUPABASE_URL ?? '';
+const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
 
 if (!URL || !KEY) {
   console.warn('[Supabase] Missing env vars — running in mock mode');
@@ -13,7 +13,7 @@ export const supabase: SupabaseClient = URL && KEY
       auth: {
         autoRefreshToken:    true,
         persistSession:      true,
-        detectSessionInUrl:  false,
+        detectSessionInUrl:  true,
       },
       realtime: { params: { eventsPerSecond: 10 } },
     })

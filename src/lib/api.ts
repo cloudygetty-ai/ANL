@@ -1,6 +1,6 @@
 // src/lib/api.ts
 // Typed fetch wrapper — injects auth token, handles errors uniformly
-const BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 let _token: string | null = null;
 

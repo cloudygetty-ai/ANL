@@ -37,7 +37,7 @@ const C = {
   twPin:      '#f7a8c4',
 };
 
-const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '';
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN ?? '';
 const MAP_STYLE    = 'mapbox://styles/mapbox/dark-v11';
 
 // ── Types ─────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ export default function MapScreen() {
         <Text style={{ color: C.purple, fontSize: 32 }}>🗺</Text>
         <Text style={[styles.labelBold, { textAlign: 'center' }]}>Mapbox not linked</Text>
         <Text style={[styles.textDim, { textAlign: 'center', maxWidth: 260 }]}>
-          Run: npx expo install @rnmapbox/maps{'\n'}then set EXPO_PUBLIC_MAPBOX_TOKEN in .env
+          Run: npx expo install @rnmapbox/maps{'\n'}then set VITE_MAPBOX_TOKEN in .env
         </Text>
       </View>
     );

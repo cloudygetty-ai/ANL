@@ -38,7 +38,7 @@ export const useSocketStore = create<SocketStore>((set, get) => ({
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { io } = require('socket.io-client');
-      const url = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
+      const url = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
       const socket = io(url, {
         auth: { token },
         transports: ['websocket'],

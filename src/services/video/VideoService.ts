@@ -21,7 +21,7 @@ export class VideoService {
   private userId: string;
   private apiBase: string;
 
-  constructor(userId: string, apiBase = process.env.EXPO_PUBLIC_API_URL ?? '') {
+  constructor(userId: string, apiBase = import.meta.env.VITE_API_URL ?? '') {
     this.userId  = userId;
     this.apiBase = apiBase;
   }

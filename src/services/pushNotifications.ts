@@ -38,7 +38,7 @@ export async function setupPushNotifications(userId: string) {
   // Get token and register with backend
   try {
     const token = await Notifications.getExpoPushTokenAsync({
-      projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
+      projectId: import.meta.env.VITE_PROJECT_ID,
     });
 
     await api.post('/users/push-token', { token: token.data });

@@ -34,6 +34,7 @@ const pushRouter      = require('./routes/push');
 
 // Stripe webhook must receive raw body — mount BEFORE express.json()
 const stripeRouter    = require('./routes/stripe');
+const otpRouter       = require('./routes/otp');
 
 const app = express();
 const httpServer = createServer(app);
@@ -80,6 +81,7 @@ const authLimiter = rateLimit({
 
 // ─── ROUTES ───────────────────────────────────────────────────
 app.use('/api/auth',      authLimiter, authRouter);
+app.use('/api/otp',       authLimiter, otpRouter);
 app.use('/api/users',     usersRouter);
 app.use('/api/discovery', discoveryRouter);
 app.use('/api/matches',   matchesRouter);

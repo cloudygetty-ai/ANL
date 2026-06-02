@@ -34,6 +34,7 @@ const pushRouter      = require('./routes/push');
 
 // Stripe webhook must receive raw body — mount BEFORE express.json()
 const stripeRouter    = require('./routes/stripe');
+const livekitRouter   = require('./routes/livekit');
 const otpRouter       = require('./routes/otp');
 
 const app = express();

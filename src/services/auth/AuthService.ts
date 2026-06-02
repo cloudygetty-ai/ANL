@@ -1,11 +1,14 @@
 // src/services/auth/AuthService.ts
 // Phone OTP via backend /api/otp/* (Twilio Verify)
-// Falls back to Supabase session management
 
 import { supabase, isSupabaseReady } from '../../config/supabase';
 import type { UserProfile } from '@types/index';
 
-const API = import.meta.env.VITE_API_URL || process.env.EXPO_PUBLIC_API_URL || '';
+const API = (
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) ||
+  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) ||
+  ''
+).replace(/\/$/, '');
 
 export interface AuthSession {
   userId:      string;
@@ -20,18 +23,27 @@ export interface OTPResult {
 }
 
 async function apiPost(path: string, body: Record<string, string>) {
+  if (!API) throw new Error('API URL not configured — set VITE_API_URL');
+
   const res = await fetch(`${API}${path}`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(body),
   });
+
+  // Guard: non-JSON response (HTML error page, proxy error, etc.)
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text();
+    throw new Error(`Server returned non-JSON (${res.status}): ${text.slice(0, 120)}`);
+  }
+
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
 
 export class AuthService {
-  /** Send OTP via Twilio Verify */
   async sendOTP(phone: string): Promise<OTPResult> {
     try {
       await apiPost('/api/otp/send', { phone });
@@ -41,12 +53,10 @@ export class AuthService {
     }
   }
 
-  /** Verify OTP — returns session on success */
   async verifyOTP(phone: string, code: string): Promise<AuthSession | null> {
     try {
       const data = await apiPost('/api/otp/verify', { phone, code });
-      // Store JWT for subsequent API calls
-      localStorage?.setItem?.('anl_token', data.token);
+      try { localStorage.setItem('anl_token', data.token); } catch {}
       return {
         userId:      data.user.id,
         phone:       data.user.phone,
@@ -58,27 +68,26 @@ export class AuthService {
     }
   }
 
-  /** Get current session from stored token */
   async getSession(): Promise<AuthSession | null> {
-    const token = localStorage?.getItem?.('anl_token');
-    if (!token) return null;
     try {
-      // Decode JWT payload (no verify needed — server will validate on each request)
+      const token = localStorage.getItem('anl_token');
+      if (!token) return null;
       const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.exp < Date.now() / 1000) { localStorage?.removeItem?.('anl_token'); return null; }
+      if (payload.exp < Date.now() / 1000) {
+        localStorage.removeItem('anl_token');
+        return null;
+      }
       return { userId: payload.id, phone: payload.phone, accessToken: token, expiresAt: payload.exp };
     } catch {
       return null;
     }
   }
 
-  /** Sign out */
   async signOut(): Promise<void> {
-    localStorage?.removeItem?.('anl_token');
+    try { localStorage.removeItem('anl_token'); } catch {}
     if (isSupabaseReady) await supabase.auth.signOut().catch(() => {});
   }
 
-  /** Fetch or create user profile */
   async getOrCreateProfile(userId: string, phone: string): Promise<UserProfile | null> {
     if (!isSupabaseReady) return null;
     const { data: existing } = await supabase.from('users').select('*').eq('id', userId).single();
@@ -92,7 +101,6 @@ export class AuthService {
     return created as UserProfile;
   }
 
-  /** Update profile fields */
   async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<boolean> {
     if (!isSupabaseReady) return false;
     const { error } = await supabase.from('users').update(updates).eq('id', userId);

@@ -42,9 +42,9 @@ const httpServer = createServer(app);
 // ─── SOCKET.IO ────────────────────────────────────────────────
 const corsOrigin = process.env.CORS_ORIGIN;
 if (!corsOrigin && process.env.NODE_ENV === 'production') {
-  throw new Error('CORS_ORIGIN must be set in production');
+  console.warn('[server] CORS_ORIGIN not set — defaulting to * (lock this down in production)');
 }
-const resolvedOrigin = corsOrigin ?? 'http://localhost:3000';
+const resolvedOrigin = corsOrigin ?? '*';
 
 const io = new Server(httpServer, {
   cors: { origin: resolvedOrigin, methods: ['GET', 'POST'], credentials: true },

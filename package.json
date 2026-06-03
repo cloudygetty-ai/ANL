@@ -39,7 +39,8 @@
     "react-native-safe-area-context": "4.8.2",
     "react-native-screens": "~3.29.0",
     "react-native-web": "^0.19.12",
-    "zustand": "^4.5.2"
+    "zustand": "^4.5.2",
+    "maplibre-gl": "^5.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
@@ -70,7 +71,7 @@
   "engines": {
     "node": ">=18"
   },
-  "description": "ANL (AllNightLong) — Location-based nightlife dating app",
+  "description": "ANL (AllNightLong) \u2014 Location-based nightlife dating app",
   "repository": {
     "type": "git",
     "url": "https://github.com/cloudygetty-ai/ANL.git"

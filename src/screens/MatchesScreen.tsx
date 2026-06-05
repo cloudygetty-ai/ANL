@@ -1,207 +1,157 @@
-// src/screens/MatchesScreen.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-
-import { api } from '../lib/api';
-import { useSocketStore } from '../stores/socketStore';
+// src/screens/MatchesScreen.tsx — Pure web, Supabase Realtime
+import React, { useState, useEffect } from 'react';
+import { supabase, isSupabaseReady } from '../config/supabase';
 
 const C = {
-  bg: '#04040a', surface: '#0d0d14', border: 'rgba(168,85,247,0.18)',
-  purple: '#a855f7', green: '#4ade80', amber: '#fbbf24',
-  text: '#f0eee8', textDim: 'rgba(240,238,232,0.5)',
+  bg: '#04040a', surface: '#0d0d14', card: '#111118', border: 'rgba(168,85,247,0.15)',
+  purple: '#a855f7', pink: '#ec4899', amber: '#fbbf24', green: '#4ade80', red: '#f43f5e',
+  text: '#f0eee8', textDim: 'rgba(240,238,232,0.5)', textMid: 'rgba(240,238,232,0.7)',
 };
 
-const GENDER_COLOR: Record<string, string> = {
-  f: '#ff3c64', m: '#a855f7', tw: '#f7a8c4', tm: '#55cdfc', nb: '#a8d5a2',
-};
-
-const GENDER_EMOJI: Record<string, string> = {
-  f: '🔥', m: '🌙', tw: '💜', tm: '⚡', nb: '✨',
-};
-
-type MatchRow = {
-  id: string;
-  partner_id: string;
-  partner_name: string;
-  partner_gender?: string;
-  created_at: string;
-  // enriched client-side from socket events
-  lastMsg?: string;
-  lastMsgTime?: string;
+interface MatchItem {
+  matchId: string; conversationId: string | null; userId: string;
+  displayName: string; avatarUrl: string; tagline: string;
+  lastMessage: string; lastMessageAt: string; isOnline: boolean;
   unread: number;
-  presence: 'online' | 'away' | 'offline';
-};
+}
 
-type Props = NativeStackScreenProps<any, 'Matches'>;
+interface Props { onOpenChat: (userId: string, name: string, conversationId: string) => void; }
 
-const MatchesScreen: React.FC<Props> = ({ navigation }) => {
-  const [matches, setMatches]     = useState<MatchRow[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const socket = useSocketStore(s => s.socket);
-  const clearUnread = useSocketStore(s => s.clearUnread);
+const MatchesScreen: React.FC<Props> = ({ onOpenChat }) => {
+  const [matches, setMatches] = useState<MatchItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [myId, setMyId] = useState('');
 
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    try {
-      const rows = await api.get<MatchRow[]>('/api/matches');
-      setMatches(rows.map(r => ({ ...r, unread: 0, presence: 'offline' })));
-    } catch { /* surface nothing — empty state is safe */ }
-    finally { setLoading(false); setRefreshing(false); }
-  }, []);
+  useEffect(() => { loadMatches(); }, []);
 
-  useEffect(() => {
-    load();
-    clearUnread();
-  }, [load, clearUnread]);
+  const loadMatches = async () => {
+    if (!isSupabaseReady) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setMyId(user.id);
 
-  // Real-time: incoming message preview
-  useEffect(() => {
-    if (!socket) return;
+    // Get matches where user is participant
+    const { data: matchRows } = await supabase
+      .from('matches')
+      .select('id, user_a, user_b, matched_at')
+      .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+      .eq('is_active', true)
+      .order('matched_at', { ascending: false });
 
-    const onPreview = (evt: { matchId: string; preview: string; time: string }) => {
-      setMatches(prev => prev.map(m =>
-        m.id === evt.matchId
-          ? { ...m, lastMsg: evt.preview, lastMsgTime: evt.time, unread: m.unread + 1 }
-          : m
-      ));
-    };
+    if (!matchRows?.length) { setLoading(false); return; }
 
-    const onPresence = (evt: { userId: string; status: 'online' | 'away' | 'offline' }) => {
-      setMatches(prev => prev.map(m =>
-        m.partner_id === evt.userId ? { ...m, presence: evt.status } : m
-      ));
-    };
+    // Get other user IDs
+    const otherIds = matchRows.map(m => m.user_a === user.id ? m.user_b : m.user_a);
+    const { data: profiles } = await supabase.from('users').select('id, display_name, avatar_url, tagline, last_active_at').in('id', otherIds);
+    const profileMap = new Map((profiles || []).map(p => [p.id, p]));
 
-    const onNewMatch = () => load(true);
+    // Get conversations for these matches
+    const matchIds = matchRows.map(m => m.id);
+    const { data: convos } = await supabase.from('conversations').select('id, match_id, last_message_at').in('match_id', matchIds);
+    const convoMap = new Map((convos || []).map(c => [c.match_id, c]));
 
-    socket.on('message:preview', onPreview);
-    socket.on('presence:update', onPresence);
-    socket.on('match:new', onNewMatch);
-
-    return () => {
-      socket.off('message:preview', onPreview);
-      socket.off('presence:update', onPresence);
-      socket.off('match:new', onNewMatch);
-    };
-  }, [socket, load]);
-
-  const openChat = (m: MatchRow) => {
-    setMatches(prev => prev.map(x => x.id === m.id ? { ...x, unread: 0 } : x));
-    navigation.navigate('Chat', {
-      matchId: m.id,
-      userId: m.partner_id,
-      displayName: m.partner_name,
+    // Build match items
+    const items: MatchItem[] = matchRows.map(m => {
+      const otherId = m.user_a === user.id ? m.user_b : m.user_a;
+      const profile = profileMap.get(otherId);
+      const convo = convoMap.get(m.id);
+      const lastActive = profile?.last_active_at ? new Date(profile.last_active_at) : null;
+      const isOnline = lastActive ? (Date.now() - lastActive.getTime()) < 10 * 60 * 1000 : false;
+      return {
+        matchId: m.id, conversationId: convo?.id || null, userId: otherId,
+        displayName: profile?.display_name || 'Anonymous',
+        avatarUrl: profile?.avatar_url || '',
+        tagline: profile?.tagline || '',
+        lastMessage: '', lastMessageAt: convo?.last_message_at || m.matched_at,
+        isOnline, unread: 0,
+      };
     });
+
+    setMatches(items);
+    setLoading(false);
   };
 
-  const totalUnread = matches.reduce((s, m) => s + m.unread, 0);
+  const handleChat = async (match: MatchItem) => {
+    let convoId = match.conversationId;
+    if (!convoId) {
+      // Create conversation
+      const { data } = await supabase.from('conversations').insert({ match_id: match.matchId }).select('id').single();
+      if (data) convoId = data.id;
+    }
+    if (convoId) onOpenChat(match.userId, match.displayName, convoId);
+  };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={s.safe}>
-        <ActivityIndicator color={C.purple} style={{ flex: 1 }} />
-      </SafeAreaView>
-    );
-  }
+  const unmatch = async (matchId: string) => {
+    await supabase.from('matches').update({ is_active: false, unmatched_at: new Date().toISOString() }).eq('id', matchId);
+    setMatches(m => m.filter(x => x.matchId !== matchId));
+  };
+
+  const timeAgo = (dt: string) => {
+    const diff = Date.now() - new Date(dt).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'now';
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h`;
+    return `${Math.floor(hrs / 24)}d`;
+  };
+
+  if (loading) return <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontFamily: "'DM Sans', sans-serif" }}>Loading matches...</div>;
 
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
-      <View style={s.header}>
-        <Text style={s.title}>Matches</Text>
-        {totalUnread > 0 && (
-          <Text style={s.sub}>{totalUnread} unread</Text>
-        )}
-      </View>
+    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ padding: '20px 20px 10px' }}>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Matches</h2>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: C.textDim }}>{matches.length} connection{matches.length !== 1 ? 's' : ''}</p>
+      </div>
 
-      <FlatList
-        data={matches}
-        keyExtractor={m => m.id}
-        contentContainerStyle={matches.length === 0 ? s.emptyContainer : s.list}
-        ItemSeparatorComponent={() => <View style={s.sep} />}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); load(true); }}
-            tintColor={C.purple}
-          />
-        }
-        ListEmptyComponent={
-          <View style={s.empty}>
-            <Text style={s.emptyEmoji}>💜</Text>
-            <Text style={s.emptyTitle}>No matches yet</Text>
-            <Text style={s.emptyText}>Keep swiping — someone's out there tonight.</Text>
-          </View>
-        }
-        renderItem={({ item: m }) => {
-          const col = GENDER_COLOR[m.partner_gender ?? 'm'] ?? C.purple;
-          const emoji = GENDER_EMOJI[m.partner_gender ?? 'm'] ?? '🌙';
-          const timeLabel = m.lastMsgTime ?? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      {matches.length === 0 ? (
+        <div style={{ padding: 40, textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>💜</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 8 }}>No matches yet</div>
+          <div style={{ fontSize: 13, color: C.textDim }}>Browse Discovery and like someone — if they like you back, you'll match</div>
+        </div>
+      ) : (
+        <div style={{ padding: '0 12px' }}>
+          {matches.map(match => (
+            <div key={match.matchId} onClick={() => handleChat(match)} style={{
+              display: 'flex', alignItems: 'center', gap: 14, padding: '14px 8px',
+              borderBottom: `1px solid ${C.border}`, cursor: 'pointer',
+              transition: 'background 0.15s',
+            }}>
+              {/* Avatar */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${match.isOnline ? C.green : 'transparent'}` }}>
+                  {match.avatarUrl ? (
+                    <img src={match.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', background: C.card, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: C.textDim }}>👤</div>
+                  )}
+                </div>
+                {match.isOnline && <div style={{ position: 'absolute', bottom: 2, right: 2, width: 12, height: 12, borderRadius: '50%', background: C.green, border: `2px solid ${C.bg}` }} />}
+              </div>
 
-          return (
-            <TouchableOpacity style={s.row} onPress={() => openChat(m)}>
-              <View style={[s.avatar, { borderColor: col }]}>
-                <Text style={s.emoji}>{emoji}</Text>
-                <View style={[
-                  s.status,
-                  { backgroundColor: m.presence === 'online' ? C.green : m.presence === 'away' ? C.amber : C.border },
-                ]} />
-              </View>
+              {/* Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 15, fontWeight: 600 }}>{match.displayName}</span>
+                  <span style={{ fontSize: 11, color: C.textDim }}>{timeAgo(match.lastMessageAt)}</span>
+                </div>
+                <div style={{ fontSize: 13, color: C.textDim, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {match.tagline || 'Tap to start chatting'}
+                </div>
+              </div>
 
-              <View style={s.info}>
-                <View style={s.nameRow}>
-                  <Text style={s.name}>{m.partner_name}</Text>
-                  <Text style={s.time}>{timeLabel}</Text>
-                </View>
-                <Text
-                  style={[s.msg, m.unread > 0 && { color: C.text, fontWeight: '600' }]}
-                  numberOfLines={1}
-                >
-                  {m.lastMsg ?? 'New match — say hello 👋'}
-                </Text>
-              </View>
-
-              {m.unread > 0 && (
-                <View style={s.badge}>
-                  <Text style={s.badgeText}>{m.unread}</Text>
-                </View>
+              {/* Unread badge */}
+              {match.unread > 0 && (
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: C.purple, color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{match.unread}</div>
               )}
-            </TouchableOpacity>
-          );
-        }}
-      />
-    </SafeAreaView>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
-
-const s = StyleSheet.create({
-  safe:           { flex: 1, backgroundColor: C.bg },
-  header:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 20, paddingVertical: 16 },
-  title:          { fontSize: 26, fontWeight: '900', color: C.text },
-  sub:            { fontSize: 12, color: C.purple },
-  list:           { paddingHorizontal: 16 },
-  emptyContainer: { flex: 1 },
-  sep:            { height: 1, backgroundColor: C.border, marginLeft: 76 },
-  row:            { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
-  avatar:         { width: 52, height: 52, borderRadius: 26, borderWidth: 2, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', marginRight: 14, position: 'relative' },
-  emoji:          { fontSize: 24 },
-  status:         { position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: C.bg },
-  info:           { flex: 1 },
-  nameRow:        { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  name:           { fontSize: 15, fontWeight: '700', color: C.text },
-  time:           { fontSize: 11, color: C.textDim },
-  msg:            { fontSize: 13, color: C.textDim },
-  badge:          { backgroundColor: C.purple, borderRadius: 10, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, marginLeft: 8 },
-  badgeText:      { color: '#fff', fontSize: 11, fontWeight: '800' },
-  empty:          { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 120 },
-  emptyEmoji:     { fontSize: 48, marginBottom: 16 },
-  emptyTitle:     { fontSize: 20, fontWeight: '800', color: C.text, marginBottom: 8 },
-  emptyText:      { fontSize: 14, color: C.textDim, textAlign: 'center' },
-});
 
 export default MatchesScreen;

@@ -1,9 +1,10 @@
-// src/AppWeb.tsx — Pure web root. No RN imports. All screens operational.
+// src/AppWeb.tsx — Pure web root. All screens operational.
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseReady } from './config/supabase';
 import type { Session } from '@supabase/supabase-js';
 import MapScreen from './screens/MapScreen';
 import DiscoveryScreen from './screens/DiscoveryScreen';
+import NearbyScreen, { ProfileViewModal } from './screens/NearbyScreen';
 import MatchesScreen from './screens/MatchesScreen';
 import ChatScreen from './screens/ChatScreen';
 import ProfileScreen from './screens/ProfileScreen';
@@ -13,9 +14,8 @@ const C = {
   pink: '#ec4899', text: '#f0eee8', textDim: 'rgba(240,238,232,0.5)',
 };
 
-type Route = 'auth' | 'discovery' | 'map' | 'matches' | 'chat' | 'profile';
+type Route = 'auth' | 'nearby' | 'discovery' | 'map' | 'matches' | 'chat' | 'profile';
 
-// ─── PHONE AUTH SCREEN ──────────────────────────────────────
 function AuthScreen({ onAuth }: { onAuth: (s: Session) => void }) {
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
@@ -64,12 +64,12 @@ function AuthScreen({ onAuth }: { onAuth: (s: Session) => void }) {
   );
 }
 
-// ─── MAIN APP ──────────────────────────────────────────────
 export default function AppWeb() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [route, setRoute] = useState<Route>('map');
+  const [route, setRoute] = useState<Route>('nearby');
   const [chatTarget, setChatTarget] = useState<{ userId: string; name: string; convoId: string } | null>(null);
+  const [viewingProfile, setViewingProfile] = useState<any>(null);
 
   useEffect(() => {
     if (!isSupabaseReady) { setLoading(false); return; }
@@ -92,45 +92,46 @@ export default function AppWeb() {
   };
 
   const tabs: { route: Route; icon: string; label: string }[] = [
+    { route: 'nearby',    icon: '👥', label: 'Nearby' },
     { route: 'discovery', icon: '🔥', label: 'Discover' },
-    { route: 'map',      icon: '🗺️', label: 'Map' },
-    { route: 'matches',  icon: '💬', label: 'Matches' },
-    { route: 'profile',  icon: '👤', label: 'Profile' },
+    { route: 'map',       icon: '🗺️', label: 'Map' },
+    { route: 'matches',   icon: '💬', label: 'Matches' },
+    { route: 'profile',   icon: '👤', label: 'Profile' },
   ];
 
   return (
     <div style={{ width: '100vw', height: '100dvh', display: 'flex', flexDirection: 'column', background: C.bg, overflow: 'hidden' }}>
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {route === 'nearby' && <NearbyScreen onViewProfile={(u) => setViewingProfile(u)} />}
         {route === 'discovery' && <DiscoveryScreen />}
         {route === 'map' && <MapScreen />}
         {route === 'matches' && <MatchesScreen onOpenChat={openChat} />}
         {route === 'profile' && <ProfileScreen />}
         {route === 'chat' && chatTarget && (
-          <ChatScreen
-            conversationId={chatTarget.convoId}
-            otherUserId={chatTarget.userId}
-            otherName={chatTarget.name}
-            onBack={() => setRoute('matches')}
-          />
+          <ChatScreen conversationId={chatTarget.convoId} otherUserId={chatTarget.userId} otherName={chatTarget.name} onBack={() => setRoute('matches')} />
         )}
       </div>
 
-      {/* Bottom nav — hidden in chat */}
+      {/* Profile view modal */}
+      {viewingProfile && (
+        <ProfileViewModal user={viewingProfile} onClose={() => setViewingProfile(null)} onMessage={() => { setViewingProfile(null); setRoute('matches'); }} />
+      )}
+
+      {/* Bottom nav */}
       {route !== 'chat' && (
         <nav style={{
           display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-          padding: '8px 0', paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
+          padding: '6px 0', paddingBottom: 'max(6px, env(safe-area-inset-bottom))',
           borderTop: '1px solid rgba(168,85,247,0.12)', background: C.bg, flexShrink: 0,
         }}>
           {tabs.map(t => (
             <button key={t.route} onClick={() => setRoute(t.route)} style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-              opacity: route === t.route ? 1 : 0.4, transition: 'opacity 0.2s',
-              padding: '4px 12px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+              opacity: route === t.route ? 1 : 0.4, transition: 'opacity 0.2s', padding: '4px 8px',
             }}>
-              <span style={{ fontSize: 22 }}>{t.icon}</span>
-              <span style={{ fontSize: 10, color: route === t.route ? C.purple : C.textDim, fontWeight: route === t.route ? 700 : 400, fontFamily: "'DM Sans', sans-serif" }}>{t.label}</span>
+              <span style={{ fontSize: 20 }}>{t.icon}</span>
+              <span style={{ fontSize: 9, color: route === t.route ? C.purple : C.textDim, fontWeight: route === t.route ? 700 : 400, fontFamily: "'DM Sans', sans-serif" }}>{t.label}</span>
             </button>
           ))}
         </nav>

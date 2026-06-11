@@ -170,14 +170,14 @@ const ProfileScreen: React.FC = () => {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
             {(profile.photos || []).map((url: string, i: number) => (
               <div key={i} style={{ position: 'relative', width: 90, height: 90, borderRadius: 12, overflow: 'hidden', border: profile.avatar_url === url ? `2px solid ${C.purple}` : '2px solid transparent' }}>
-                <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {/\.(mp4|mov|webm)$/i.test(url) ? <video src={url} muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                 <button onClick={() => removePhoto(url)} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, fontSize: 12, cursor: 'pointer', lineHeight: '22px', padding: 0 }}>×</button>
                 {profile.avatar_url !== url && <button onClick={() => update('avatar_url', url)} style={{ position: 'absolute', bottom: 4, left: 4, background: 'rgba(0,0,0,0.7)', color: C.amber, border: 'none', borderRadius: 8, fontSize: 9, padding: '2px 6px', cursor: 'pointer' }}>Main</button>}
               </div>
             ))}
             <label style={{ width: 90, height: 90, borderRadius: 12, border: `2px dashed ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 28, color: C.textDim }}>
               {uploading ? '...' : '+'}
-              <input type="file" accept="image/*" onChange={uploadPhoto} style={{ display: 'none' }} />
+              <input type="file" accept="image/*,video/*" onChange={uploadPhoto} style={{ display: 'none' }} />
             </label>
           </div>
         </Section>

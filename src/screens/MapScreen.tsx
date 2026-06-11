@@ -1,4 +1,4 @@
-// src/screens/MapScreen.tsx — MapLibre GL JS + 3D Buildings + Street View
+// src/screens/MapScreen.tsx — MapLibre GL JS + Authentic 3D Buildings
 import React, { useRef, useEffect, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -8,21 +8,17 @@ const C = {
   amber: '#fbbf24', green: '#4ade80', text: '#f0eee8', textDim: 'rgba(240,238,232,0.5)',
 };
 
-// OpenFreeMap dark style with building data (free, no API key)
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
-
-// Fallback: CARTO dark-matter
-const CARTO_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+// MapTiler 3D dark style — free tier (100k loads/month)
+// Using OpenFreeMap as primary (unlimited, free)
+const STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
 
 const MapScreen: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
   const [mode, setMode] = useState<'pins' | 'heat'>('pins');
-  const [streetView, setStreetView] = useState<{ lng: number; lat: number } | null>(null);
   const [locating, setLocating] = useState(true);
 
-  // Get real location
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (pos) => { setUserLoc([pos.coords.longitude, pos.coords.latitude]); setLocating(false); },
@@ -36,13 +32,13 @@ const MapScreen: React.FC = () => {
 
     const map = new maplibregl.Map({
       container: mapContainer.current,
-      style: CARTO_STYLE,
+      style: STYLE_URL,
       center: userLoc,
-      zoom: 16,
-      pitch: 60,
+      zoom: 16.5,
+      pitch: 62,
       bearing: -17.6,
       antialias: true,
-      maxPitch: 70,
+      maxPitch: 72,
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right');
@@ -53,133 +49,158 @@ const MapScreen: React.FC = () => {
     }), 'bottom-right');
 
     map.on('load', () => {
-      // Add 3D buildings layer
-      const layers = map.getStyle().layers;
-      // Find the label layer to insert buildings below it
-      let labelLayerId = '';
-      for (const layer of layers || []) {
-        if ((layer as any).type === 'symbol' && (layer as any).layout?.['text-field']) {
-          labelLayerId = layer.id;
-          break;
-        }
-      }
-
-      // Try to add 3D buildings from existing source
-      try {
-        map.addLayer({
-          id: '3d-buildings',
-          source: 'carto',
-          'source-layer': 'building',
-          filter: ['==', '$type', 'Polygon'],
-          type: 'fill-extrusion',
-          minzoom: 14,
-          paint: {
-            'fill-extrusion-color': [
-              'interpolate', ['linear'], ['get', 'render_height'],
-              0, '#0a0a12',
-              50, '#12121f',
-              100, '#1a1a2e',
-              200, '#22223a',
-            ],
-            'fill-extrusion-height': ['coalesce', ['get', 'render_height'], ['get', 'height'], 10],
-            'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
-            'fill-extrusion-opacity': 0.7,
-          },
-        }, labelLayerId || undefined);
-      } catch (e) {
-        // If carto source doesn't have buildings, add from OpenMapTiles
-        try {
-          map.addSource('openmaptiles', {
-            type: 'vector',
-            url: 'https://tiles.openfreemap.org/planet',
-          });
-          map.addLayer({
-            id: '3d-buildings',
-            source: 'openmaptiles',
-            'source-layer': 'building',
-            filter: ['==', '$type', 'Polygon'],
-            type: 'fill-extrusion',
-            minzoom: 14,
-            paint: {
-              'fill-extrusion-color': '#12121f',
-              'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 10],
-              'fill-extrusion-base': 0,
-              'fill-extrusion-opacity': 0.6,
-            },
-          });
-        } catch {}
-      }
-
-      // Purple glow ground layer under user
-      map.addSource('user-glow', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: userLoc }, properties: {} }] },
-      });
-      map.addLayer({
-        id: 'user-glow-layer',
-        type: 'circle',
-        source: 'user-glow',
-        paint: {
-          'circle-radius': 40,
-          'circle-color': C.purple,
-          'circle-opacity': 0.15,
-          'circle-blur': 1,
-        },
-      });
-
-      // Heatmap pulse layer
-      map.addSource('pulse', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      });
-      map.addLayer({
-        id: 'pulse-heat',
-        type: 'heatmap',
-        source: 'pulse',
-        layout: { visibility: 'none' },
-        paint: {
-          'heatmap-weight': ['get', 'intensity'],
-          'heatmap-intensity': 1.2,
-          'heatmap-color': [
-            'interpolate', ['linear'], ['heatmap-density'],
-            0, 'rgba(0,0,0,0)',
-            0.2, 'rgba(168,85,247,0.3)',
-            0.4, 'rgba(168,85,247,0.5)',
-            0.6, 'rgba(236,72,153,0.6)',
-            0.8, 'rgba(251,191,36,0.7)',
-            1, 'rgba(251,191,36,0.9)',
-          ],
-          'heatmap-radius': 60,
-          'heatmap-opacity': 0.8,
-        },
-      });
-
-      // Long press / right click = street view at that point
-      map.on('contextmenu', (e) => {
-        setStreetView({ lng: e.lngLat.lng, lat: e.lngLat.lat });
-      });
-
-      // Mobile: long press via touchhold
-      let touchTimer: ReturnType<typeof setTimeout>;
-      map.getCanvas().addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-          touchTimer = setTimeout(() => {
-            const rect = map.getCanvas().getBoundingClientRect();
-            const point = map.unproject([
-              e.touches[0].clientX - rect.left,
-              e.touches[0].clientY - rect.top,
-            ]);
-            setStreetView({ lng: point.lng, lat: point.lat });
-          }, 600);
-        }
-      });
-      map.getCanvas().addEventListener('touchend', () => clearTimeout(touchTimer));
-      map.getCanvas().addEventListener('touchmove', () => clearTimeout(touchTimer));
+      add3DBuildings(map);
+      addUserGlow(map, userLoc);
+      addPulseLayer(map);
+      addAtmosphere(map);
     });
 
     mapRef.current = map;
     return () => map.remove();
   }, [userLoc]);
+
+  const add3DBuildings = (map: maplibregl.Map) => {
+    const layers = map.getStyle().layers || [];
+    let labelLayerId = '';
+    for (const layer of layers) {
+      if ((layer as any).type === 'symbol' && (layer as any).layout?.['text-field']) {
+        labelLayerId = layer.id;
+        break;
+      }
+    }
+
+    // Try multiple source-layer names for building data
+    const buildingLayers = ['building', 'buildings', 'building-3d'];
+    const sources = Object.keys(map.getStyle().sources || {});
+
+    for (const src of sources) {
+      for (const sl of buildingLayers) {
+        try {
+          map.addLayer({
+            id: '3d-buildings',
+            source: src,
+            'source-layer': sl,
+            filter: ['==', '$type', 'Polygon'],
+            type: 'fill-extrusion',
+            minzoom: 13,
+            paint: {
+              'fill-extrusion-color': [
+                'interpolate', ['linear'], ['coalesce', ['get', 'render_height'], ['get', 'height'], 10],
+                0,   '#08080f',
+                20,  '#0e0e18',
+                50,  '#131320',
+                100, '#181828',
+                200, '#1e1e32',
+                400, '#252540',
+              ],
+              'fill-extrusion-height': [
+                'interpolate', ['linear'], ['zoom'],
+                13, 0,
+                14, ['coalesce', ['get', 'render_height'], ['get', 'height'], 10],
+              ],
+              'fill-extrusion-base': [
+                'interpolate', ['linear'], ['zoom'],
+                13, 0,
+                14, ['coalesce', ['get', 'render_min_height'], 0],
+              ],
+              'fill-extrusion-opacity': [
+                'interpolate', ['linear'], ['zoom'],
+                13, 0,
+                14, 0.65,
+                16, 0.8,
+                18, 0.85,
+              ],
+              'fill-extrusion-flood-light-color': C.purple,
+              'fill-extrusion-flood-light-intensity': 0.15,
+              'fill-extrusion-vertical-gradient': true,
+            },
+          }, labelLayerId || undefined);
+          return; // Success
+        } catch {}
+      }
+    }
+
+    // Fallback: add OpenMapTiles source for buildings
+    try {
+      map.addSource('buildings-omt', {
+        type: 'vector',
+        tiles: ['https://tiles.openfreemap.org/planet/{z}/{x}/{y}.pbf'],
+        maxzoom: 14,
+      });
+      map.addLayer({
+        id: '3d-buildings',
+        source: 'buildings-omt',
+        'source-layer': 'building',
+        filter: ['==', '$type', 'Polygon'],
+        type: 'fill-extrusion',
+        minzoom: 13,
+        paint: {
+          'fill-extrusion-color': [
+            'interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 10],
+            0, '#08080f', 50, '#131320', 100, '#181828', 200, '#1e1e32',
+          ],
+          'fill-extrusion-height': ['coalesce', ['get', 'render_height'], ['get', 'height'], 10],
+          'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+          'fill-extrusion-opacity': 0.75,
+          'fill-extrusion-vertical-gradient': true,
+        },
+      }, labelLayerId || undefined);
+    } catch {}
+  };
+
+  const addUserGlow = (map: maplibregl.Map, loc: [number, number]) => {
+    map.addSource('user-glow', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [
+        { type: 'Feature', geometry: { type: 'Point', coordinates: loc }, properties: { r: 50 } },
+        { type: 'Feature', geometry: { type: 'Point', coordinates: loc }, properties: { r: 25 } },
+      ]},
+    });
+    // Outer glow
+    map.addLayer({
+      id: 'user-glow-outer', type: 'circle', source: 'user-glow',
+      filter: ['==', ['get', 'r'], 50],
+      paint: { 'circle-radius': 50, 'circle-color': C.purple, 'circle-opacity': 0.08, 'circle-blur': 1 },
+    });
+    // Inner glow
+    map.addLayer({
+      id: 'user-glow-inner', type: 'circle', source: 'user-glow',
+      filter: ['==', ['get', 'r'], 25],
+      paint: { 'circle-radius': 20, 'circle-color': C.purple, 'circle-opacity': 0.2, 'circle-blur': 0.5 },
+    });
+  };
+
+  const addPulseLayer = (map: maplibregl.Map) => {
+    map.addSource('pulse', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+    map.addLayer({
+      id: 'pulse-heat', type: 'heatmap', source: 'pulse',
+      layout: { visibility: 'none' },
+      paint: {
+        'heatmap-weight': ['get', 'intensity'],
+        'heatmap-intensity': 1.5,
+        'heatmap-color': [
+          'interpolate', ['linear'], ['heatmap-density'],
+          0, 'rgba(0,0,0,0)', 0.15, 'rgba(168,85,247,0.25)',
+          0.35, 'rgba(168,85,247,0.5)', 0.55, 'rgba(236,72,153,0.6)',
+          0.75, 'rgba(251,146,60,0.7)', 1, 'rgba(251,191,36,0.9)',
+        ],
+        'heatmap-radius': 70, 'heatmap-opacity': 0.85,
+      },
+    });
+  };
+
+  const addAtmosphere = (map: maplibregl.Map) => {
+    // Subtle fog for depth
+    try {
+      (map as any).setFog?.({
+        color: '#04040a', 'high-color': '#08081a', 'horizon-blend': 0.08,
+        'space-color': '#04040a', 'star-intensity': 0.3,
+      });
+    } catch {}
+  };
 
   const toggleMode = () => {
     const map = mapRef.current;
@@ -187,19 +208,6 @@ const MapScreen: React.FC = () => {
     const next = mode === 'pins' ? 'heat' : 'pins';
     setMode(next);
     try { map.setLayoutProperty('pulse-heat', 'visibility', next === 'heat' ? 'visible' : 'none'); } catch {}
-  };
-
-  const openGoogleStreetView = (lng: number, lat: number) => {
-    window.open(`https://www.google.com/maps/@${lat},${lng},3a,75y,0h,90t/data=!3m1!1e1`, '_blank');
-  };
-
-  const openNavigation = (lng: number, lat: number) => {
-    // Deep link to native maps for navigation
-    const isIOS = /iPhone|iPad/.test(navigator.userAgent);
-    const url = isIOS
-      ? `maps://maps.apple.com/?daddr=${lat},${lng}&dirflg=w`
-      : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
-    window.open(url, '_blank');
   };
 
   if (locating) return (
@@ -217,7 +225,7 @@ const MapScreen: React.FC = () => {
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0,
         padding: '12px 16px', paddingTop: 'max(12px, env(safe-area-inset-top))',
-        background: 'linear-gradient(to bottom, rgba(4,4,10,0.9), transparent)',
+        background: 'linear-gradient(to bottom, rgba(4,4,10,0.92) 0%, rgba(4,4,10,0.4) 70%, transparent 100%)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         pointerEvents: 'none', zIndex: 10,
       }}>
@@ -227,69 +235,14 @@ const MapScreen: React.FC = () => {
           </div>
           <div style={{ fontSize: 9, color: C.textDim, letterSpacing: 3, marginTop: -2 }}>NIGHTPULSE</div>
         </div>
-        <div style={{ display: 'flex', gap: 8, pointerEvents: 'auto' }}>
-          <button onClick={toggleMode} style={{
-            background: mode === 'heat' ? C.purple : 'rgba(255,255,255,0.1)',
-            color: C.text, border: 'none', borderRadius: 20, padding: '7px 14px',
-            fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-          }}>{mode === 'pins' ? '🔥 Pulse' : '📍 Pins'}</button>
-          <button onClick={() => {
-            const center = mapRef.current?.getCenter();
-            if (center) setStreetView({ lng: center.lng, lat: center.lat });
-          }} style={{
-            background: 'rgba(255,255,255,0.1)', color: C.text, border: 'none',
-            borderRadius: 20, padding: '7px 14px', fontSize: 12, fontWeight: 600,
-            cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-          }}>👁️ Street</button>
-        </div>
+        <button onClick={toggleMode} style={{
+          pointerEvents: 'auto',
+          background: mode === 'heat' ? C.purple : 'rgba(255,255,255,0.1)',
+          color: C.text, border: 'none', borderRadius: 20, padding: '7px 14px',
+          fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+          backdropFilter: 'blur(8px)',
+        }}>{mode === 'pins' ? '🔥 Pulse' : '📍 Pins'}</button>
       </div>
-
-      {/* Hint */}
-      <div style={{
-        position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
-        background: 'rgba(0,0,0,0.7)', color: C.textDim, padding: '6px 14px',
-        borderRadius: 20, fontSize: 11, zIndex: 10, pointerEvents: 'none',
-        fontFamily: "'DM Sans', sans-serif",
-      }}>Long press anywhere for street view</div>
-
-      {/* Street View Modal */}
-      {streetView && (
-        <div style={{
-          position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)',
-          zIndex: 20, display: 'flex', flexDirection: 'column',
-          fontFamily: "'DM Sans', sans-serif",
-        }}>
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
-            <h3 style={{ color: C.text, margin: 0, fontSize: 16, fontWeight: 600 }}>
-              📍 Street View
-            </h3>
-            <button onClick={() => setStreetView(null)} style={{ background: 'rgba(255,255,255,0.1)', color: C.text, border: 'none', borderRadius: '50%', width: 36, height: 36, fontSize: 18, cursor: 'pointer' }}>×</button>
-          </div>
-
-          {/* Mapillary embed */}
-          <div style={{ flex: 1, overflow: 'hidden', margin: '0 16px', borderRadius: 16 }}>
-            <iframe
-              src={`https://www.mapillary.com/embed?style=photo&close=true&lat=${streetView.lat}&lng=${streetView.lng}&z=17`}
-              style={{ width: '100%', height: '100%', border: 'none', borderRadius: 16 }}
-              title="Street View"
-              allow="fullscreen"
-            />
-          </div>
-
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: 10, padding: '16px', paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
-            <button onClick={() => openGoogleStreetView(streetView.lng, streetView.lat)} style={{
-              flex: 1, padding: '14px', background: C.purple, color: '#fff', border: 'none',
-              borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-            }}>Open Google Street View</button>
-            <button onClick={() => openNavigation(streetView.lng, streetView.lat)} style={{
-              flex: 1, padding: '14px', background: 'rgba(255,255,255,0.1)', color: C.text,
-              border: `1px solid ${C.purple}`, borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-            }}>🧭 Navigate</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

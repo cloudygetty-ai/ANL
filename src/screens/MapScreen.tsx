@@ -39,14 +39,14 @@ const MapScreen: React.FC = () => {
       bearing: -17.6,
       antialias: true,
       maxPitch: 72,
-    });
+    } as any);
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right');
     map.addControl(new maplibregl.GeolocateControl({
       positionOptions: { enableHighAccuracy: true },
       trackUserLocation: true,
       showUserHeading: true,
-    }), 'bottom-right');
+    } as any), 'bottom-right');
 
     map.on('load', () => {
       add3DBuildings(map);
@@ -110,8 +110,8 @@ const MapScreen: React.FC = () => {
                 16, 0.8,
                 18, 0.85,
               ],
-              'fill-extrusion-flood-light-color': C.purple,
-              'fill-extrusion-flood-light-intensity': 0.15,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ...({ 'fill-extrusion-flood-light-color': C.purple, 'fill-extrusion-flood-light-intensity': 0.15 } as any),
               'fill-extrusion-vertical-gradient': true,
             },
           }, labelLayerId || undefined);

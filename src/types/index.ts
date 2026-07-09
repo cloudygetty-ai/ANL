@@ -73,8 +73,10 @@ export interface UserProfile {
   distanceM?:   number;        // computed server-side
   match?:       number;        // 0-100 compatibility score
   isNew?:       boolean;
-  isTop?:       boolean;
-  blockedIds:   string[];
+  isTop?:              boolean;
+  blockedIds:          string[];
+  subscriptionTier?:   'free' | 'plus' | 'premium';
+  subscriptionStatus?: 'active' | 'inactive' | 'pending' | 'past_due' | 'cancelling';
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────

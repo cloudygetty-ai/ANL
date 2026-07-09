@@ -4,7 +4,7 @@
 
 # This document is the authoritative source for all ANL implementations.
 
-# Claude Code reads this file to reconstruct the full codebase.
+# This file is used to reconstruct the full codebase.
 
 # Do not modify without updating version + changelog.
 
@@ -15,7 +15,7 @@
 This is a GOD-MODE spec file. Every implementation in the ANL codebase
 is defined here with full code, schemas, contracts, and architecture decisions.
 
-Claude Code workflow:
+Workflow:
 
 1. Read CLAUDE.md — load operational persona + constraints
 1. Read PROJECT.md — load file map + known issues

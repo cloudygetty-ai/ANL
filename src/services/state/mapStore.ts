@@ -1,6 +1,6 @@
 // src/services/state/mapStore.ts
 import { create } from 'zustand';
-import type { MapUser, MapEvent, CameraState } from '@types/index';
+import type { MapUser, MapEvent, CameraState } from '@anl-types/index';
 
 type FilterGender = 'all' | 'f' | 'm' | 'tw' | 'tm';
 type MapMode      = 'pins' | 'pulse';

@@ -1,5 +1,5 @@
 // src/core/scheduler/TaskQueue.ts
-import type { Task, TaskPriority } from '@types/index';
+import type { Task, TaskPriority } from '@anl-types/index';
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = {
   CRITICAL: 0,

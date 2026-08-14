@@ -1,7 +1,7 @@
 // src/core/eventLoop/EventLoopManager.ts
 import { TaskQueue } from '@core/scheduler/TaskQueue';
 import { HealthMonitor } from '@services/health/HealthMonitor';
-import type { SystemError } from '@types/index';
+import type { SystemError } from '@anl-types/index';
 
 const MIN_DELAY_MS = 500;
 const MAX_DELAY_MS = 5000;

@@ -1,6 +1,6 @@
 // src/services/matching/MatchingEngine.ts
 // Weighted compatibility score: distance, interests, age, activity, premium
-import type { UserProfile } from '@types/index';
+import type { UserProfile } from '@anl-types/index';
 import { distanceM } from '@utils/geo';
 
 export interface MatchWeights {

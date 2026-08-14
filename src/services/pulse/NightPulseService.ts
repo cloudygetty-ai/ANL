@@ -2,7 +2,7 @@
 // NightPulse: real-time anonymous heatwave showing which neighborhoods are 🔥
 // Data: user activity events aggregated by neighborhood polygon server-side
 // Update cycle: 60s via EventLoop task + Supabase Realtime subscription
-import type { PulseZone, NightPulseSnapshot, LatLng } from '@types/index';
+import type { PulseZone, NightPulseSnapshot, LatLng } from '@anl-types/index';
 
 // Intensity → color mapping (purple → pink → amber → white at peak)
 export const pulseColor = (intensity: number): string => {
@@ -102,13 +102,13 @@ export class NightPulseService {
   /** Get the hottest zone right now */
   getPeakZone(): PulseZone | null {
     if (!this.snapshot) return null;
-    return this.snapshot.zones.reduce((a, b) => a.intensity > b.intensity ? a : b);
+    return this.snapshot.zones.reduce((a: PulseZone, b: PulseZone) => a.intensity > b.intensity ? a : b);
   }
 
   /** Get zones within radius of coords (for "near you" filter) */
   getZonesNear(coords: LatLng, radiusM: number): PulseZone[] {
     if (!this.snapshot) return [];
-    return this.snapshot.zones.filter(z => {
+    return this.snapshot.zones.filter((z: PulseZone) => {
       const dx = (z.center.lng - coords.lng) * 111320 * Math.cos(coords.lat * Math.PI / 180);
       const dy = (z.center.lat - coords.lat) * 110574;
       return Math.sqrt(dx*dx + dy*dy) <= radiusM;

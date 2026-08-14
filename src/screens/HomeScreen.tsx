@@ -8,6 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSystemStore } from '@services/state/systemStore';
 import { getEventLoop } from '@core/SystemInitializer';
+import type { SystemError } from '@anl-types/index';
 
 const { width: SW } = Dimensions.get('window');
 const CARD_W = (SW - 48) / 3;
@@ -250,7 +251,7 @@ const HomeScreen: React.FC = () => {
               }
             />
             <View style={styles.infoCard}>
-              {visibleErrors.map((err, i) => (
+              {visibleErrors.map((err: SystemError, i: number) => (
                 <ErrorRow key={err.id} module={err.module} message={err.message} time={err.timestamp} last={i === visibleErrors.length - 1} />
               ))}
             </View>

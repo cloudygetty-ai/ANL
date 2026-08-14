@@ -1,6 +1,6 @@
 // src/services/state/userStore.ts
 import { create } from 'zustand';
-import type { UserProfile } from '@types/index';
+import type { UserProfile } from '@anl-types/index';
 
 interface UserStore {
   profile:      UserProfile | null;

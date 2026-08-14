@@ -5,8 +5,9 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   Animated, Dimensions, ScrollView,
 } from 'react-native';
-import type { UserProfile } from '@types/index';
-import { timeAgo, formatDistance, matchLabel } from '@utils/format';
+import type { UserProfile } from '@anl-types/index';
+import { timeAgo, matchLabel } from '@utils/format';
+import { formatDistance } from '@utils/geo';
 
 const { width: SW } = Dimensions.get('window');
 

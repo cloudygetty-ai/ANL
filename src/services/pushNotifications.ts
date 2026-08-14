@@ -7,11 +7,11 @@ import { api } from './api';
 export async function setupPushNotifications(userId: string) {
   if (!Device.isDevice) return; // simulators don't support push
 
-  const { status: existing } = await Notifications.getPermissionsAsync();
+  const { status: existing } = await Notifications.getPermissionsAsync() as unknown as { status: string };
   let finalStatus = existing;
 
   if (existing !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
+    const { status } = await Notifications.requestPermissionsAsync() as unknown as { status: string };
     finalStatus = status;
   }
 
@@ -51,13 +51,13 @@ export async function setupPushNotifications(userId: string) {
 // Call this once in App.tsx to handle taps on notifications
 export function registerNotificationHandlers(navigation: any) {
   // Foreground handler
-  const sub1 = Notifications.addNotificationReceivedListener((notification) => {
+  const sub1 = Notifications.addNotificationReceivedListener((notification: Notifications.Notification) => {
     const data = notification.request.content.data as any;
     console.log('[push] received:', data?.type);
   });
 
   // Background tap handler
-  const sub2 = Notifications.addNotificationResponseReceivedListener((response) => {
+  const sub2 = Notifications.addNotificationResponseReceivedListener((response: Notifications.NotificationResponse) => {
     const data = response.notification.request.content.data as any;
 
     switch (data?.type) {

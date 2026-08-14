@@ -1,4 +1,4 @@
-# ANL — Claude Code Task Queue
+# ANL â€” Task Queue
 # P0 = ship blocker, P1 = next, P2 = growth
 
 ## P0 — Deploy run in order

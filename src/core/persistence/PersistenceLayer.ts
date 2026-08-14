@@ -1,6 +1,6 @@
 // src/core/persistence/PersistenceLayer.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { PersistedSnapshot, SystemState, HealthMetrics } from '@types/index';
+import type { PersistedSnapshot, SystemState, HealthMetrics } from '@anl-types/index';
 
 const SNAPSHOT_KEY    = 'anl:system:snapshot';
 const CURRENT_VERSION = 1;

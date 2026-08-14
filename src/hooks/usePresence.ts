@@ -5,7 +5,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { AppState } from 'react-native';
 import { supabase } from '@config/supabase';
 import { PRESENCE } from '@config/constants';
-import type { LatLng, PresenceStatus } from '@types/index';
+import type { LatLng, PresenceStatus } from '@anl-types/index';
 
 export function usePresence(userId: string | null, coords: LatLng | null) {
   const channelRef = useRef<any>(null);

@@ -2,11 +2,11 @@
 // WHY: Abstracts platform differences for background fetch so callers write
 //      one API regardless of iOS BGTaskScheduler vs Android headless JS.
 import { Platform } from 'react-native';
-import type { Task } from '@types/index';
+import type { Task } from '@anl-types/index';
 
 // react-native-background-fetch API surface we depend on
 interface BgFetch {
-  configure(config: Record<string, unknown>, callback: (status: number) => void, failure: (status: number) => void): void;
+  configure(config: Record<string, unknown>, callback: (taskId: string) => void, failure: (status: number) => void): void;
   start(success?: () => void, failure?: (status: number) => void): void;
   stop(success?: () => void, failure?: () => void): void;
   finish(taskId: string): void;

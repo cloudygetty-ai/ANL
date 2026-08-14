@@ -1,6 +1,6 @@
 // src/services/state/chatStore.ts
 import { create } from 'zustand';
-import type { Channel, ChatMessage } from '@types/index';
+import type { Channel, ChatMessage } from '@anl-types/index';
 
 interface ChatStore {
   channels:       Channel[];

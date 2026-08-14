@@ -1,7 +1,7 @@
 // src/hooks/useAuth.ts
 import { useEffect, useState } from 'react';
 import { supabase } from '@config/supabase';
-import type { UserProfile } from '@types/index';
+import type { UserProfile } from '@anl-types/index';
 
 export interface AuthState {
   user:        UserProfile | null;

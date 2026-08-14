@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, Easing, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
-import type { MapUser } from '@types/index';
+import type { MapUser } from '@anl-types/index';
 
 interface Props {
   user:       MapUser;
@@ -27,8 +27,8 @@ const PinMarker: React.FC<Props> = ({ user, selected = false, onPress, size = 40
   useEffect(() => {
     if (!user.online) return;
     const loop = Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1.08, duration: 900, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 1,    duration: 900, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1.08, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1,    duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
     ]));
     const ringLoop = Animated.loop(Animated.sequence([
       Animated.timing(ring, { toValue: 1, duration: 2400, easing: Easing.out(Easing.quad), useNativeDriver: true }),

@@ -1,5 +1,5 @@
 // src/services/health/HealthMonitor.ts
-import type { HealthMetrics, SystemError } from '@types/index';
+import type { HealthMetrics, SystemError } from '@anl-types/index';
 
 const MAX_ERROR_LOG = 100;
 const MAX_ITERATION_SAMPLES = 50;

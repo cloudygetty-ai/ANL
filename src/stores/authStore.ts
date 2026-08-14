@@ -3,7 +3,7 @@
 // Persists session in AsyncStorage so the user stays logged in across restarts.
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { UserProfile } from '@types/index';
+import type { UserProfile } from '@anl-types/index';
 
 interface AuthStore {
   user:           UserProfile | null;

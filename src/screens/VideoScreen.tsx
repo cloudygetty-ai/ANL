@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { VideoService } from '@services/video/VideoService';
-import type { VideoParticipant } from '@types/index';
+import type { VideoParticipant } from '@anl-types/index';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 

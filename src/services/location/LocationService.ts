@@ -1,7 +1,7 @@
 // src/services/location/LocationService.ts
 // GPS polling with Expo Location, fuzzy coords before broadcast,
 // background updates via expo-task-manager
-import type { LatLng } from '@types/index';
+import type { LatLng } from '@anl-types/index';
 import { fuzzyCoords } from '@utils/geo';
 
 let ExpoLocation: any = null;

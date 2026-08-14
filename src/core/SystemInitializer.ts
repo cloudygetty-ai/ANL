@@ -5,7 +5,7 @@ import { PersistenceLayer }   from '@core/persistence/PersistenceLayer';
 import { HealthMonitor }      from '@services/health/HealthMonitor';
 import { BackgroundService }  from '@services/background/BackgroundService';
 import { useSystemStore }     from '@services/state/systemStore';
-import type { Task }          from '@types/index';
+import type { Task }          from '@anl-types/index';
 
 let _initialized    = false;
 let _eventLoop:     EventLoopManager  | null = null;

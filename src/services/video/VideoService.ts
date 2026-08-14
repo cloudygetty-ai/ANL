@@ -1,7 +1,7 @@
 // src/services/video/VideoService.ts
 // Stack: LiveKit (open-source WebRTC, self-hostable or livekit.io cloud)
 // Supports: 1:1 video calls, group video rooms (up to 12 for ANL groups)
-import type { VideoRoom, VideoParticipant } from '@types/index';
+import type { VideoRoom, VideoParticipant } from '@anl-types/index';
 
 // Lazy LiveKit import
 let LiveKit: any = null;

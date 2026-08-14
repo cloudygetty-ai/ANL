@@ -2,7 +2,7 @@
 // Returns fuzzy location (PROXIMITY.FUZZ_M jitter) — never exposes exact coords
 import { useState, useEffect, useRef } from 'react';
 import { PROXIMITY, PRESENCE } from '@config/constants';
-import type { LatLng } from '@types/index';
+import type { LatLng } from '@anl-types/index';
 
 export interface LocationState {
   coords:    LatLng | null;

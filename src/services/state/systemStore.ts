@@ -1,6 +1,6 @@
 // src/services/state/systemStore.ts
 import { create } from 'zustand';
-import type { SystemState, HealthMetrics, SystemStatus } from '@types/index';
+import type { SystemState, HealthMetrics, SystemStatus } from '@anl-types/index';
 
 interface SystemStore {
   systemState: SystemState;
